@@ -138,8 +138,12 @@ const my_routes = [
   }
 ]
 
+// Cloudflare Pages 部署支持
+// 从环境变量获取 base URL，默认为根路径
+const base = import.meta.env.VITE_BASE_URL || '/'
+
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(base),
   routes: my_routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
