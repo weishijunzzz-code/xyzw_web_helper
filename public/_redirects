@@ -1,3 +1,1 @@
-# Cloudflare Pages SPA 路由支持
-# 所有路由都指向 index.html，让 Vue Router 处理
-/*    /index.html   200
+/* /index.html 200
