@@ -103,34 +103,22 @@ export default defineConfig(async () => {
     componentsPlugin,
     vueI18nPlugin,
     {
-      name: "copy-static-files",
+      name: "copy-worker",
       closeBundle() {
         try {
-          // 复制 worker.js
-          const workerSrc = path.resolve(__dirname, "worker.js");
-          const workerDest = path.resolve(__dirname, "dist/_worker.js");
-          if (fs.existsSync(workerSrc)) {
-            fs.copyFileSync(workerSrc, workerDest);
-            console.log("\n[copy-static-files] worker.js copied to dist/_worker.js");
-          }
-
-          // 复制 xyzw 游戏脚本
-          const xyzwSrcDir = path.resolve(__dirname, "src/xyzw");
-          const xyzwDestDir = path.resolve(__dirname, "dist/src/xyzw");
-          if (fs.existsSync(xyzwSrcDir)) {
-            if (!fs.existsSync(xyzwDestDir)) {
-              fs.mkdirSync(xyzwDestDir, { recursive: true });
+          const src = path.resolve(__dirname, "worker.js");
+          const dest = path.resolve(__dirname, "dist/_worker.js");
+          if (fs.existsSync(src)) {
+            if (!fs.existsSync(path.dirname(dest))) {
+              fs.mkdirSync(path.dirname(dest), { recursive: true });
             }
-            const files = fs.readdirSync(xyzwSrcDir);
-            for (const file of files) {
-              const srcFile = path.join(xyzwSrcDir, file);
-              const destFile = path.join(xyzwDestDir, file);
-              fs.copyFileSync(srcFile, destFile);
-              console.log(`[copy-static-files] ${file} copied to dist/src/xyzw/`);
-            }
+            fs.copyFileSync(src, dest);
+            console.log("\n[copy-worker] worker.js copied to dist/_worker.js");
+          } else {
+            console.warn("\n[copy-worker] worker.js not found at " + src);
           }
         } catch (e) {
-          console.error("\n[copy-static-files] Error:", e);
+          console.error("\n[copy-worker] Error copying worker.js:", e);
         }
       },
     },
