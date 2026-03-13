@@ -1,6 +1,16 @@
 name = "xyzw-web-helper"
 compatibility_date = "2023-12-01"
 
+# Cloudflare Pages 构建设置
 [pages_build_config]
 build_command = "npm run build"
 destination_dir = "dist"
+
+# 可选：自定义路由规则（如果需要）
+# [[routes]]
+# pattern = "/api/*"
+# script = "_worker.js"
+
+# 可选：环境变量
+# [vars]
+# API_BASE_URL = "https://api.example.com"
