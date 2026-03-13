@@ -128,7 +128,8 @@ export default defineConfig(async () => {
   return {
     plugins,
     // Cloudflare Pages 部署配置
-    base: process.env.VITE_BASE_URL || '/',
+    // 使用相对路径，让资源路径自动适配任何域名
+    base: './',
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
