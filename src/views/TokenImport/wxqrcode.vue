@@ -531,25 +531,42 @@ const getEncryptedData = async (code) => {
   }
   console.log("combUser:", combUser);
 
-  // 这里简化处理，实际应该调用游戏加密模块生成bin
-  // 由于是前端环境，我们模拟生成一个token
+  // 调用游戏加密模块生成bin
+  // 首先尝试从 window.o4e 获取（index.js 加载后会挂载到全局）
+  const o4e = (window as any).o4e;
+  if (o4e?.encMsg && o4e?.lz4XorEncode) {
+    const encryptedBuffer = o4e.encMsg(
+      {
+        platform: "hortor",
+        platformExt: "mix",
+        info: combUser,
+        serverId: null,
+        scene: 0,
+        referrerInfo: "",
+      },
+      { decrypt: o4e.lz4XorDecode, encrypt: o4e.lz4XorEncode },
+    );
+    return new Uint8Array(encryptedBuffer);
+  }
+
+  // 备选方案：尝试通过 __require 获取模块13
   const dm = (window as any).__require?.("13");
-  if (!dm?.encMsg || !dm?.lz4XorEncode)
-    throw new Error("游戏加密模块未加载，不能生成 bin");
+  if (dm?.encMsg && dm?.lz4XorEncode) {
+    const encryptedBuffer = dm.encMsg(
+      {
+        platform: "hortor",
+        platformExt: "mix",
+        info: combUser,
+        serverId: null,
+        scene: 0,
+        referrerInfo: "",
+      },
+      { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode },
+    );
+    return new Uint8Array(encryptedBuffer);
+  }
 
-  const encryptedBuffer = dm.encMsg(
-    {
-      platform: "hortor",
-      platformExt: "mix",
-      info: combUser,
-      serverId: null,
-      scene: 0,
-      referrerInfo: "",
-    },
-    { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode },
-  );
-
-  return new Uint8Array(encryptedBuffer);
+  throw new Error("游戏加密模块未加载，不能生成 bin");
 };
 
 /**
