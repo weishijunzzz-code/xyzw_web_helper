@@ -103,23 +103,34 @@ export default defineConfig(async () => {
     componentsPlugin,
     vueI18nPlugin,
     {
-      name: "copy-worker",
+      name: "copy-static-files",
       closeBundle() {
         try {
-          const src = path.resolve(__dirname, "worker.js");
-          // Cloudflare Pages Advanced Mode expects _worker.js
-          const dest = path.resolve(__dirname, "dist/_worker.js");
-          if (fs.existsSync(src)) {
-            if (!fs.existsSync(path.dirname(dest))) {
-              fs.mkdirSync(path.dirname(dest), { recursive: true });
+          // 复制 worker.js
+          const workerSrc = path.resolve(__dirname, "worker.js");
+          const workerDest = path.resolve(__dirname, "dist/_worker.js");
+          if (fs.existsSync(workerSrc)) {
+            fs.copyFileSync(workerSrc, workerDest);
+            console.log("\n[copy-static-files] worker.js copied to dist/_worker.js");
+          }
+
+          // 复制 xyzw 游戏脚本
+          const xyzwSrcDir = path.resolve(__dirname, "src/xyzw");
+          const xyzwDestDir = path.resolve(__dirname, "dist/src/xyzw");
+          if (fs.existsSync(xyzwSrcDir)) {
+            if (!fs.existsSync(xyzwDestDir)) {
+              fs.mkdirSync(xyzwDestDir, { recursive: true });
             }
-            fs.copyFileSync(src, dest);
-            console.log("\n[copy-worker] worker.js copied to dist/_worker.js");
-          } else {
-            console.warn("\n[copy-worker] worker.js not found at " + src);
+            const files = fs.readdirSync(xyzwSrcDir);
+            for (const file of files) {
+              const srcFile = path.join(xyzwSrcDir, file);
+              const destFile = path.join(xyzwDestDir, file);
+              fs.copyFileSync(srcFile, destFile);
+              console.log(`[copy-static-files] ${file} copied to dist/src/xyzw/`);
+            }
           }
         } catch (e) {
-          console.error("\n[copy-worker] Error copying worker.js:", e);
+          console.error("\n[copy-static-files] Error:", e);
         }
       },
     },
@@ -128,8 +139,8 @@ export default defineConfig(async () => {
   return {
     plugins,
     // Cloudflare Pages 部署配置
-    // 使用相对路径，让资源路径自动适配任何域名
-    base: './',
+    // 使用根路径，适配 Cloudflare Pages 部署
+    base: '/',
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
