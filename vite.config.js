@@ -127,6 +127,18 @@ export default defineConfig(async () => {
 
   return {
     plugins,
+    // Cloudflare Pages 部署配置
+    base: process.env.VITE_BASE_URL || '/',
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      // 确保生成 _worker.js
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
+      },
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
