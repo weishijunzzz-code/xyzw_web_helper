@@ -2,8 +2,6 @@ name = "xyzw-web-helper"
 compatibility_date = "2023-12-01"
 
 # Cloudflare Pages 构建设置
-[build]
-command = "npm run build"
-
-# 输出目录
-pages_build_output_dir = "dist"
+[pages_build_config]
+build_command = "npm install && npm run build"
+destination_dir = "dist"
