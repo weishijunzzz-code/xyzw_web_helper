@@ -5,7 +5,7 @@
     </n-alert>
 
     <!-- JSON输入区域 -->
-    <n-form :model="formData" label-placement="left" label-width="100px">
+    <n-form :model="formData" label-placement="left" label-width="120px">
       <n-form-item label="Token JSON" required>
         <n-input
           v-model:value="formData.jsonInput"
@@ -35,6 +35,20 @@
         <n-input
           v-model:value="formData.name"
           placeholder="角色名称（可选，默认从JSON解析）"
+        />
+      </n-form-item>
+
+      <!-- PKCS12加密选项 -->
+      <n-form-item label="使用PKCS12加密">
+        <n-switch v-model:value="formData.usePkcs12" />
+      </n-form-item>
+
+      <n-form-item v-if="formData.usePkcs12" label="加密密码">
+        <n-input
+          v-model:value="formData.pkcs12Password"
+          type="password"
+          placeholder="请输入PKCS12加密密码（可选）"
+          show-password-on="mousedown"
         />
       </n-form-item>
     </n-form>
@@ -103,7 +117,8 @@ import { reactive, ref, computed, watch } from 'vue';
 import { DocumentText, Download } from '@vicons/ionicons5';
 import {
   tokenToBinComplete,
-  downloadBinFile
+  downloadBinFile,
+  generateBinWithPkcs12Crypto
 } from '@/utils/tokenToBin';
 import {
   validateBinFile,
@@ -117,6 +132,8 @@ const formData = reactive({
   jsonInput: '',
   serverId: null,
   name: '',
+  usePkcs12: false,
+  pkcs12Password: '',
 });
 
 const isGenerating = ref(false);
@@ -182,23 +199,54 @@ const generateBin = async () => {
     // 生成设备唯一ID
     const deviceUniqueId = `DID-${crypto.randomUUID()}`;
 
-    // 调用tokenToBinComplete生成bin文件
-    const result = await tokenToBinComplete(
-      combUser,
-      deviceUniqueId,
-      {
-        platform: 'hortor',
-        platformExt: 'mix',
-        serverId: formData.serverId,
-        scene: 0,
-        referrerInfo: '',
-      }
-    );
+    let result;
+
+    if (formData.usePkcs12) {
+      // 使用PKCS12加密
+      const binDataResult = generateBinWithPkcs12Crypto(
+        combUser,
+        deviceUniqueId,
+        formData.pkcs12Password || 'default_password',
+        {
+          platform: 'hortor',
+          platformExt: 'mix',
+          serverId: formData.serverId,
+          scene: 0,
+          referrerInfo: '',
+        }
+      );
+
+      const timestamp = Date.now();
+      const roleId = combUser.uid || 'unknown';
+      const roleName = combUser.name || 'unknown';
+      const serverId = formData.serverId || 'default';
+      const filename = `bin-${serverId}-0-${roleId}-${roleName}.bin`;
+
+      result = {
+        binData: binDataResult,
+        filename: filename,
+      };
+
+      message.success('Bin文件生成成功（PKCS12加密）！');
+    } else {
+      // 使用游戏加密模块
+      result = await tokenToBinComplete(
+        combUser,
+        deviceUniqueId,
+        {
+          platform: 'hortor',
+          platformExt: 'mix',
+          serverId: formData.serverId,
+          scene: 0,
+          referrerInfo: '',
+        }
+      );
+
+      message.success('Bin文件生成成功！');
+    }
 
     binData.value = result.binData;
     binFilename.value = result.filename;
-
-    message.success('Bin文件生成成功！');
 
     // 自动验证
     await validateBin();

@@ -5,6 +5,7 @@
 
 import { bon, getEnc, encode, DataWriter } from "./bonProtocol";
 import { MD5, lib, enc } from "crypto-js";
+import { encryptBinData, generateBinWithPkcs12 } from "./pkcs12Crypto";
 
 /**
  * Token转Bin文件配置
@@ -15,6 +16,8 @@ export interface TokenToBinConfig {
   scene?: number;
   referrerInfo?: string;
   serverId?: number | null;
+  usePkcs12?: boolean; // 是否使用PKCS12加密
+  pkcs12Password?: string; // PKCS12加密密码
 }
 
 /**
@@ -28,15 +31,54 @@ export interface CombUser {
 }
 
 /**
+ * 构建BON尾部
+ */
+const buildBonTail = (deviceUniqueId: string): Uint8Array => {
+  const writer = new DataWriter();
+
+  // serverId（NULL值）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x08);
+  writer.writeUint8Array(new TextEncoder().encode("serverId"));
+  writer.writeInt8(0x00);
+
+  // scene（int32，值为0）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x05);
+  writer.writeUint8Array(new TextEncoder().encode("scene"));
+  writer.writeInt8(0x01);
+  writer.writeInt32(0);
+
+  // referrerInfo（空字符串）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x0c);
+  writer.writeUint8Array(new TextEncoder().encode("referrerInfo"));
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x00);
+
+  // deviceUniqueId（字符串）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x0e);
+  writer.writeUint8Array(new TextEncoder().encode("deviceUniqueId"));
+  writer.writeInt8(0x05);
+  writer.writeInt8(deviceUniqueId.length);
+  writer.writeUint8Array(new TextEncoder().encode(deviceUniqueId));
+
+  return writer.getBytes();
+};
+
+/**
  * 将微信扫码获取的token转换为bin文件格式
  *
  * @param combUser 组合用户信息（从微信扫码登录响应中获取）
  * @param config 转换配置
+ * @param deviceUniqueId 设备唯一ID（PKCS12加密时需要）
  * @returns Uint8Array bin文件数据
  */
 export const convertTokenToBin = (
   combUser: CombUser,
-  config: TokenToBinConfig = {}
+  config: TokenToBinConfig = {},
+  deviceUniqueId?: string
 ): Uint8Array => {
   const {
     platform = "hortor",
@@ -44,17 +86,50 @@ export const convertTokenToBin = (
     scene = 0,
     referrerInfo = "",
     serverId = null,
+    usePkcs12 = false,
+    pkcs12Password = "",
   } = config;
 
   // 构建bin文件内部数据结构
+  // 注意：只加密核心用户信息，不包含 platform 等字段
+  // 这些字段在 bin 文件的 BON 尾部中已包含
   const binData = {
-    platform,
-    platformExt,
-    info: combUser, // 用户信息
-    serverId,
-    scene,
-    referrerInfo,
+    uid: combUser.uid,
+    name: combUser.name,
+    token: combUser.token || combUser.roleToken,
+    openid: combUser.openid,
+    unionid: combUser.unionid,
+    avatar: combUser.avatar,
+    sessId: combUser.sessId,
+    connId: combUser.connId,
+    isRestore: combUser.isRestore,
   };
+
+  // 如果使用PKCS12加密
+  if (usePkcs12) {
+    const encrypted = encryptBinData(binData, pkcs12Password || "default_password");
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signStr = `${encrypted.data}${timestamp}`;
+    const sign = MD5(signStr).toString(enc.Hex);
+
+    const jsonContent = {
+      info: encrypted.data,
+      sign: sign,
+      timestamp: timestamp,
+    };
+
+    const jsonStr = JSON.stringify(jsonContent);
+    const jsonBytes = new TextEncoder().encode(jsonStr);
+
+    // 构建BON尾部
+    const bonTail = buildBonTail(deviceUniqueId || "default_device");
+
+    const result = new Uint8Array(jsonBytes.length + bonTail.length);
+    result.set(jsonBytes, 0);
+    result.set(bonTail, jsonBytes.length);
+
+    return result;
+  }
 
   // 使用游戏加密模块加密数据
   const o4e = (window as any).o4e;
@@ -71,6 +146,85 @@ export const convertTokenToBin = (
   });
 
   return new Uint8Array(encryptedBuffer);
+};
+
+/**
+ * 使用参考文件的info内容生成bin文件（用于测试）
+ * @param referenceInfo 参考文件的info字段（base64）
+ * @param deviceUniqueId 设备ID
+ * @param timestamp 时间戳
+ * @returns Uint8Array bin文件数据
+ */
+export const buildBinFileFromReference = (
+  referenceInfo: string,
+  deviceUniqueId: string,
+  timestamp?: number
+): Uint8Array => {
+  const ts = timestamp || Math.floor(Date.now() / 1000);
+  
+  // 直接使用参考文件的info内容
+  const encryptedBase64 = referenceInfo;
+  
+  // 生成签名
+  const finalSign = generateSign(encryptedBase64, ts);
+  
+  // 构建bin文件
+  return buildBinFileFromData(encryptedBase64, finalSign, ts, deviceUniqueId);
+};
+
+/**
+ * 从已有数据构建bin文件
+ */
+const buildBinFileFromData = (
+  encryptedBase64: string,
+  sign: string,
+  timestamp: number,
+  deviceUniqueId: string
+): Uint8Array => {
+  // 参考文件格式：JSON字符串 + BON编码的尾部字段
+  const jsonContent = {
+    info: encryptedBase64,
+    sign: sign,
+    timestamp: timestamp,
+  };
+
+  const jsonStr = JSON.stringify(jsonContent);
+  const jsonBytes = new TextEncoder().encode(jsonStr);
+
+  // 构建BON格式的尾部数据
+  const writer = new DataWriter();
+
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x08);
+  writer.writeUint8Array(new TextEncoder().encode("serverId"));
+  writer.writeInt8(0x00);
+
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x05);
+  writer.writeUint8Array(new TextEncoder().encode("scene"));
+  writer.writeInt8(0x01);
+  writer.writeInt32(0);
+
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x0C);
+  writer.writeUint8Array(new TextEncoder().encode("referrerInfo"));
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x00);
+
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x0E);
+  writer.writeUint8Array(new TextEncoder().encode("deviceUniqueId"));
+  writer.writeInt8(0x05);
+  writer.writeInt8(deviceUniqueId.length);
+  writer.writeUint8Array(new TextEncoder().encode(deviceUniqueId));
+
+  const bonTail = writer.getBytes();
+
+  const result = new Uint8Array(jsonBytes.length + bonTail.length);
+  result.set(jsonBytes, 0);
+  result.set(bonTail, jsonBytes.length);
+
+  return result;
 };
 
 /**
@@ -161,8 +315,43 @@ export const buildBinFile = (
   return result;
 };
 
+// 导出内部函数供测试使用
+export { buildBinFileFromData };
+
 /**
- * 完整的token转bin流程
+ * 使用PKCS12加密生成完整的bin文件
+ * @param combUser 组合用户信息
+ * @param deviceUniqueId 设备唯一ID
+ * @param password PKCS12加密密码
+ * @param config 其他配置
+ * @returns bin文件数据
+ */
+export const generateBinWithPkcs12Crypto = (
+  combUser: CombUser,
+  deviceUniqueId: string,
+  password: string,
+  config?: TokenToBinConfig
+): Uint8Array => {
+  // 构建用户数据结构
+  const userData = {
+    uid: combUser.uid,
+    name: combUser.name,
+    token: combUser.token || combUser.roleToken,
+    openid: combUser.openid,
+    unionid: combUser.unionid,
+    avatar: combUser.avatar,
+    sessId: combUser.sessId,
+    connId: combUser.connId,
+    isRestore: combUser.isRestore,
+  };
+
+  // 使用PKCS12加密
+  const timestamp = Math.floor(Date.now() / 1000);
+  return generateBinWithPkcs12(userData, password, deviceUniqueId, timestamp);
+};
+
+/**
+ * 生成签名
  */
 export const tokenToBinComplete = async (
   combUser: CombUser,
