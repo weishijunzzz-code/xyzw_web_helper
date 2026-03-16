@@ -103,58 +103,70 @@ export const buildBinFile = (
   // 生成签名（如果没有提供）
   const finalSign = sign || generateSign(encryptedBase64, ts);
 
-  // 构建JSON对象（与参考文件格式一致）
-  // 参考文件格式：JSON字符串 + BON编码的尾部字段
-  const jsonContent = {
-    info: encryptedBase64,
-    sign: finalSign,
-    timestamp: ts,
-  };
+  // 参考文件格式：完整的BON编码对象
+  // 使用BON编码整个对象（包括info, sign, timestamp, serverId, scene, referrerInfo, deviceUniqueId）
 
-  // 将JSON对象转为字符串
-  const jsonStr = JSON.stringify(jsonContent);
-  const jsonBytes = new TextEncoder().encode(jsonStr);
-
-  // 构建BON格式的尾部数据（serverId, scene, referrerInfo, deviceUniqueId）
-  // 参考文件尾部格式：BON类型标记 + 字段名 + 值
   const writer = new DataWriter();
 
-  // 写入serverId（NULL值）- 0x00 表示 null
-  writer.writeInt8(0x05); // 类型标记：字段开始
-  writer.writeInt8(0x08); // 字段名长度 8
-  writer.writeUint8Array(new TextEncoder().encode("serverId"));
-  writer.writeInt8(0x00); // 值：NULL（不是空字符串！）
+  // 对象开始标记（类型6）
+  writer.writeInt8(0x06);
 
-  // 写入scene（0）- int32 类型，4字节
-  writer.writeInt8(0x05); // 类型标记：字段开始
-  writer.writeInt8(0x05); // 字段名长度 5
+  // 字段数量（7个字段）
+  writer.writeInt8(0x07);
+
+  // 1. info字段（长字符串）
+  writer.writeInt8(0x05); // 字段名类型
+  writer.writeInt8(0x04); // 字段名长度
+  writer.writeUint8Array(new TextEncoder().encode("info"));
+  writer.writeInt8(0x0B); // 类型：长字符串（带4字节长度）
+  writer.writeInt32(encryptedBase64.length); // 字符串长度（4字节，小端序）
+  writer.writeUint8Array(new TextEncoder().encode(encryptedBase64));
+
+  // 2. sign字段（字符串）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x04);
+  writer.writeUint8Array(new TextEncoder().encode("sign"));
+  writer.writeInt8(0x05); // 类型：字符串（带1字节长度）
+  writer.writeInt8(finalSign.length);
+  writer.writeUint8Array(new TextEncoder().encode(finalSign));
+
+  // 3. timestamp字段（int64）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x09);
+  writer.writeUint8Array(new TextEncoder().encode("timestamp"));
+  writer.writeInt8(0x03); // 类型：int64
+  writer.writeInt64(ts);
+
+  // 4. serverId字段（空字符串）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x08);
+  writer.writeUint8Array(new TextEncoder().encode("serverId"));
+  writer.writeInt8(0x05); // 类型：空字符串
+  writer.writeInt8(0x00); // 长度0
+
+  // 5. scene字段（int32）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x05);
   writer.writeUint8Array(new TextEncoder().encode("scene"));
   writer.writeInt8(0x01); // 类型：int32
-  writer.writeInt32(0);   // 值：0（4字节，小端序）
+  writer.writeInt32(0);   // 值0
 
-  // 写入referrerInfo（空字符串）
-  writer.writeInt8(0x05); // 类型标记：字段开始
-  writer.writeInt8(0x0C); // 字段名长度 12
+  // 6. referrerInfo字段（空字符串）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x0C);
   writer.writeUint8Array(new TextEncoder().encode("referrerInfo"));
-  writer.writeInt8(0x05); // 类型：空字符串
-  writer.writeInt8(0x00); // 长度：0
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x00);
 
-  // 写入deviceUniqueId（字符串，带长度前缀）
-  writer.writeInt8(0x05); // 类型标记：字段开始
-  writer.writeInt8(0x0E); // 字段名长度 14
+  // 7. deviceUniqueId字段（字符串）
+  writer.writeInt8(0x05);
+  writer.writeInt8(0x0E);
   writer.writeUint8Array(new TextEncoder().encode("deviceUniqueId"));
-  writer.writeInt8(0x05); // 类型：字符串
-  writer.writeInt8(deviceUniqueId.length); // 字符串长度（1字节）
+  writer.writeInt8(0x05);
+  writer.writeInt8(deviceUniqueId.length);
   writer.writeUint8Array(new TextEncoder().encode(deviceUniqueId));
 
-  const bonTail = writer.getBytes();
-
-  // 合并JSON字符串和BON尾部
-  const result = new Uint8Array(jsonBytes.length + bonTail.length);
-  result.set(jsonBytes, 0);
-  result.set(bonTail, jsonBytes.length);
-
-  return result;
+  return writer.getBytes();
 };
 
 /**
