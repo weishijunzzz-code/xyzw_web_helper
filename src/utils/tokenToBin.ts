@@ -3,7 +3,7 @@
  * 将微信扫码获取的token转换为游戏服务器要求的bin文件格式
  */
 
-import { bon, getEnc, encode } from "./bonProtocol";
+import { bon, getEnc, encode, DataWriter } from "./bonProtocol";
 import { MD5, lib, enc } from "crypto-js";
 
 /**
@@ -115,10 +115,8 @@ export const buildBinFile = (
 
   // 构建BON格式的尾部数据（serverId, scene, referrerInfo, deviceUniqueId）
   // 参考文件格式：JSON字符串 + BON标记 + 字段值
-  const bonEncoder = getEnc("x");
 
   // 创建BON写入器来编码尾部字段
-  const { DataWriter } = require("./bonProtocol");
   const writer = new DataWriter();
 
   // 写入serverId（空字符串）
