@@ -171,6 +171,7 @@ const originalBinData = ref<any>(null);
 // 标准bin文件数据（新增）
 const standardBinData = ref<Uint8Array | null>(null);
 const standardBinFilename = ref<string>("");
+const currentCombUser = ref<any>(null); // 保存扫码获取的用户信息
 const roleList = ref<
   Array<{
     id: string;
@@ -289,6 +290,48 @@ const addSelectedRole = async (roleInfo: any) => {
       wsUrl: importForm.wsUrl || "",
       importMethod: "wxQrcode",
     });
+
+    // 【新增】生成该角色的标准bin文件
+    if (currentCombUser.value) {
+      try {
+        const deviceUniqueId = `DID-${crypto.randomUUID()}`;
+        const { binData: standardBin, filename } = await tokenToBinComplete(
+          {
+            ...currentCombUser.value,
+            uid: roleInfo.roleId,
+            name: roleName,
+          } as CombUser,
+          deviceUniqueId,
+          {
+            platform: "hortor",
+            platformExt: "mix",
+            serverId: serverNum,
+            scene: 0,
+            referrerInfo: "",
+          }
+        );
+
+        // 验证生成的bin文件
+        const validation = validateBinFile(standardBin);
+        if (!validation.valid) {
+          console.warn("标准Bin文件验证警告:", validation.error);
+        } else {
+          console.log("标准Bin文件生成成功:", formatBinInfo(standardBin));
+        }
+
+        // 保存到本地存储
+        await saveBinToLocal(filename, standardBin);
+        console.log("标准Bin文件已保存到本地:", filename);
+
+        // 保存到响应式变量，供UI使用
+        standardBinData.value = standardBin;
+        standardBinFilename.value = filename;
+      } catch (err) {
+        console.warn("生成标准Bin文件失败:", err);
+        standardBinData.value = null;
+        standardBinFilename.value = "";
+      }
+    }
 
     message.success(`已添加角色: ${finalName}`);
 
@@ -576,6 +619,9 @@ const getEncryptedData = async (code) => {
   }
   console.log("combUser:", combUser);
 
+  // 保存用户信息，供后续生成标准bin文件使用
+  currentCombUser.value = combUser;
+
   // 调用游戏加密模块生成bin（保持原有逻辑不变）
   // 首先尝试从 window.o4e 获取（index.js 加载后会挂载到全局）
   const o4e = (window as any).o4e;
@@ -614,42 +660,6 @@ const getEncryptedData = async (code) => {
   }
 
   const binData = new Uint8Array(encryptedBuffer);
-
-  // 【新增】额外生成标准格式的bin文件并保存（不影响原有功能）
-  try {
-    const deviceUniqueId = `DID-${crypto.randomUUID()}`;
-    const { binData: standardBin, filename } = await tokenToBinComplete(
-      combUser as CombUser,
-      deviceUniqueId,
-      {
-        platform: "hortor",
-        platformExt: "mix",
-        serverId: null,
-        scene: 0,
-        referrerInfo: "",
-      }
-    );
-
-    // 验证生成的bin文件
-    const validation = validateBinFile(standardBin);
-    if (!validation.valid) {
-      console.warn("标准Bin文件验证警告:", validation.error);
-    } else {
-      console.log("标准Bin文件生成成功:", formatBinInfo(standardBin));
-    }
-
-    // 保存到本地存储（供后续下载使用）
-    await saveBinToLocal(filename, standardBin);
-    console.log("标准Bin文件已保存到本地:", filename);
-
-    // 保存到响应式变量，供UI使用
-    standardBinData.value = standardBin;
-    standardBinFilename.value = filename;
-  } catch (err) {
-    console.warn("生成标准Bin文件失败（不影响主流程）:", err);
-    standardBinData.value = null;
-    standardBinFilename.value = "";
-  }
 
   // 返回原有格式的bin数据（保持兼容性）
   return binData;
@@ -860,6 +870,7 @@ const resetQRCode = () => {
   // 重置标准bin数据
   standardBinData.value = null;
   standardBinFilename.value = "";
+  currentCombUser.value = null;
 };
 
 // 生命周期
