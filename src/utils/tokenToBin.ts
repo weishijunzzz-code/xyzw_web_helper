@@ -120,20 +120,20 @@ export const buildBinFile = (
   const writer = new DataWriter();
 
   // 写入serverId（空字符串）
-  writer.writeString("serverId");
-  writer.writeString("");
+  writer.writeUTF("serverId");
+  writer.writeUTF("");
 
   // 写入scene（1）
-  writer.writeString("scene");
+  writer.writeUTF("scene");
   writer.writeInt32(1);
 
   // 写入referrerInfo（空字符串）
-  writer.writeString("referrerInfo");
-  writer.writeString("");
+  writer.writeUTF("referrerInfo");
+  writer.writeUTF("");
 
   // 写入deviceUniqueId
-  writer.writeString("deviceUniqueId");
-  writer.writeString(deviceUniqueId);
+  writer.writeUTF("deviceUniqueId");
+  writer.writeUTF(deviceUniqueId);
 
   const bonTail = writer.getBytes();
 
