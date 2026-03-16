@@ -42,6 +42,7 @@
             <n-radio-button value="wechatTokenToBin"> 微信Token转Bin </n-radio-button>
             <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
             <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
+            <n-radio-button value="gameLogin"> 游戏账号登录 </n-radio-button>
           </n-radio-group>
         </div>
         <div class="card-body">
@@ -74,6 +75,11 @@
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'singlebin'"
+          />
+          <game-login-form
+            @cancel="() => (showImportForm = false)"
+            @ok="() => (showImportForm = false)"
+            v-if="importMethod === 'gameLogin'"
           />
         </div>
       </a-modal>
@@ -614,6 +620,7 @@ import BinTokenForm from "./bin.vue";
 import singleBinTokenForm from "./singlebin.vue";
 import WxQrcodeForm from "./wxqrcode.vue";
 import WechatTokenToBinForm from "./wechatTokenToBin.vue";
+import GameLoginForm from "./gameLogin.vue";
 
 import { useTokenStore, selectedTokenId } from "@/stores/tokenStore";
 import {
