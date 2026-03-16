@@ -224,7 +224,9 @@ const generateBin = async () => {
     // 将用户数据转为JSON字符串，然后Base64编码作为info字段
     // 注意：这里不做额外的加密，因为微信扫码返回的token本身已经包含了会话信息
     const userDataJson = JSON.stringify(userData);
-    const infoBase64 = btoa(userDataJson);
+    // 使用TextEncoder和自定义Base64编码，支持Unicode字符
+    const userDataBytes = new TextEncoder().encode(userDataJson);
+    const infoBase64 = btoa(String.fromCharCode(...userDataBytes));
 
     // 构建bin文件数据
     const timestamp = Math.floor(Date.now() / 1000);
