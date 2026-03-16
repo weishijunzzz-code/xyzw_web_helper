@@ -31,19 +31,21 @@
         </template>
         <div class="card-header">
           <!-- 导入方式选择 -->
-          <n-radio-group
-            v-model:value="importMethod"
-            class="import-method-tabs"
-            size="small"
-          >
-            <n-radio-button value="manual"> 手动输入 </n-radio-button>
-            <n-radio-button value="url"> URL获取 </n-radio-button>
-            <n-radio-button value="wxQrcode"> 微信扫码获取 </n-radio-button>
-            <n-radio-button value="wechatTokenToBin"> 微信Token转Bin </n-radio-button>
-            <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
-            <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
-            <n-radio-button value="gameLogin"> 游戏账号登录 </n-radio-button>
-          </n-radio-group>
+          <div class="import-method-scroll">
+            <n-radio-group
+              v-model:value="importMethod"
+              class="import-method-tabs"
+              size="small"
+            >
+              <n-radio-button value="manual"> 手动输入 </n-radio-button>
+              <n-radio-button value="url"> URL获取 </n-radio-button>
+              <n-radio-button value="wxQrcode"> 微信扫码获取 </n-radio-button>
+              <n-radio-button value="wechatTokenToBin"> 微信Token转Bin </n-radio-button>
+              <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
+              <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
+              <n-radio-button value="gameLogin"> 游戏账号登录 </n-radio-button>
+            </n-radio-group>
+          </div>
         </div>
         <div class="card-body">
           <manual-token-form
@@ -76,7 +78,7 @@
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'singlebin'"
           />
-          <game-login-form
+          <GameLoginForm
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'gameLogin'"
@@ -1720,10 +1722,37 @@ onMounted(async () => {
     font-weight: var(--font-weight-normal);
   }
 
-  .import-method-tabs {
+  .import-method-scroll {
     margin-top: var(--spacing-md);
-    display: flex;
-    justify-content: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+  }
+
+  .import-method-tabs {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+
+    :deep(.n-radio-button) {
+      flex-shrink: 0;
+    }
   }
 }
 

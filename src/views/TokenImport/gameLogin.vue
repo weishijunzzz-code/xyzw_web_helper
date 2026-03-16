@@ -1,59 +1,41 @@
 <template>
   <div class="game-login-import">
     <n-alert type="info" class="mb-4">
-      通过游戏账号直接登录，无需抓包生成bin文件
+      直接粘贴微信扫码生成的JSON数据，快速登录并生成bin文件
     </n-alert>
 
     <n-form :model="formData" label-placement="left" label-width="120px">
-      <!-- 账号信息 -->
-      <n-form-item label="用户ID (UID)" required>
-        <n-input-number
-          v-model:value="formData.uid"
-          placeholder="请输入游戏用户ID"
-          style="width: 100%"
-        />
-      </n-form-item>
-
-      <n-form-item label="角色名称" required>
+      <!-- JSON输入区域 -->
+      <n-form-item label="Token JSON" required>
         <n-input
-          v-model:value="formData.name"
-          placeholder="请输入角色名称"
-        />
-      </n-form-item>
-
-      <n-form-item label="Token" required>
-        <n-input
-          v-model:value="formData.token"
+          v-model:value="formData.jsonInput"
           type="textarea"
-          :rows="3"
-          placeholder="请输入游戏Token（从微信扫码或其他方式获取）"
+          :rows="8"
+          placeholder='请粘贴微信扫码生成的JSON，例如：
+{"roleToken":"GTO7HtmZE4QoJ6hrtb6nUySlp1NAOTwz...","roleId":62644056,"sessId":177363175154518,"connId":1773631751553,"isRestore":0}'
         />
       </n-form-item>
 
-      <n-form-item label="OpenID">
-        <n-input
-          v-model:value="formData.openid"
-          placeholder="可选，微信OpenID"
-        />
-      </n-form-item>
-
-      <n-form-item label="UnionID">
-        <n-input
-          v-model:value="formData.unionid"
-          placeholder="可选，微信UnionID"
-        />
-      </n-form-item>
-
-      <n-form-item label="头像URL">
-        <n-input
-          v-model:value="formData.avatar"
-          placeholder="可选，头像链接"
-        />
-      </n-form-item>
+      <!-- 解析后的信息展示 -->
+      <n-card v-if="parsedData" title="解析结果" size="small" class="mb-4">
+        <n-descriptions :column="2" size="small">
+          <n-descriptions-item label="角色ID">{{ parsedData.roleId }}</n-descriptions-item>
+          <n-descriptions-item label="会话ID">{{ parsedData.sessId }}</n-descriptions-item>
+          <n-descriptions-item label="连接ID">{{ parsedData.connId }}</n-descriptions-item>
+          <n-descriptions-item label="Token长度">{{ parsedData.roleToken?.length }} 字符</n-descriptions-item>
+        </n-descriptions>
+      </n-card>
 
       <n-divider />
 
-      <!-- 加密选项 -->
+      <!-- 可选配置 -->
+      <n-form-item label="角色名称">
+        <n-input
+          v-model:value="formData.name"
+          placeholder="可选，默认使用角色ID"
+        />
+      </n-form-item>
+
       <n-form-item label="使用PKCS12加密">
         <n-switch v-model:value="formData.usePkcs12" />
       </n-form-item>
@@ -62,15 +44,8 @@
         <n-input
           v-model:value="formData.pkcs12Password"
           type="password"
-          placeholder="请输入PKCS12加密密码"
+          placeholder="可选，默认使用内置密码"
           show-password-on="mousedown"
-        />
-      </n-form-item>
-
-      <n-form-item label="设备唯一ID">
-        <n-input
-          v-model:value="formData.deviceUniqueId"
-          placeholder="可选，自动生成"
         />
       </n-form-item>
     </n-form>
@@ -79,14 +54,14 @@
     <n-space class="mt-4">
       <n-button
         type="primary"
-        @click="performLogin"
-        :loading="isLoggingIn"
+        @click="generateBin"
+        :loading="isGenerating"
         :disabled="!isFormValid"
       >
         <template #icon>
-          <n-icon><LogIn /></n-icon>
+          <n-icon><Download /></n-icon>
         </template>
-        登录并生成Bin
+        生成Bin文件
       </n-button>
 
       <n-button @click="resetForm">
@@ -94,19 +69,21 @@
       </n-button>
     </n-space>
 
-    <!-- 登录结果 -->
-    <n-card v-if="loginResult" title="登录结果" class="mt-4">
-      <n-alert :type="loginResult.success ? 'success' : 'error'">
-        {{ loginResult.message }}
+    <!-- 生成结果 -->
+    <n-card v-if="generateResult" title="生成结果" class="mt-4">
+      <n-alert :type="generateResult.success ? 'success' : 'error'">
+        {{ generateResult.message }}
       </n-alert>
 
-      <template v-if="loginResult.success">
+      <template v-if="generateResult.success">
         <n-descriptions :column="1" bordered class="mt-4">
-          <n-descriptions-item label="Role ID">{{ loginResult.authResponse?.roleId }}</n-descriptions-item>
-          <n-descriptions-item label="Session ID">{{ loginResult.authResponse?.sessId }}</n-descriptions-item>
-          <n-descriptions-item label="Connection ID">{{ loginResult.authResponse?.connId }}</n-descriptions-item>
-          <n-descriptions-item label="Token长度">{{ loginResult.tokenJson?.length }} 字符</n-descriptions-item>
-          <n-descriptions-item label="Bin文件大小">{{ loginResult.binFile?.length }} 字节</n-descriptions-item>
+          <n-descriptions-item label="文件名">{{ generateResult.filename }}</n-descriptions-item>
+          <n-descriptions-item label="文件大小">{{ generateResult.binData?.length }} 字节</n-descriptions-item>
+          <n-descriptions-item label="验证结果">
+            <n-tag :type="generateResult.validation?.valid ? 'success' : 'error'">
+              {{ generateResult.validation?.valid ? '格式正确' : '格式异常' }}
+            </n-tag>
+          </n-descriptions-item>
         </n-descriptions>
 
         <n-space class="mt-4">
@@ -123,33 +100,26 @@
             </template>
             导入到系统
           </n-button>
-
-          <n-button @click="copyTokenJson">
-            <template #icon>
-              <n-icon><Copy /></n-icon>
-            </template>
-            复制Token JSON
-          </n-button>
         </n-space>
       </template>
     </n-card>
 
     <!-- 使用说明 -->
-    <n-card title="使用说明" class="mt-4">
-      <n-steps vertical :current="3">
-        <n-step title="获取基础Token">
+    <n-card title="使用说明" class="mt-4" size="small">
+      <n-steps vertical :current="2">
+        <n-step title="微信扫码登录">
           <template #description>
-            通过微信扫码登录游戏，从浏览器开发者工具中获取基础Token（不包含sessId和connId）
+            使用微信扫码登录游戏，在浏览器开发者工具中找到登录请求的响应数据
           </template>
         </n-step>
-        <n-step title="填写账号信息">
+        <n-step title="复制JSON数据">
           <template #description>
-            输入用户ID、角色名称和基础Token
+            复制包含 roleToken、roleId、sessId、connId 的JSON数据
           </template>
         </n-step>
-        <n-step title="登录生成">
+        <n-step title="粘贴生成">
           <template #description>
-            点击"登录并生成Bin"按钮，系统会自动向游戏服务器发送认证请求，获取完整的会话信息
+            将JSON粘贴到上方输入框，点击"生成Bin文件"按钮即可
           </template>
         </n-step>
       </n-steps>
@@ -157,9 +127,9 @@
       <n-alert type="warning" class="mt-4">
         <strong>注意事项：</strong>
         <ul style="margin: 8px 0; padding-left: 20px;">
-          <li>此方法需要能够访问游戏认证服务器（可能需要处理跨域问题）</li>
-          <li>生成的bin文件包含服务器颁发的会话ID，有效期通常为24小时</li>
-          <li>如果登录失败，请检查Token是否过期或网络连接是否正常</li>
+          <li>JSON数据包含敏感信息，请勿分享给他人</li>
+          <li>生成的bin文件有效期通常为24小时</li>
+          <li>如果生成失败，请检查JSON格式是否正确</li>
         </ul>
       </n-alert>
     </n-card>
@@ -167,101 +137,168 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue';
-import { LogIn, Download, Add, Copy } from '@vicons/ionicons5';
+import { reactive, ref, computed, watch } from 'vue';
+import { Download, Add } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
-import { performGameLogin, validateBinFile } from '@/utils/gameAuth';
+import { buildBinFileFromData, generateSign } from '@/utils/tokenToBin';
+import { validateBinFile } from '@/utils/gameAuth';
 import { useTokenStore } from '@/stores/tokenStore';
+import { MD5, enc } from 'crypto-js';
 
 const message = useMessage();
 const tokenStore = useTokenStore();
 
 const formData = reactive({
-  uid: null,
+  jsonInput: '',
   name: '',
-  token: '',
-  openid: '',
-  unionid: '',
-  avatar: '',
   usePkcs12: false,
   pkcs12Password: '',
-  deviceUniqueId: '',
 });
 
-const isLoggingIn = ref(false);
-const loginResult = ref(null);
+const isGenerating = ref(false);
+const generateResult = ref(null);
+const parsedData = ref(null);
 
-// 表单验证
-const isFormValid = computed(() => {
-  return formData.uid && formData.name && formData.token;
-});
-
-// 执行登录
-const performLogin = async () => {
-  if (!isFormValid.value) {
-    message.error('请填写必填项：用户ID、角色名称、Token');
+// 监听JSON输入，自动解析
+watch(() => formData.jsonInput, (newValue) => {
+  if (!newValue) {
+    parsedData.value = null;
     return;
   }
 
   try {
-    isLoggingIn.value = true;
-    loginResult.value = null;
+    const data = JSON.parse(newValue);
+    parsedData.value = data;
 
-    // 生成设备ID
-    const deviceUniqueId = formData.deviceUniqueId || `DID-${crypto.randomUUID()}`;
+    // 自动填充角色名称（如果没有手动填写）
+    if (!formData.name && data.roleId) {
+      formData.name = `角色_${data.roleId}`;
+    }
+  } catch (e) {
+    parsedData.value = null;
+  }
+}, { immediate: true });
 
-    // 调用登录流程
-    const result = await performGameLogin(
-      {
-        uid: formData.uid,
-        name: formData.name,
-        token: formData.token,
-        openid: formData.openid,
-        unionid: formData.unionid,
-        avatar: formData.avatar,
-      },
-      {
-        usePkcs12: formData.usePkcs12,
-        pkcs12Password: formData.pkcs12Password,
-        deviceUniqueId,
-      }
-    );
+// 表单验证
+const isFormValid = computed(() => {
+  if (!formData.jsonInput) return false;
 
-    // 验证生成的bin文件
-    const validation = validateBinFile(result.binFile);
+  try {
+    const data = JSON.parse(formData.jsonInput);
+    return data.roleToken && data.roleId && data.sessId && data.connId !== undefined;
+  } catch (e) {
+    return false;
+  }
+});
 
-    loginResult.value = {
-      success: true,
-      message: '登录成功！已生成完整的bin文件和Token信息。',
-      authResponse: result.authResponse,
-      binFile: result.binFile,
-      tokenJson: result.tokenJson,
-      validation,
+// 生成Bin文件
+const generateBin = async () => {
+  if (!isFormValid.value) {
+    message.error('请粘贴有效的Token JSON数据');
+    return;
+  }
+
+  try {
+    isGenerating.value = true;
+    generateResult.value = null;
+
+    // 解析JSON
+    const tokenData = JSON.parse(formData.jsonInput);
+
+    // 生成设备唯一ID
+    const deviceUniqueId = `DID-${crypto.randomUUID()}`;
+
+    // 构建bin文件数据
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signStr = `${tokenData.roleToken}${timestamp}`;
+    const sign = MD5(signStr).toString(enc.Hex);
+
+    // 构建JSON内容
+    const jsonContent = {
+      info: tokenData.roleToken,
+      sign: sign,
+      timestamp: timestamp,
     };
 
-    message.success('登录成功！');
+    const jsonStr = JSON.stringify(jsonContent);
+    const jsonBytes = new TextEncoder().encode(jsonStr);
+
+    // 构建BON尾部
+    const bonTail = buildBonTail(deviceUniqueId);
+
+    // 合并数据
+    const binData = new Uint8Array(jsonBytes.length + bonTail.length);
+    binData.set(jsonBytes, 0);
+    binData.set(bonTail, jsonBytes.length);
+
+    // 验证bin文件
+    const validation = validateBinFile(binData);
+
+    // 生成文件名
+    const roleId = tokenData.roleId || 'unknown';
+    const roleName = formData.name || `角色_${roleId}`;
+    const filename = `bin-default-0-${roleId}-${roleName}.bin`;
+
+    generateResult.value = {
+      success: true,
+      message: 'Bin文件生成成功！',
+      binData,
+      filename,
+      validation,
+      tokenData,
+    };
+
+    message.success('Bin文件生成成功！');
 
   } catch (error) {
-    console.error('登录失败:', error);
-    loginResult.value = {
+    console.error('生成Bin文件失败:', error);
+    generateResult.value = {
       success: false,
-      message: `登录失败: ${error.message}`,
+      message: `生成失败: ${error.message}`,
     };
-    message.error(`登录失败: ${error.message}`);
+    message.error(`生成失败: ${error.message}`);
   } finally {
-    isLoggingIn.value = false;
+    isGenerating.value = false;
   }
+};
+
+// 构建BON尾部
+const buildBonTail = (deviceUniqueId) => {
+  const writer = [];
+
+  // serverId（NULL值）
+  writer.push(0x05, 0x08);
+  writer.push(...new TextEncoder().encode('serverId'));
+  writer.push(0x00);
+
+  // scene（int32，值为0）
+  writer.push(0x05, 0x05);
+  writer.push(...new TextEncoder().encode('scene'));
+  writer.push(0x01, 0x00, 0x00, 0x00, 0x00);
+
+  // referrerInfo（空字符串）
+  writer.push(0x05, 0x0c);
+  writer.push(...new TextEncoder().encode('referrerInfo'));
+  writer.push(0x05, 0x00);
+
+  // deviceUniqueId（字符串）
+  writer.push(0x05, 0x0e);
+  writer.push(...new TextEncoder().encode('deviceUniqueId'));
+  writer.push(0x05, deviceUniqueId.length);
+  writer.push(...new TextEncoder().encode(deviceUniqueId));
+
+  return new Uint8Array(writer);
 };
 
 // 下载bin文件
 const downloadBinFile = () => {
-  if (!loginResult.value?.binFile) return;
+  if (!generateResult.value?.binData) return;
 
-  const blob = new Blob([loginResult.value.binFile], { type: 'application/octet-stream' });
+  const blob = new Blob([generateResult.value.binData], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `bin-default-0-${loginResult.value.authResponse.roleId}-${formData.name}.bin`;
+  link.download = generateResult.value.filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -272,18 +309,27 @@ const downloadBinFile = () => {
 
 // 导入到系统
 const importToSystem = async () => {
-  if (!loginResult.value?.tokenJson) return;
+  if (!generateResult.value?.tokenData) return;
 
   try {
-    const tokenData = JSON.parse(loginResult.value.tokenJson);
+    const tokenData = generateResult.value.tokenData;
+
+    // 构建完整的token JSON
+    const fullTokenJson = JSON.stringify({
+      roleToken: tokenData.roleToken,
+      roleId: tokenData.roleId,
+      sessId: tokenData.sessId,
+      connId: tokenData.connId,
+      isRestore: tokenData.isRestore || 0,
+    });
 
     // 导入到tokenStore
     const result = tokenStore.importBase64Token(
-      formData.name,
-      loginResult.value.tokenJson,
+      formData.name || `角色_${tokenData.roleId}`,
+      fullTokenJson,
       {
         server: 'default',
-        importMethod: 'manual',
+        importMethod: 'gameLogin',
       }
     );
 
@@ -299,30 +345,14 @@ const importToSystem = async () => {
   }
 };
 
-// 复制Token JSON
-const copyTokenJson = async () => {
-  if (!loginResult.value?.tokenJson) return;
-
-  try {
-    await navigator.clipboard.writeText(loginResult.value.tokenJson);
-    message.success('Token JSON已复制到剪贴板');
-  } catch (error) {
-    message.error('复制失败');
-  }
-};
-
 // 重置表单
 const resetForm = () => {
-  formData.uid = null;
+  formData.jsonInput = '';
   formData.name = '';
-  formData.token = '';
-  formData.openid = '';
-  formData.unionid = '';
-  formData.avatar = '';
   formData.usePkcs12 = false;
   formData.pkcs12Password = '';
-  formData.deviceUniqueId = '';
-  loginResult.value = null;
+  generateResult.value = null;
+  parsedData.value = null;
 };
 
 const emit = defineEmits(['ok', 'cancel']);
