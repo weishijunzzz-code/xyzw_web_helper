@@ -208,14 +208,32 @@ const generateBin = async () => {
     // 生成设备唯一ID
     const deviceUniqueId = `DID-${crypto.randomUUID()}`;
 
+    // 构建用户数据结构（与游戏客户端发送的格式一致）
+    const userData = {
+      uid: tokenData.roleId,
+      name: formData.name || `角色_${tokenData.roleId}`,
+      token: tokenData.roleToken,
+      openid: tokenData.openid || '',
+      unionid: tokenData.unionid || '',
+      avatar: tokenData.avatar || '',
+      sessId: tokenData.sessId,
+      connId: tokenData.connId,
+      isRestore: tokenData.isRestore || 0,
+    };
+
+    // 将用户数据转为JSON字符串，然后Base64编码作为info字段
+    // 注意：这里不做额外的加密，因为微信扫码返回的token本身已经包含了会话信息
+    const userDataJson = JSON.stringify(userData);
+    const infoBase64 = btoa(userDataJson);
+
     // 构建bin文件数据
     const timestamp = Math.floor(Date.now() / 1000);
-    const signStr = `${tokenData.roleToken}${timestamp}`;
+    const signStr = `${infoBase64}${timestamp}`;
     const sign = MD5(signStr).toString(enc.Hex);
 
     // 构建JSON内容
     const jsonContent = {
-      info: tokenData.roleToken,
+      info: infoBase64,
       sign: sign,
       timestamp: timestamp,
     };
