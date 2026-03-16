@@ -140,11 +140,9 @@
 import { reactive, ref, computed, watch } from 'vue';
 import { Download, Add } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
-import { buildBinFileFromData, generateSign } from '@/utils/tokenToBin';
 import { validateBinFile } from '@/utils/gameAuth';
 import { useTokenStore } from '@/stores/tokenStore';
-import { MD5, enc } from 'crypto-js';
-import { encryptGameData } from '@/utils/gameCrypto';
+import { g_utils } from '@/utils/bonProtocol';
 
 const message = useMessage();
 const tokenStore = useTokenStore();
@@ -222,53 +220,17 @@ const generateBin = async () => {
       isRestore: tokenData.isRestore || 0,
     };
 
-    // 尝试使用游戏客户端的加密模块（如果可用）
-    let binData;
-    const o4e = (window as any).o4e;
-    const dm = o4e || (window as any).__require?.("13");
-
-    if (dm?.encMsg && dm?.lz4XorEncode) {
-      // 使用游戏客户端的加密模块（推荐）
-      console.log("使用游戏客户端加密模块");
-      const encryptedBuffer = dm.encMsg(
-        {
-          platform: "hortor",
-          platformExt: "mix",
-          info: userData,
-          serverId: null,
-          scene: 0,
-          referrerInfo: "",
-        },
-        { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode }
-      );
-      binData = new Uint8Array(encryptedBuffer);
-    } else {
-      // 回退到自定义加密算法
-      console.log("使用自定义加密算法");
-      const userDataJson = JSON.stringify(userData);
-      const encryptedInfo = encryptGameData(userDataJson);
-
-      const timestamp = Math.floor(Date.now() / 1000);
-      const jsonContent = {
-        info: btoa(encryptedInfo),
-        sign: MD5(encryptedInfo + timestamp).toString(enc.Hex),
-        timestamp: timestamp,
-      };
-
-      const jsonStr = JSON.stringify(jsonContent);
-      const jsonBytes = new TextEncoder().encode(jsonStr);
-      const bonTail = buildBonTail(deviceUniqueId);
-
-      const encryptedBytes = new Uint8Array(encryptedInfo.length);
-      for (let i = 0; i < encryptedInfo.length; i++) {
-        encryptedBytes[i] = encryptedInfo.charCodeAt(i) & 0xFF;
-      }
-
-      binData = new Uint8Array(encryptedBytes.length + jsonBytes.length + bonTail.length);
-      binData.set(encryptedBytes, 0);
-      binData.set(jsonBytes, encryptedBytes.length);
-      binData.set(bonTail, encryptedBytes.length + jsonBytes.length);
-    }
+    // 使用 g_utils.encode 生成bin文件（与bin文件读取使用相同的编码方式）
+    console.log("使用 g_utils.encode 生成bin文件");
+    const binBuffer = g_utils.encode({
+      platform: "hortor",
+      platformExt: "mix",
+      info: userData,
+      serverId: null,
+      scene: 0,
+      referrerInfo: "",
+    }) as ArrayBuffer;
+    const binData = new Uint8Array(binBuffer);
 
     // 验证bin文件
     const validation = validateBinFile(binData);
