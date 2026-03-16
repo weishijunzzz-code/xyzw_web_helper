@@ -229,7 +229,7 @@ const generateBin = async () => {
       serverId: null,
       scene: 0,
       referrerInfo: "",
-    }) as ArrayBuffer;
+    });
     const binData = new Uint8Array(binBuffer);
 
     // 验证bin文件
