@@ -88,7 +88,24 @@
         添加Token
       </n-button>
 
-      <n-button block @click="$emit('cancel')" :disabled="isProcessing">
+      <!-- 新增：下载标准Bin文件按钮 -->
+      <n-button
+        v-if="standardBinData"
+        type="info"
+        size="large"
+        block
+        @click="handleDownloadStandardBin"
+        style="margin-top: 8px;"
+      >
+        <template #icon>
+          <n-icon>
+            <Download />
+          </n-icon>
+        </template>
+        下载标准Bin文件
+      </n-button>
+
+      <n-button block @click="$emit('cancel')" :disabled="isProcessing" style="margin-top: 8px;">
         <template #icon>
           <n-icon>
             <Close />
@@ -102,7 +119,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, reactive } from "vue";
-import { Scan, Refresh, Close, CloudUpload } from "@vicons/ionicons5";
+import { Scan, Refresh, Close, CloudUpload, Download } from "@vicons/ionicons5";
 import { NIcon, useMessage, NButton, NForm, NFormItem, NInput } from "naive-ui";
 import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
@@ -150,6 +167,10 @@ const serverListData = ref<any[]>([]);
 const currentBinData = ref<ArrayBuffer | null>(null);
 const binDecodedResult = ref("");
 const originalBinData = ref<any>(null);
+
+// 标准bin文件数据（新增）
+const standardBinData = ref<Uint8Array | null>(null);
+const standardBinFilename = ref<string>("");
 const roleList = ref<
   Array<{
     id: string;
@@ -172,11 +193,11 @@ const handleDownload = (roleInfo: any) => {
     const newData = { ...originalBinData.value };
     newData.serverId = roleInfo.serverId; // 确保类型一致
     const newBinBuffer = g_utils.encode(newData) as ArrayBuffer;
-    
+
     // 构造文件名: bin-{server}-0-{roleId}-{name}.bin
     let sid = Number(roleInfo.serverId);
     let roleIndex = 0;
-    
+
     if (sid >= 2000000) {
       roleIndex = 2;
       sid -= 2000000;
@@ -184,15 +205,32 @@ const handleDownload = (roleInfo: any) => {
       roleIndex = 1;
       sid -= 1000000;
     }
-    
+
     const serverNum = sid - 27;
     const fileName = `bin-${serverNum}服-${roleIndex}-${roleInfo.roleId}-${roleInfo.name}.bin`;
-    
+
     downloadBinFile(fileName, newBinBuffer);
     message.success(`已开始下载: ${fileName}`);
   } catch (e: any) {
     console.error("下载失败", e);
     message.error("下载失败: " + e.message);
+  }
+};
+
+/**
+ * 下载标准格式bin文件（新增）
+ */
+const handleDownloadStandardBin = () => {
+  if (!standardBinData.value) {
+    message.error("标准Bin数据不存在，请重新扫码");
+    return;
+  }
+  try {
+    downloadTokenBin(standardBinData.value, standardBinFilename.value);
+    message.success(`已开始下载标准Bin文件: ${standardBinFilename.value}`);
+  } catch (e: any) {
+    console.error("下载标准Bin失败", e);
+    message.error("下载标准Bin失败: " + e.message);
   }
 };
 
@@ -603,8 +641,14 @@ const getEncryptedData = async (code) => {
     // 保存到本地存储（供后续下载使用）
     await saveBinToLocal(filename, standardBin);
     console.log("标准Bin文件已保存到本地:", filename);
+
+    // 保存到响应式变量，供UI使用
+    standardBinData.value = standardBin;
+    standardBinFilename.value = filename;
   } catch (err) {
     console.warn("生成标准Bin文件失败（不影响主流程）:", err);
+    standardBinData.value = null;
+    standardBinFilename.value = "";
   }
 
   // 返回原有格式的bin数据（保持兼容性）
@@ -812,6 +856,10 @@ const resetQRCode = () => {
   qrcodeUUID.value = null;
   qrcodeUrl.value = null;
   updateStatus("点击获取微信登录二维码", "info");
+
+  // 重置标准bin数据
+  standardBinData.value = null;
+  standardBinFilename.value = "";
 };
 
 // 生命周期
