@@ -108,6 +108,13 @@ import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { g_utils } from "@/utils/bonProtocol";
 import { useTokenStore } from "@/stores/tokenStore";
+import {
+  tokenToBinComplete,
+  downloadBinFile as downloadTokenBin,
+  saveBinToLocal,
+  type CombUser,
+} from "@/utils/tokenToBin";
+import { validateBinFile, formatBinInfo } from "@/utils/binValidator";
 const tokenStore = useTokenStore();
 const { storeArrayBuffer } = useIndexedDB();
 
@@ -531,11 +538,13 @@ const getEncryptedData = async (code) => {
   }
   console.log("combUser:", combUser);
 
-  // 调用游戏加密模块生成bin
+  // 调用游戏加密模块生成bin（保持原有逻辑不变）
   // 首先尝试从 window.o4e 获取（index.js 加载后会挂载到全局）
   const o4e = (window as any).o4e;
+  let encryptedBuffer;
+  
   if (o4e?.encMsg && o4e?.lz4XorEncode) {
-    const encryptedBuffer = o4e.encMsg(
+    encryptedBuffer = o4e.encMsg(
       {
         platform: "hortor",
         platformExt: "mix",
@@ -546,27 +555,60 @@ const getEncryptedData = async (code) => {
       },
       { decrypt: o4e.lz4XorDecode, encrypt: o4e.lz4XorEncode },
     );
-    return new Uint8Array(encryptedBuffer);
+  } else {
+    // 备选方案：尝试通过 __require 获取模块13
+    const dm = (window as any).__require?.("13");
+    if (dm?.encMsg && dm?.lz4XorEncode) {
+      encryptedBuffer = dm.encMsg(
+        {
+          platform: "hortor",
+          platformExt: "mix",
+          info: combUser,
+          serverId: null,
+          scene: 0,
+          referrerInfo: "",
+        },
+        { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode },
+      );
+    } else {
+      throw new Error("游戏加密模块未加载，不能生成 bin");
+    }
   }
 
-  // 备选方案：尝试通过 __require 获取模块13
-  const dm = (window as any).__require?.("13");
-  if (dm?.encMsg && dm?.lz4XorEncode) {
-    const encryptedBuffer = dm.encMsg(
+  const binData = new Uint8Array(encryptedBuffer);
+
+  // 【新增】额外生成标准格式的bin文件并保存（不影响原有功能）
+  try {
+    const deviceUniqueId = `DID-${crypto.randomUUID()}`;
+    const { binData: standardBin, filename } = await tokenToBinComplete(
+      combUser as CombUser,
+      deviceUniqueId,
       {
         platform: "hortor",
         platformExt: "mix",
-        info: combUser,
         serverId: null,
         scene: 0,
         referrerInfo: "",
-      },
-      { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode },
+      }
     );
-    return new Uint8Array(encryptedBuffer);
+
+    // 验证生成的bin文件
+    const validation = validateBinFile(standardBin);
+    if (!validation.valid) {
+      console.warn("标准Bin文件验证警告:", validation.error);
+    } else {
+      console.log("标准Bin文件生成成功:", formatBinInfo(standardBin));
+    }
+
+    // 保存到本地存储（供后续下载使用）
+    await saveBinToLocal(filename, standardBin);
+    console.log("标准Bin文件已保存到本地:", filename);
+  } catch (err) {
+    console.warn("生成标准Bin文件失败（不影响主流程）:", err);
   }
 
-  throw new Error("游戏加密模块未加载，不能生成 bin");
+  // 返回原有格式的bin数据（保持兼容性）
+  return binData;
 };
 
 /**
