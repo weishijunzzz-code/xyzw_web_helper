@@ -39,6 +39,7 @@
             <n-radio-button value="manual"> 手动输入 </n-radio-button>
             <n-radio-button value="url"> URL获取 </n-radio-button>
             <n-radio-button value="wxQrcode"> 微信扫码获取 </n-radio-button>
+            <n-radio-button value="wechatTokenToBin"> 微信Token转Bin </n-radio-button>
             <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
             <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
           </n-radio-group>
@@ -58,6 +59,11 @@
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'wxQrcode'"
+          />
+          <wechat-token-to-bin-form
+            @cancel="() => (showImportForm = false)"
+            @ok="() => (showImportForm = false)"
+            v-if="importMethod === 'wechatTokenToBin'"
           />
           <bin-token-form
             @cancel="() => (showImportForm = false)"
@@ -607,6 +613,7 @@ import UrlTokenForm from "./url.vue";
 import BinTokenForm from "./bin.vue";
 import singleBinTokenForm from "./singlebin.vue";
 import WxQrcodeForm from "./wxqrcode.vue";
+import WechatTokenToBinForm from "./wechatTokenToBin.vue";
 
 import { useTokenStore, selectedTokenId } from "@/stores/tokenStore";
 import {

@@ -36,6 +36,9 @@
           <n-button type="info" size="small" block @click="emit('download', row)">
             下载
           </n-button>
+          <n-button type="success" size="small" block @click="emit('downloadStandardBin', row)">
+            下载标准Bin
+          </n-button>
         </div>
       </div>
     </div>
@@ -81,6 +84,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   add: [row: any];
   download: [row: any];
+  downloadStandardBin: [row: any];
 }>();
 
 function getServerIdDisplay(row: any) {
@@ -217,6 +221,15 @@ const columns = computed(() => [
               onClick: () => emit("download", row),
             },
             { default: () => "下载" }
+          ),
+          h(
+            NButton,
+            {
+              size: "small",
+              type: "success",
+              onClick: () => emit("downloadStandardBin", row),
+            },
+            { default: () => "下载标准Bin" }
           ),
         ]
       );

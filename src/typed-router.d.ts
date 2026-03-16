@@ -35,6 +35,7 @@ declare module 'vue-router/auto-routes' {
     '/TokenImport/manual': RouteRecordInfo<'/TokenImport/manual', '/TokenImport/manual', Record<never, never>, Record<never, never>>,
     '/TokenImport/singlebin': RouteRecordInfo<'/TokenImport/singlebin', '/TokenImport/singlebin', Record<never, never>, Record<never, never>>,
     '/TokenImport/url': RouteRecordInfo<'/TokenImport/url', '/TokenImport/url', Record<never, never>, Record<never, never>>,
+    '/TokenImport/wechatTokenToBin': RouteRecordInfo<'/TokenImport/wechatTokenToBin', '/TokenImport/wechatTokenToBin', Record<never, never>, Record<never, never>>,
     '/TokenImport/wxqrcode': RouteRecordInfo<'/TokenImport/wxqrcode', '/TokenImport/wxqrcode', Record<never, never>, Record<never, never>>,
   }
 }

@@ -58,6 +58,7 @@
       max-height="50vh"
       @add="addSelectedRole"
       @download="handleDownload"
+      @downloadStandardBin="handleDownloadStandardBinForRole"
     />
 
     <a-list>
@@ -232,6 +233,58 @@ const handleDownloadStandardBin = () => {
   } catch (e: any) {
     console.error("下载标准Bin失败", e);
     message.error("下载标准Bin失败: " + e.message);
+  }
+};
+
+/**
+ * 为指定角色下载标准bin文件
+ */
+const handleDownloadStandardBinForRole = async (roleInfo: any) => {
+  // 如果当前没有标准bin数据，或者不是当前角色的，需要重新生成
+  if (!standardBinData.value || standardBinRoleId.value !== String(roleInfo.roleId)) {
+    // 使用当前combUser和角色信息生成标准bin
+    if (!currentCombUser.value) {
+      message.error("用户信息不存在，请重新扫码");
+      return;
+    }
+
+    try {
+      const deviceUniqueId = `DID-${crypto.randomUUID()}`;
+
+      let sid = Number(roleInfo.serverId);
+      const serverNum = sid - 27;
+
+      const { binData: standardBin, filename } = await tokenToBinComplete(
+        {
+          ...currentCombUser.value,
+          uid: roleInfo.roleId,
+          name: roleInfo.name,
+        } as CombUser,
+        deviceUniqueId,
+        {
+          platform: "hortor",
+          platformExt: "mix",
+          serverId: serverNum,
+          scene: 0,
+          referrerInfo: "",
+        }
+      );
+
+      // 保存到响应式变量
+      standardBinData.value = standardBin;
+      standardBinFilename.value = filename;
+      standardBinRoleId.value = String(roleInfo.roleId);
+
+      // 下载
+      downloadTokenBin(standardBin, filename);
+      message.success(`已开始下载标准Bin文件: ${filename}`);
+    } catch (err: any) {
+      console.error("生成标准Bin文件失败:", err);
+      message.error("生成标准Bin文件失败: " + err.message);
+    }
+  } else {
+    // 直接下载已有的标准bin
+    handleDownloadStandardBin();
   }
 };
 
