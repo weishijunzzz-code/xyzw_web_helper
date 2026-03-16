@@ -308,8 +308,9 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
         deviceUniqueId: deviceUniqueId,
       };
 
-      // 步骤4：使用BON编码
-      const standardBin = bon.encode(mainObj, true);
+      // 步骤4：使用 g_utils.encode 生成bin（先BON编码再加密，与参考文件格式一致）
+      const binBuffer = g_utils.encode(mainObj, 'x');
+      const standardBin = new Uint8Array(binBuffer);
       const filename = `bin-${serverNum}-0-${roleInfo.roleId}-${roleInfo.name}.bin`;
 
       // 保存到响应式变量

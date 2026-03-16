@@ -263,8 +263,9 @@ const generateBin = async () => {
       deviceUniqueId: deviceUniqueId,
     };
 
-    // 步骤4：使用BON编码
-    const binData = bon.encode(mainObj, true);
+    // 步骤4：使用 g_utils.encode 生成bin（先BON编码再加密，与参考文件格式一致）
+    const binBuffer = g_utils.encode(mainObj, 'x');
+    const binData = new Uint8Array(binBuffer);
 
     // 验证bin文件
     const validation = validateBinFile(binData);
