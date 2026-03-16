@@ -87,6 +87,7 @@ const generateSign = (
 
 /**
  * 构建完整的bin文件内容（参考 request_body.bin 格式）
+ * 格式：JSON字符串 + BON二进制标记
  */
 export const buildBinFile = (
   encryptedData: Uint8Array,
@@ -102,22 +103,49 @@ export const buildBinFile = (
   // 生成签名（如果没有提供）
   const finalSign = sign || generateSign(encryptedBase64, ts);
 
-  // 构建JSON结构
-  const binContent = {
+  // 构建JSON对象（与参考文件格式一致）
+  const jsonContent = {
     info: encryptedBase64,
     sign: finalSign,
     timestamp: ts,
-    serverId: "",
-    scene: 1,
-    referrerInfo: "",
-    deviceUniqueId,
   };
 
-  // 使用BON协议编码
-  const bonEncoder = getEnc("x");
-  const encoded = encode(binContent, bonEncoder);
+  // 将JSON对象转为字符串
+  const jsonStr = JSON.stringify(jsonContent);
 
-  return new Uint8Array(encoded);
+  // 构建BON格式的尾部数据（serverId, scene, referrerInfo, deviceUniqueId）
+  // 参考文件格式：JSON字符串 + BON标记 + 字段值
+  const bonEncoder = getEnc("x");
+
+  // 创建BON写入器来编码尾部字段
+  const { DataWriter } = require("./bonProtocol");
+  const writer = new DataWriter();
+
+  // 写入serverId（空字符串）
+  writer.writeString("serverId");
+  writer.writeString("");
+
+  // 写入scene（1）
+  writer.writeString("scene");
+  writer.writeInt32(1);
+
+  // 写入referrerInfo（空字符串）
+  writer.writeString("referrerInfo");
+  writer.writeString("");
+
+  // 写入deviceUniqueId
+  writer.writeString("deviceUniqueId");
+  writer.writeString(deviceUniqueId);
+
+  const bonTail = writer.getBytes();
+
+  // 合并JSON字符串和BON尾部
+  const jsonBytes = new TextEncoder().encode(jsonStr);
+  const result = new Uint8Array(jsonBytes.length + bonTail.length);
+  result.set(jsonBytes, 0);
+  result.set(bonTail, jsonBytes.length);
+
+  return result;
 };
 
 /**
