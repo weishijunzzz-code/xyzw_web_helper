@@ -254,21 +254,21 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       let sid = Number(roleInfo.serverId);
       const serverNum = sid - 27;
 
-      const { binData: standardBin, filename } = await tokenToBinComplete(
-        {
-          ...currentCombUser.value,
-          uid: roleInfo.roleId,
-          name: roleInfo.name,
-        } as CombUser,
-        deviceUniqueId,
-        {
-          platform: "hortor",
-          platformExt: "mix",
-          serverId: serverNum,
-          scene: 0,
-          referrerInfo: "",
-        }
-      );
+      // 使用 g_utils.encode 生成bin文件（与bin文件读取使用相同的编码方式）
+      const userData = {
+        ...currentCombUser.value,
+        uid: roleInfo.roleId,
+        name: roleInfo.name,
+        platform: "hortor",
+        platformExt: "mix",
+        serverId: serverNum,
+        scene: 0,
+        referrerInfo: "",
+      };
+
+      const binBuffer = g_utils.encode(userData);
+      const standardBin = new Uint8Array(binBuffer);
+      const filename = `bin-${serverNum}-0-${roleInfo.roleId}-${roleInfo.name}.bin`;
 
       // 保存到响应式变量
       standardBinData.value = standardBin;
