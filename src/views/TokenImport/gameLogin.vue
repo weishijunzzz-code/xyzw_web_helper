@@ -229,9 +229,10 @@ const generateBin = async () => {
     // 构建bin文件数据
     const timestamp = Math.floor(Date.now() / 1000);
 
-    // 构建JSON内容（不包含sign，与参考文件格式一致）
+    // 构建JSON内容（与参考文件格式一致，包含sign）
     const jsonContent = {
       info: encryptedInfo,
+      sign: MD5(encryptedInfo + timestamp).toString(enc.Hex),
       timestamp: timestamp,
     };
 
@@ -241,10 +242,14 @@ const generateBin = async () => {
     // 构建BON尾部
     const bonTail = buildBonTail(deviceUniqueId);
 
-    // 合并数据
-    const binData = new Uint8Array(jsonBytes.length + bonTail.length);
-    binData.set(jsonBytes, 0);
-    binData.set(bonTail, jsonBytes.length);
+    // 将加密数据转为字节（作为文件前缀）
+    const encryptedBytes = new TextEncoder().encode(encryptedInfo);
+
+    // 合并数据: [加密数据] + [JSON] + [BON尾部]
+    const binData = new Uint8Array(encryptedBytes.length + jsonBytes.length + bonTail.length);
+    binData.set(encryptedBytes, 0);
+    binData.set(jsonBytes, encryptedBytes.length);
+    binData.set(bonTail, encryptedBytes.length + jsonBytes.length);
 
     // 验证bin文件
     const validation = validateBinFile(binData);
