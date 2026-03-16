@@ -8,10 +8,10 @@
       <!-- JSON输入区域 -->
       <n-form-item label="Token JSON" required>
         <n-input
-          v-model:value="formData.jsonInput"
-          type="textarea"
-          :rows="8"
-          placeholder='请粘贴微信扫码生成的JSON，例如：
+            v-model:value="formData.jsonInput"
+            type="textarea"
+            :rows="8"
+            placeholder='请粘贴微信扫码生成的JSON，例如：
 {"roleToken":"GTO7HtmZE4QoJ6hrtb6nUySlp1NAOTwz...","roleId":62644056,"sessId":177363175154518,"connId":1773631751553,"isRestore":0}'
         />
       </n-form-item>
@@ -31,8 +31,8 @@
       <!-- 可选配置 -->
       <n-form-item label="角色名称">
         <n-input
-          v-model:value="formData.name"
-          placeholder="可选，默认使用角色ID"
+            v-model:value="formData.name"
+            placeholder="可选，默认使用角色ID"
         />
       </n-form-item>
 
@@ -42,10 +42,10 @@
 
       <n-form-item v-if="formData.usePkcs12" label="加密密码">
         <n-input
-          v-model:value="formData.pkcs12Password"
-          type="password"
-          placeholder="可选，默认使用内置密码"
-          show-password-on="mousedown"
+            v-model:value="formData.pkcs12Password"
+            type="password"
+            placeholder="可选，默认使用内置密码"
+            show-password-on="mousedown"
         />
       </n-form-item>
     </n-form>
@@ -53,10 +53,10 @@
     <!-- 操作按钮 -->
     <n-space class="mt-4">
       <n-button
-        type="primary"
-        @click="generateBin"
-        :loading="isGenerating"
-        :disabled="!isFormValid"
+          type="primary"
+          @click="generateBin"
+          :loading="isGenerating"
+          :disabled="!isFormValid"
       >
         <template #icon>
           <n-icon><Download /></n-icon>
@@ -326,12 +326,12 @@ const importToSystem = async () => {
 
     // 导入到tokenStore
     const result = tokenStore.importBase64Token(
-      formData.name || `角色_${tokenData.roleId}`,
-      fullTokenJson,
-      {
-        server: 'default',
-        importMethod: 'gameLogin',
-      }
+        formData.name || `角色_${tokenData.roleId}`,
+        fullTokenJson,
+        {
+          server: 'default',
+          importMethod: 'gameLogin',
+        }
     );
 
     if (result.success) {
