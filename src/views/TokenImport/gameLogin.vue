@@ -142,7 +142,7 @@ import { Download, Add } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import { validateBinFile } from '@/utils/gameAuth';
 import { useTokenStore } from '@/stores/tokenStore';
-import { g_utils } from '@/utils/bonProtocol';
+import { g_utils, bon } from '@/utils/bonProtocol';
 
 const message = useMessage();
 const tokenStore = useTokenStore();
@@ -190,7 +190,16 @@ const isFormValid = computed(() => {
   }
 });
 
-// 生成Bin文件
+// MD5哈希函数
+const md5 = async (text) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('MD5', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+// 生成Bin文件（适配参考文件格式）
 const generateBin = async () => {
   if (!isFormValid.value) {
     message.error('请粘贴有效的Token JSON数据');
@@ -220,17 +229,42 @@ const generateBin = async () => {
       isRestore: tokenData.isRestore || 0,
     };
 
-    // 使用 g_utils.encode 生成bin文件（与bin文件读取使用相同的编码方式）
-    console.log("使用 g_utils.encode 生成bin文件");
-    const binBuffer = g_utils.encode({
+    // 参考文件格式：
+    // 1. 加密前缀（包含platform, platformExt, info等）
+    // 2. JSON部分包含 sign 和 timestamp
+    // 3. BON尾部
+
+    // 步骤1：加密用户数据生成info字段
+    const userDataJson = JSON.stringify(userData);
+    const userDataBytes = new TextEncoder().encode(userDataJson);
+
+    // 使用g_utils的加密器加密用户数据
+    const enc = g_utils.getEnc('x');
+    const encryptedInfo = enc.encrypt(userDataBytes);
+
+    // 将加密后的数据转为base64
+    const infoBase64 = btoa(String.fromCharCode(...encryptedInfo));
+
+    // 步骤2：生成sign（MD5校验）
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signText = `${infoBase64}${timestamp}`;
+    const sign = await md5(signText);
+
+    // 步骤3：构建主对象
+    const mainObj = {
       platform: "hortor",
       platformExt: "mix",
-      info: userData,
+      info: infoBase64,
+      sign: sign,
+      timestamp: timestamp,
       serverId: null,
       scene: 0,
       referrerInfo: "",
-    });
-    const binData = new Uint8Array(binBuffer);
+      deviceUniqueId: deviceUniqueId,
+    };
+
+    // 步骤4：使用BON编码
+    const binData = bon.encode(mainObj, true);
 
     // 验证bin文件
     const validation = validateBinFile(binData);

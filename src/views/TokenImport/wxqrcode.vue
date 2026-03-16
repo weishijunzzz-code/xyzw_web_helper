@@ -123,7 +123,7 @@ import { Scan, Refresh, Close, CloudUpload, Download } from "@vicons/ionicons5";
 import { NIcon, useMessage, NButton, NForm, NFormItem, NInput } from "naive-ui";
 import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
-import { g_utils } from "@/utils/bonProtocol";
+import { g_utils, bon } from "@/utils/bonProtocol";
 import { useTokenStore } from "@/stores/tokenStore";
 import {
   tokenToBinComplete,
@@ -237,7 +237,19 @@ const handleDownloadStandardBin = () => {
 };
 
 /**
- * 为指定角色下载标准bin文件
+ * MD5哈希函数
+ */
+const md5 = async (text: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('MD5', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * 为指定角色下载标准bin文件（适配参考文件格式）
+ * 参考文件格式：加密info + sign + timestamp + BON尾部
  */
 const handleDownloadStandardBinForRole = async (roleInfo: any) => {
   // 如果当前没有标准bin数据，或者不是当前角色的，需要重新生成
@@ -254,20 +266,50 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       let sid = Number(roleInfo.serverId);
       const serverNum = sid - 27;
 
-      // 使用 g_utils.encode 生成bin文件（与bin文件读取使用相同的编码方式）
+      // 构建用户数据结构
       const userData = {
         ...currentCombUser.value,
         uid: roleInfo.roleId,
         name: roleInfo.name,
+      };
+
+      // 参考文件格式：
+      // 1. 加密用户数据生成info字段（base64编码）
+      // 2. 生成sign（MD5校验）
+      // 3. 添加timestamp
+      // 4. BON编码整个对象
+
+      // 步骤1：加密用户数据
+      const userDataJson = JSON.stringify(userData);
+      const userDataBytes = new TextEncoder().encode(userDataJson);
+
+      // 使用g_utils的加密器加密用户数据
+      const enc = g_utils.getEnc('x');
+      const encryptedInfo = enc.encrypt(userDataBytes);
+
+      // 将加密后的数据转为base64
+      const infoBase64 = btoa(String.fromCharCode(...encryptedInfo));
+
+      // 步骤2：生成sign（MD5校验）
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signText = `${infoBase64}${timestamp}`;
+      const sign = await md5(signText);
+
+      // 步骤3：构建主对象（与参考文件格式一致）
+      const mainObj = {
         platform: "hortor",
         platformExt: "mix",
+        info: infoBase64,
+        sign: sign,
+        timestamp: timestamp,
         serverId: serverNum,
         scene: 0,
         referrerInfo: "",
+        deviceUniqueId: deviceUniqueId,
       };
 
-      const binBuffer = g_utils.encode(userData);
-      const standardBin = new Uint8Array(binBuffer);
+      // 步骤4：使用BON编码
+      const standardBin = bon.encode(mainObj, true);
       const filename = `bin-${serverNum}-0-${roleInfo.roleId}-${roleInfo.name}.bin`;
 
       // 保存到响应式变量
