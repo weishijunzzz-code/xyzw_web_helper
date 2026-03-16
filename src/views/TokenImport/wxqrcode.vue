@@ -70,9 +70,25 @@
             <strong>服务器:</strong> {{ role.server || "未指定" }}<br />
             <strong>角色序号:</strong> {{ role.roleIndex }}
           </div>
-          <n-button type="error" size="small" @click="removeRole(index)">
-            删除
-          </n-button>
+          <n-space>
+            <!-- 新增：下载标准Bin文件按钮 -->
+            <n-button
+              v-if="standardBinData && standardBinRoleId === role.roleId"
+              type="info"
+              size="small"
+              @click="handleDownloadStandardBin"
+            >
+              <template #icon>
+                <n-icon>
+                  <Download />
+                </n-icon>
+              </template>
+              下载标准Bin
+            </n-button>
+            <n-button type="error" size="small" @click="removeRole(index)">
+              删除
+            </n-button>
+          </n-space>
         </div>
       </a-list-item>
     </a-list>
@@ -86,23 +102,6 @@
           </n-icon>
         </template>
         添加Token
-      </n-button>
-
-      <!-- 新增：下载标准Bin文件按钮 -->
-      <n-button
-        v-if="standardBinData"
-        type="info"
-        size="large"
-        block
-        @click="handleDownloadStandardBin"
-        style="margin-top: 8px;"
-      >
-        <template #icon>
-          <n-icon>
-            <Download />
-          </n-icon>
-        </template>
-        下载标准Bin文件
       </n-button>
 
       <n-button block @click="$emit('cancel')" :disabled="isProcessing" style="margin-top: 8px;">
@@ -171,6 +170,7 @@ const originalBinData = ref<any>(null);
 // 标准bin文件数据（新增）
 const standardBinData = ref<Uint8Array | null>(null);
 const standardBinFilename = ref<string>("");
+const standardBinRoleId = ref<string>(""); // 记录哪个角色生成了标准bin
 const currentCombUser = ref<any>(null); // 保存扫码获取的用户信息
 const roleList = ref<
   Array<{
@@ -326,10 +326,12 @@ const addSelectedRole = async (roleInfo: any) => {
         // 保存到响应式变量，供UI使用
         standardBinData.value = standardBin;
         standardBinFilename.value = filename;
+        standardBinRoleId.value = String(roleInfo.roleId);
       } catch (err) {
         console.warn("生成标准Bin文件失败:", err);
         standardBinData.value = null;
         standardBinFilename.value = "";
+        standardBinRoleId.value = "";
       }
     }
 
@@ -870,6 +872,7 @@ const resetQRCode = () => {
   // 重置标准bin数据
   standardBinData.value = null;
   standardBinFilename.value = "";
+  standardBinRoleId.value = "";
   currentCombUser.value = null;
 };
 
