@@ -222,39 +222,53 @@ const generateBin = async () => {
       isRestore: tokenData.isRestore || 0,
     };
 
-    // 将用户数据转为JSON字符串，然后使用游戏加密算法加密
-    const userDataJson = JSON.stringify(userData);
-    const encryptedInfo = encryptGameData(userDataJson);
+    // 尝试使用游戏客户端的加密模块（如果可用）
+    let binData;
+    const o4e = (window as any).o4e;
+    const dm = o4e || (window as any).__require?.("13");
 
-    // 构建bin文件数据
-    const timestamp = Math.floor(Date.now() / 1000);
+    if (dm?.encMsg && dm?.lz4XorEncode) {
+      // 使用游戏客户端的加密模块（推荐）
+      console.log("使用游戏客户端加密模块");
+      const encryptedBuffer = dm.encMsg(
+        {
+          platform: "hortor",
+          platformExt: "mix",
+          info: userData,
+          serverId: null,
+          scene: 0,
+          referrerInfo: "",
+        },
+        { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode }
+      );
+      binData = new Uint8Array(encryptedBuffer);
+    } else {
+      // 回退到自定义加密算法
+      console.log("使用自定义加密算法");
+      const userDataJson = JSON.stringify(userData);
+      const encryptedInfo = encryptGameData(userDataJson);
 
-    // 构建JSON内容（与参考文件格式一致，包含sign）
-    // 注意：info字段使用Base64编码的加密数据
-    const jsonContent = {
-      info: btoa(encryptedInfo),
-      sign: MD5(encryptedInfo + timestamp).toString(enc.Hex),
-      timestamp: timestamp,
-    };
+      const timestamp = Math.floor(Date.now() / 1000);
+      const jsonContent = {
+        info: btoa(encryptedInfo),
+        sign: MD5(encryptedInfo + timestamp).toString(enc.Hex),
+        timestamp: timestamp,
+      };
 
-    const jsonStr = JSON.stringify(jsonContent);
-    const jsonBytes = new TextEncoder().encode(jsonStr);
+      const jsonStr = JSON.stringify(jsonContent);
+      const jsonBytes = new TextEncoder().encode(jsonStr);
+      const bonTail = buildBonTail(deviceUniqueId);
 
-    // 构建BON尾部
-    const bonTail = buildBonTail(deviceUniqueId);
+      const encryptedBytes = new Uint8Array(encryptedInfo.length);
+      for (let i = 0; i < encryptedInfo.length; i++) {
+        encryptedBytes[i] = encryptedInfo.charCodeAt(i) & 0xFF;
+      }
 
-    // 将加密数据转为字节（作为文件前缀）
-    // 注意：这里使用字符串的charCodeAt获取原始字节
-    const encryptedBytes = new Uint8Array(encryptedInfo.length);
-    for (let i = 0; i < encryptedInfo.length; i++) {
-      encryptedBytes[i] = encryptedInfo.charCodeAt(i) & 0xFF;
+      binData = new Uint8Array(encryptedBytes.length + jsonBytes.length + bonTail.length);
+      binData.set(encryptedBytes, 0);
+      binData.set(jsonBytes, encryptedBytes.length);
+      binData.set(bonTail, encryptedBytes.length + jsonBytes.length);
     }
-
-    // 合并数据: [加密数据二进制] + [JSON] + [BON尾部]
-    const binData = new Uint8Array(encryptedBytes.length + jsonBytes.length + bonTail.length);
-    binData.set(encryptedBytes, 0);
-    binData.set(jsonBytes, encryptedBytes.length);
-    binData.set(bonTail, encryptedBytes.length + jsonBytes.length);
 
     // 验证bin文件
     const validation = validateBinFile(binData);
