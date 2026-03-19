@@ -237,12 +237,12 @@ const handleDownloadStandardBin = () => {
 };
 
 /**
- * MD5哈希函数
+ * SHA-256哈希函数（浏览器不支持MD5，使用SHA-256代替）
  */
-const md5 = async (text: string) => {
+const sha256 = async (text: string) => {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest('MD5', data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
@@ -292,7 +292,8 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       // 步骤2：生成sign和timestamp（与参考文件格式一致）
       const timestamp = Math.floor(Date.now() / 1000);
       const signText = `${encryptCombUser}${timestamp}`;
-      const sign = await md5(signText);
+      // 使用SHA-256代替MD5（浏览器不支持MD5）
+      const sign = await sha256(signText);
 
       // 步骤3：构建info字符串（与抓包文件格式一致）
       // 注意：info是JSON字符串，不是对象，包含encryptCombUser、sign、timestamp
