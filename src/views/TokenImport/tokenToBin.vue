@@ -9,7 +9,7 @@
         <br />
         支持两种格式：
         <n-ul>
-          <n-li>标准格式：包含 encryptCombUser（与抓包文件格式一致）</n-li>
+          <n-li>标准格式：包含 info（与抓包文件格式一致）</n-li>
           <n-li>完整格式：包含 info + sign + timestamp</n-li>
         </n-ul>
       </n-alert>
@@ -267,7 +267,7 @@ const handleGenerateBin = async () => {
       mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        encryptCombUser: encryptCombUser,
+        info: encryptCombUser,
         serverId: formData.serverId,
         scene: 0,
         referrerInfo: "",

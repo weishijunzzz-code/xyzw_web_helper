@@ -1378,17 +1378,17 @@
             </div>
           </div>
 
-          <!-- 赠送数量 -->
+          <!-- 目标赠送数量 -->
           <div class="setting-item">
-            <label class="setting-label">赠送数量</label>
+            <label class="setting-label">目标赠送数量</label>
             <n-input-number
-              v-model:value="giftQuantity"
+              v-model:value="giftTargetQuantity"
               :min="1"
-              :max="9999"
+              :max="999999"
               :step="1"
-              placeholder="请输入赠送数量（最大9999）"
+              placeholder="请输入目标赠送数量"
             />
-            <div class="setting-hint">单次最多赠送9999个</div>
+            <div class="setting-hint">系统会自动分批赠送（每批最多9999个）</div>
           </div>
         </div>
 
@@ -2906,6 +2906,7 @@ const recipientIdError = ref("");
 const recipientInfo = ref(null);
 const isQueryingRecipient = ref(false);
 const giftQuantity = ref(10);
+const giftTargetQuantity = ref(10000); // 目标赠送数量，默认10000
 const securityPassword = ref(""); // 安全密码
 // 头像加载状态
 const isAvatarLoading = ref(false);
@@ -4210,8 +4211,13 @@ const confirmLegacyGift = async () => {
     return;
   }
 
-  // 调用增强版批量赠送功能
-  await batchLegacyGiftSendEnhanced();
+  if (!giftTargetQuantity.value || giftTargetQuantity.value <= 0) {
+    message.error("请输入有效的目标赠送数量");
+    return;
+  }
+
+  // 调用增强版批量赠送功能，传入目标赠送数量
+  await batchLegacyGiftSendEnhanced(false, giftTargetQuantity.value);
 
   // 关闭模态框
   showLegacyGiftModal.value = false;
@@ -5061,6 +5067,7 @@ const createTaskDeps = () => ({
   recipientInfo,
   securityPassword,
   giftQuantity,
+  giftTargetQuantity,
   // 竞技场相关辅助函数
   pickArenaTargetId,
   getTodayStartSec,

@@ -290,11 +290,11 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       const encryptCombUser = btoa(String.fromCharCode(...encryptedInfo));
 
       // 步骤2：构建主对象（与抓包文件格式一致）
-      // 注意：抓包文件使用encryptCombUser而不是info，不包含sign和timestamp
+      // 注意：使用 'info' 字段名，与参考文件格式一致
       const mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        encryptCombUser: encryptCombUser,
+        info: encryptCombUser,
         serverId: serverNum,
         scene: 0,
         referrerInfo: "",

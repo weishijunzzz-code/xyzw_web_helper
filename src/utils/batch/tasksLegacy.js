@@ -94,9 +94,32 @@ export function createTasksLegacy(deps) {
   };
 
   /**
-   * 增强版批量赠送功法残卷（含完善的验证和错误处理）
+   * 计算分批赠送的数量列表
+   * @param {number} targetQuantity - 目标赠送数量
+   * @param {number} actualCount - 实际拥有的数量
+   * @returns {number[]} - 每批赠送的数量列表
    */
-  const batchLegacyGiftSendEnhanced = async (isScheduledTask = false) => {
+  const calculateGiftBatches = (targetQuantity, actualCount) => {
+    const batches = [];
+    let remaining = Math.min(targetQuantity, actualCount); // 不能超过实际拥有的数量
+
+    while (remaining > 0) {
+      // 如果剩余数量大于1万，则每批最多9999
+      // 否则一次性送完剩余数量
+      const batchSize = remaining > 10000 ? 9999 : remaining;
+      batches.push(batchSize);
+      remaining -= batchSize;
+    }
+
+    return batches;
+  };
+
+  /**
+   * 增强版批量赠送功法残卷（含完善的验证和错误处理）
+   * @param {boolean} isScheduledTask - 是否为定时任务
+   * @param {number|null} targetQuantity - 目标赠送数量（null则使用giftQuantity.value）
+   */
+  const batchLegacyGiftSendEnhanced = async (isScheduledTask = false, targetQuantity = null) => {
     if (selectedTokens.value.length === 0) {
       message.warning("请先选择要操作的角色");
       return;
@@ -109,10 +132,14 @@ export function createTasksLegacy(deps) {
       ? batchSettings.password
       : securityPassword.value;
 
+    // 使用传入的目标数量或默认的giftQuantity
+    const targetGiftQuantity = targetQuantity !== null ? targetQuantity : (giftQuantity.value || 0);
+
     const giftConfig = {
       recipientId: Number(recipientId),
       itemId: 37007,
-      quantity: Math.min(giftQuantity.value, 9999) || 0,
+      targetQuantity: targetGiftQuantity, // 目标赠送数量
+      quantity: Math.min(targetGiftQuantity, 9999) || 0, // 第一批赠送数量
       serverName: recipientInfo.value?.serverName || "",
       name: recipientInfo.value?.name || "",
     };
@@ -160,20 +187,30 @@ export function createTasksLegacy(deps) {
           const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
           // 获取实际拥有的功法残卷数量
           const actualCount = roleInfo?.role?.items?.[giftConfig.itemId]?.quantity || 0;
-          // 动态计算赠送上限：如果大于1万则为9999，否则为实际数量
-          const maxGiftLimit = actualCount > 10000 ? 9999 : actualCount;
-          const legacyFragmentCount = Math.min(actualCount, maxGiftLimit) || 0;
+
+          // 计算分批赠送列表
+          const giftBatches = calculateGiftBatches(giftConfig.targetQuantity, actualCount);
+          const totalBatches = giftBatches.length;
+          const totalGiftCount = giftBatches.reduce((sum, batch) => sum + batch, 0);
+
+          if (totalBatches === 0) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 功法残卷不足，当前拥有: 0 ===`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+            totalFailed++;
+            break;
+          }
+
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 计划赠送${totalGiftCount}个功法残卷，分${totalBatches}次完成（当前拥有: ${actualCount}个）===`,
+            type: "info",
+          });
+
           if (isScheduledTask) {
-            if (legacyFragmentCount === 0) {
-              addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `=== ${token.name} 功法残卷不足，当前拥有: 0 ===`,
-                type: "error",
-              });
-              tokenStatus.value[tokenId] = "failed";
-              totalFailed++;
-              break;
-            }
             const rankroleinfo = await tokenStore.sendMessageWithPromise(
               tokenId,
               "rank_getroleinfo",
@@ -197,18 +234,6 @@ export function createTasksLegacy(deps) {
               totalFailed++;
               break;
             }
-            giftConfig.quantity = legacyFragmentCount;
-          }
-
-          if (legacyFragmentCount < giftConfig.quantity) {
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `=== ${token.name} 功法残卷不足，当前拥有: ${legacyFragmentCount}，需要: ${giftConfig.quantity} ===`,
-              type: "error",
-            });
-            tokenStatus.value[tokenId] = "failed";
-            totalFailed++;
-            break;
           }
 
           addLog({
@@ -246,37 +271,90 @@ export function createTasksLegacy(deps) {
             type: "success",
           });
 
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} === 开始赠送功法残卷${giftConfig.quantity}个,目标:[${giftConfig.serverName}] ID:${giftConfig.recipientId} ${giftConfig.name} ===`,
-            type: "info",
-          });
+          // 分批赠送
+          let batchSuccessCount = 0;
+          let totalGiftedCount = 0;
 
-          const legacySendGiftResp = await tokenStore.sendMessageWithPromise(
-            tokenId,
-            "legacy_sendgift",
-            {
-              itemCnt: giftConfig.quantity,
-              legacyUIds: [],
-              targetId: giftConfig.recipientId,
-            },
-            5000,
-          );
+          for (let i = 0; i < giftBatches.length; i++) {
+            if (shouldStop.value) break;
 
-          if (!legacySendGiftResp) {
-            throw new Error("赠送请求无响应");
+            const batchQuantity = giftBatches[i];
+            const currentBatch = i + 1;
+
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} === 第${currentBatch}/${totalBatches}次赠送: ${batchQuantity}个,目标:[${giftConfig.serverName}] ID:${giftConfig.recipientId} ${giftConfig.name} ===`,
+              type: "info",
+            });
+
+            try {
+              const legacySendGiftResp = await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "legacy_sendgift",
+                {
+                  itemCnt: batchQuantity,
+                  legacyUIds: [],
+                  targetId: giftConfig.recipientId,
+                },
+                5000,
+              );
+
+              if (!legacySendGiftResp) {
+                throw new Error("赠送请求无响应");
+              }
+
+              batchSuccessCount++;
+              totalGiftedCount += batchQuantity;
+
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== ${token.name} 第${currentBatch}/${totalBatches}次赠送成功: ${batchQuantity}个 ===`,
+                type: "success",
+              });
+
+              // 刷新角色信息以获取最新数量
+              await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+
+              // 如果不是最后一批，等待一小段时间避免请求过快
+              if (i < giftBatches.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            } catch (batchError) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== ${token.name} 第${currentBatch}/${totalBatches}次赠送失败: ${batchError.message} ===`,
+                type: "error",
+              });
+              // 如果某一批失败，继续尝试下一批
+            }
           }
 
-          await tokenStore.sendMessage(tokenId, "role_getroleinfo");
-
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `=== ${token.name} 成功赠送功法残卷${giftConfig.quantity}个给[${giftConfig.serverName}] ID:${giftConfig.recipientId} ${giftConfig.name} ===`,
-            type: "success",
-          });
-
-          tokenStatus.value[tokenId] = "completed";
-          totalSuccess++;
+          // 记录最终结果
+          if (batchSuccessCount === totalBatches) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 成功完成所有赠送，共${totalBatches}次，总计${totalGiftedCount}个给[${giftConfig.serverName}] ID:${giftConfig.recipientId} ${giftConfig.name} ===`,
+              type: "success",
+            });
+            tokenStatus.value[tokenId] = "completed";
+            totalSuccess++;
+          } else if (batchSuccessCount > 0) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 部分赠送成功，成功${batchSuccessCount}/${totalBatches}次，总计${totalGiftedCount}个 ===`,
+              type: "warning",
+            });
+            tokenStatus.value[tokenId] = "completed";
+            totalSuccess++;
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 赠送全部失败 ===`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+            totalFailed++;
+          }
           break;
         } catch (error) {
           consecutiveErrors++;
