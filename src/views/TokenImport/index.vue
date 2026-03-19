@@ -40,10 +40,9 @@
               <n-radio-button value="manual"> 手动输入 </n-radio-button>
               <n-radio-button value="url"> URL获取 </n-radio-button>
               <n-radio-button value="wxQrcode"> 微信扫码获取 </n-radio-button>
-              <n-radio-button value="wechatTokenToBin"> 微信Token转Bin </n-radio-button>
+              <n-radio-button value="tokenToBin"> Token转Bin </n-radio-button>
               <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
               <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
-              <n-radio-button value="gameLogin"> 游戏账号登录 </n-radio-button>
             </n-radio-group>
           </div>
         </div>
@@ -63,10 +62,10 @@
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'wxQrcode'"
           />
-          <wechat-token-to-bin-form
+          <token-to-bin-form
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
-            v-if="importMethod === 'wechatTokenToBin'"
+            v-if="importMethod === 'tokenToBin'"
           />
           <bin-token-form
             @cancel="() => (showImportForm = false)"
@@ -77,11 +76,6 @@
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'singlebin'"
-          />
-          <GameLoginForm
-            @cancel="() => (showImportForm = false)"
-            @ok="() => (showImportForm = false)"
-            v-if="importMethod === 'gameLogin'"
           />
         </div>
       </a-modal>
@@ -621,8 +615,7 @@ import UrlTokenForm from "./url.vue";
 import BinTokenForm from "./bin.vue";
 import singleBinTokenForm from "./singlebin.vue";
 import WxQrcodeForm from "./wxqrcode.vue";
-import WechatTokenToBinForm from "./wechatTokenToBin.vue";
-import GameLoginForm from "./gameLogin.vue";
+import TokenToBinForm from "./tokenToBin.vue";
 
 import { useTokenStore, selectedTokenId } from "@/stores/tokenStore";
 import {

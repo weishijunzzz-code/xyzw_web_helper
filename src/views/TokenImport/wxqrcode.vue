@@ -248,8 +248,8 @@ const md5 = async (text: string) => {
 };
 
 /**
- * 为指定角色下载标准bin文件（适配参考文件格式）
- * 参考文件格式：加密info + sign + timestamp + BON尾部
+ * 为指定角色下载标准bin文件（适配抓包文件格式）
+ * 抓包文件格式：BON编码 {platform, platformExt, encryptCombUser, serverId, scene, referrerInfo, deviceUniqueId}
  */
 const handleDownloadStandardBinForRole = async (roleInfo: any) => {
   // 如果当前没有标准bin数据，或者不是当前角色的，需要重新生成
@@ -266,18 +266,17 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       let sid = Number(roleInfo.serverId);
       const serverNum = sid - 27;
 
-      // 构建用户数据结构
+      // 构建用户数据结构（与抓包文件格式一致）
       const userData = {
         ...currentCombUser.value,
         uid: roleInfo.roleId,
         name: roleInfo.name,
       };
 
-      // 参考文件格式：
-      // 1. 加密用户数据生成info字段（base64编码）
-      // 2. 生成sign（MD5校验）
-      // 3. 添加timestamp
-      // 4. BON编码整个对象
+      // 抓包文件格式：
+      // 1. 加密用户数据生成encryptCombUser字段（base64编码的加密数据）
+      // 2. BON编码整个对象
+      // 3. 使用LX加密（LZ4+XOR）
 
       // 步骤1：加密用户数据
       const userDataJson = JSON.stringify(userData);
@@ -288,27 +287,21 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       const encryptedInfo = enc.encrypt(userDataBytes);
 
       // 将加密后的数据转为base64
-      const infoBase64 = btoa(String.fromCharCode(...encryptedInfo));
+      const encryptCombUser = btoa(String.fromCharCode(...encryptedInfo));
 
-      // 步骤2：生成sign（MD5校验）
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signText = `${infoBase64}${timestamp}`;
-      const sign = await md5(signText);
-
-      // 步骤3：构建主对象（与参考文件格式一致）
+      // 步骤2：构建主对象（与抓包文件格式一致）
+      // 注意：抓包文件使用encryptCombUser而不是info，不包含sign和timestamp
       const mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        info: infoBase64,
-        sign: sign,
-        timestamp: timestamp,
+        encryptCombUser: encryptCombUser,
         serverId: serverNum,
         scene: 0,
         referrerInfo: "",
         deviceUniqueId: deviceUniqueId,
       };
 
-      // 步骤4：使用 g_utils.encode 生成bin（先BON编码再加密，与参考文件格式一致）
+      // 步骤3：使用 g_utils.encode 生成bin（先BON编码再LX加密，与抓包文件格式一致）
       const binBuffer = g_utils.encode(mainObj, 'x');
       const standardBin = new Uint8Array(binBuffer);
       const filename = `bin-${serverNum}-0-${roleInfo.roleId}-${roleInfo.name}.bin`;
