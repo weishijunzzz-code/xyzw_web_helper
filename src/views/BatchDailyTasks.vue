@@ -1384,10 +1384,11 @@
             <n-input-number
               v-model:value="giftQuantity"
               :min="1"
-              :max="1000"
+              :max="9999"
               :step="1"
-              placeholder="请输入赠送数量"
+              placeholder="请输入赠送数量（最大9999）"
             />
+            <div class="setting-hint">单次最多赠送9999个</div>
           </div>
         </div>
 

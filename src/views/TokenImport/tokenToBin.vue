@@ -293,7 +293,8 @@ const handleGenerateBin = async () => {
     }
 
     // 使用g_utils.encode生成bin文件
-    const binBuffer = g_utils.encode(mainObj, 'x');
+    // 注意：使用 'lx' 而不是 'x'，因为抓包文件使用 LX加密 (LZ4+XOR)，输出以 'pl' 开头
+    const binBuffer = g_utils.encode(mainObj, 'lx');
     const binData = new Uint8Array(binBuffer);
 
     // 生成文件名

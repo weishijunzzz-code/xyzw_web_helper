@@ -302,7 +302,8 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       };
 
       // 步骤3：使用 g_utils.encode 生成bin（先BON编码再LX加密，与抓包文件格式一致）
-      const binBuffer = g_utils.encode(mainObj, 'x');
+      // 注意：使用 'lx' 而不是 'x'，因为抓包文件使用 LX加密 (LZ4+XOR)，输出以 'pl' 开头
+      const binBuffer = g_utils.encode(mainObj, 'lx');
       const standardBin = new Uint8Array(binBuffer);
       const filename = `bin-${serverNum}-0-${roleInfo.roleId}-${roleInfo.name}.bin`;
 

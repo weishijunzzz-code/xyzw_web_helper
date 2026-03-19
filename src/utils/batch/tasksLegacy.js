@@ -158,11 +158,11 @@ export function createTasksLegacy(deps) {
           await ensureConnection(tokenId);
 
           const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
-          const legacyFragmentCount =
-            Math.min(
-              roleInfo?.role?.items?.[giftConfig.itemId]?.quantity,
-              9999,
-            ) || 0;
+          // 获取实际拥有的功法残卷数量
+          const actualCount = roleInfo?.role?.items?.[giftConfig.itemId]?.quantity || 0;
+          // 动态计算赠送上限：如果大于1万则为9999，否则为实际数量
+          const maxGiftLimit = actualCount > 10000 ? 9999 : actualCount;
+          const legacyFragmentCount = Math.min(actualCount, maxGiftLimit) || 0;
           if (isScheduledTask) {
             if (legacyFragmentCount === 0) {
               addLog({
