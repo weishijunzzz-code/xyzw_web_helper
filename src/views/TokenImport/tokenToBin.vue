@@ -260,10 +260,18 @@ const handleGenerateBin = async () => {
     const encryptedInfo = enc.encrypt(userDataBytes);
     const encryptCombUser = btoa(String.fromCharCode(...encryptedInfo));
 
-    // 构建info对象（与抓包文件格式一致）
-    const infoObj = {
-      encryptCombUser: encryptCombUser
-    };
+    // 生成sign和timestamp（与参考文件格式一致）
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signText = `${encryptCombUser}${timestamp}`;
+    const sign = await md5(signText);
+
+    // 构建info字符串（与抓包文件格式一致）
+    // 注意：info是JSON字符串，包含encryptCombUser、sign、timestamp
+    const infoStr = JSON.stringify({
+      encryptCombUser: encryptCombUser,
+      sign: sign,
+      timestamp: timestamp
+    });
 
     let mainObj: any;
 
@@ -272,24 +280,18 @@ const handleGenerateBin = async () => {
       mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        info: infoObj,
+        info: infoStr,
         serverId: formData.serverId,
         scene: 0,
         referrerInfo: "",
         deviceUniqueId: deviceUniqueId,
       };
     } else {
-      // 完整格式（含sign和timestamp）
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signText = `${encryptCombUser}${timestamp}`;
-      const sign = await md5(signText);
-
+      // 完整格式（含sign和timestamp，且info为对象）
       mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        info: infoObj,
-        sign: sign,
-        timestamp: timestamp,
+        info: infoStr,
         serverId: formData.serverId,
         scene: 0,
         referrerInfo: "",

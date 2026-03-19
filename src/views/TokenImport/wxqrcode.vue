@@ -289,16 +289,23 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       // 将加密后的数据转为base64
       const encryptCombUser = btoa(String.fromCharCode(...encryptedInfo));
 
-      // 步骤2：构建主对象（与抓包文件格式一致）
-      // 注意：info字段是一个JSON对象，包含encryptCombUser字段
-      const infoObj = {
-        encryptCombUser: encryptCombUser
-      };
+      // 步骤2：生成sign和timestamp（与参考文件格式一致）
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signText = `${encryptCombUser}${timestamp}`;
+      const sign = await md5(signText);
+
+      // 步骤3：构建info字符串（与抓包文件格式一致）
+      // 注意：info是JSON字符串，不是对象，包含encryptCombUser、sign、timestamp
+      const infoStr = JSON.stringify({
+        encryptCombUser: encryptCombUser,
+        sign: sign,
+        timestamp: timestamp
+      });
 
       const mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        info: infoObj,
+        info: infoStr,
         serverId: serverNum,
         scene: 0,
         referrerInfo: "",
