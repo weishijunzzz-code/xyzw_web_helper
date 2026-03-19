@@ -1,7 +1,7 @@
 <template>
   <div class="game-login-import">
     <n-alert type="info" class="mb-4">
-      直接粘贴微信扫码生成的JSON数据，快速登录并生成bin文件
+      直接粘贴微信扫码生成的JSON数据，快速登录并生成bin文件（参考文件格式）
     </n-alert>
 
     <n-form :model="formData" label-placement="left" label-width="120px">
@@ -35,19 +35,6 @@
             placeholder="可选，默认使用角色ID"
         />
       </n-form-item>
-
-      <n-form-item label="使用PKCS12加密">
-        <n-switch v-model:value="formData.usePkcs12" />
-      </n-form-item>
-
-      <n-form-item v-if="formData.usePkcs12" label="加密密码">
-        <n-input
-            v-model:value="formData.pkcs12Password"
-            type="password"
-            placeholder="可选，默认使用内置密码"
-            show-password-on="mousedown"
-        />
-      </n-form-item>
     </n-form>
 
     <!-- 操作按钮 -->
@@ -79,12 +66,31 @@
         <n-descriptions :column="1" bordered class="mt-4">
           <n-descriptions-item label="文件名">{{ generateResult.filename }}</n-descriptions-item>
           <n-descriptions-item label="文件大小">{{ generateResult.binData?.length }} 字节</n-descriptions-item>
+          <n-descriptions-item label="格式类型">
+            <n-tag type="success">参考文件格式 (BON+JSON+BON)</n-tag>
+          </n-descriptions-item>
           <n-descriptions-item label="验证结果">
             <n-tag :type="generateResult.validation?.valid ? 'success' : 'error'">
               {{ generateResult.validation?.valid ? '格式正确' : '格式异常' }}
             </n-tag>
           </n-descriptions-item>
         </n-descriptions>
+
+        <!-- 解析详情 -->
+        <n-card v-if="generateResult.parsedData" title="解析详情" size="small" class="mt-4">
+          <n-descriptions :column="2" size="small">
+            <n-descriptions-item label="平台">{{ generateResult.parsedData.platform }}</n-descriptions-item>
+            <n-descriptions-item label="平台扩展">{{ generateResult.parsedData.platformExt }}</n-descriptions-item>
+            <n-descriptions-item label="时间戳">{{ generateResult.parsedData.timestamp }}</n-descriptions-item>
+            <n-descriptions-item label="设备ID">{{ generateResult.parsedData.deviceUniqueId }}</n-descriptions-item>
+            <n-descriptions-item label="用户ID" v-if="generateResult.parsedData.userData">
+              {{ generateResult.parsedData.userData.uid }}
+            </n-descriptions-item>
+            <n-descriptions-item label="用户名" v-if="generateResult.parsedData.userData">
+              {{ generateResult.parsedData.userData.name }}
+            </n-descriptions-item>
+          </n-descriptions>
+        </n-card>
 
         <n-space class="mt-4">
           <n-button type="info" @click="downloadBinFile">
@@ -99,6 +105,13 @@
               <n-icon><Add /></n-icon>
             </template>
             导入到系统
+          </n-button>
+
+          <n-button type="warning" @click="testParseBin">
+            <template #icon>
+              <n-icon><Refresh /></n-icon>
+            </template>
+            测试解析
           </n-button>
         </n-space>
       </template>
@@ -127,9 +140,10 @@
       <n-alert type="warning" class="mt-4">
         <strong>注意事项：</strong>
         <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>生成的bin文件使用参考文件格式（BON+JSON+BON混合格式）</li>
+          <li>文件包含加密前缀、JSON数据、BON尾部三部分</li>
+          <li>生成的文件可以被正确解析和验证</li>
           <li>JSON数据包含敏感信息，请勿分享给他人</li>
-          <li>生成的bin文件有效期通常为24小时</li>
-          <li>如果生成失败，请检查JSON格式是否正确</li>
         </ul>
       </n-alert>
     </n-card>
@@ -138,11 +152,10 @@
 
 <script setup>
 import { reactive, ref, computed, watch } from 'vue';
-import { Download, Add } from '@vicons/ionicons5';
+import { Download, Add, Refresh } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
-import { validateBinFile } from '@/utils/gameAuth';
 import { useTokenStore } from '@/stores/tokenStore';
-import { g_utils, bon } from '@/utils/bonProtocol';
+import { generateRefBin, parseRefBin, validateRefBin } from '@/utils/refBinFormat';
 
 const message = useMessage();
 const tokenStore = useTokenStore();
@@ -150,8 +163,6 @@ const tokenStore = useTokenStore();
 const formData = reactive({
   jsonInput: '',
   name: '',
-  usePkcs12: false,
-  pkcs12Password: '',
 });
 
 const isGenerating = ref(false);
@@ -190,16 +201,7 @@ const isFormValid = computed(() => {
   }
 });
 
-// MD5哈希函数
-const md5 = async (text) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest('MD5', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-// 生成Bin文件（适配参考文件格式）
+// 生成Bin文件（参考文件格式）
 const generateBin = async () => {
   if (!isFormValid.value) {
     message.error('请粘贴有效的Token JSON数据');
@@ -213,10 +215,7 @@ const generateBin = async () => {
     // 解析JSON
     const tokenData = JSON.parse(formData.jsonInput);
 
-    // 生成设备唯一ID
-    const deviceUniqueId = `DID-${crypto.randomUUID()}`;
-
-    // 构建用户数据结构（与游戏客户端发送的格式一致）
+    // 构建用户数据
     const userData = {
       uid: tokenData.roleId,
       name: formData.name || `角色_${tokenData.roleId}`,
@@ -229,46 +228,19 @@ const generateBin = async () => {
       isRestore: tokenData.isRestore || 0,
     };
 
-    // 参考文件格式：
-    // 1. 加密前缀（包含platform, platformExt, info等）
-    // 2. JSON部分包含 sign 和 timestamp
-    // 3. BON尾部
+    // 使用参考文件格式生成bin
+    const binData = await generateRefBin(userData);
 
-    // 步骤1：加密用户数据生成info字段
-    const userDataJson = JSON.stringify(userData);
-    const userDataBytes = new TextEncoder().encode(userDataJson);
+    // 验证生成的bin文件
+    const validation = validateRefBin(binData);
 
-    // 使用g_utils的加密器加密用户数据
-    const enc = g_utils.getEnc('x');
-    const encryptedInfo = enc.encrypt(userDataBytes);
-
-    // 将加密后的数据转为base64
-    const infoBase64 = btoa(String.fromCharCode(...encryptedInfo));
-
-    // 步骤2：生成sign（MD5校验）
-    const timestamp = Math.floor(Date.now() / 1000);
-    const signText = `${infoBase64}${timestamp}`;
-    const sign = await md5(signText);
-
-    // 步骤3：构建主对象
-    const mainObj = {
-      platform: "hortor",
-      platformExt: "mix",
-      info: infoBase64,
-      sign: sign,
-      timestamp: timestamp,
-      serverId: null,
-      scene: 0,
-      referrerInfo: "",
-      deviceUniqueId: deviceUniqueId,
-    };
-
-    // 步骤4：使用 g_utils.encode 生成bin（先BON编码再加密，与参考文件格式一致）
-    const binBuffer = g_utils.encode(mainObj, 'x');
-    const binData = new Uint8Array(binBuffer);
-
-    // 验证bin文件
-    const validation = validateBinFile(binData);
+    // 解析生成的bin文件以显示详情
+    let parsedBinData = null;
+    try {
+      parsedBinData = parseRefBin(binData);
+    } catch (e) {
+      console.warn('解析生成的bin文件失败:', e);
+    }
 
     // 生成文件名
     const roleId = tokenData.roleId || 'unknown';
@@ -277,10 +249,11 @@ const generateBin = async () => {
 
     generateResult.value = {
       success: true,
-      message: 'Bin文件生成成功！',
+      message: 'Bin文件生成成功！（参考文件格式）',
       binData,
       filename,
       validation,
+      parsedData: parsedBinData,
       tokenData,
     };
 
@@ -298,32 +271,25 @@ const generateBin = async () => {
   }
 };
 
-// 构建BON尾部
-const buildBonTail = (deviceUniqueId) => {
-  const writer = [];
+// 测试解析生成的bin文件
+const testParseBin = () => {
+  if (!generateResult.value?.binData) {
+    message.error('没有可解析的bin文件');
+    return;
+  }
 
-  // serverId（NULL值）
-  writer.push(0x05, 0x08);
-  writer.push(...new TextEncoder().encode('serverId'));
-  writer.push(0x00);
+  try {
+    const parsed = parseRefBin(generateResult.value.binData);
+    console.log('解析结果:', parsed);
 
-  // scene（int32，值为0）
-  writer.push(0x05, 0x05);
-  writer.push(...new TextEncoder().encode('scene'));
-  writer.push(0x01, 0x00, 0x00, 0x00, 0x00);
+    message.success('Bin文件解析成功！');
 
-  // referrerInfo（空字符串）
-  writer.push(0x05, 0x0c);
-  writer.push(...new TextEncoder().encode('referrerInfo'));
-  writer.push(0x05, 0x00);
-
-  // deviceUniqueId（字符串）
-  writer.push(0x05, 0x0e);
-  writer.push(...new TextEncoder().encode('deviceUniqueId'));
-  writer.push(0x05, deviceUniqueId.length);
-  writer.push(...new TextEncoder().encode(deviceUniqueId));
-
-  return new Uint8Array(writer);
+    // 显示解析详情
+    generateResult.value.parsedData = parsed;
+  } catch (error) {
+    console.error('解析失败:', error);
+    message.error(`解析失败: ${error.message}`);
+  }
 };
 
 // 下载bin文件
@@ -385,8 +351,6 @@ const importToSystem = async () => {
 const resetForm = () => {
   formData.jsonInput = '';
   formData.name = '';
-  formData.usePkcs12 = false;
-  formData.pkcs12Password = '';
   generateResult.value = null;
   parsedData.value = null;
 };
