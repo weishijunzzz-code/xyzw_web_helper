@@ -260,6 +260,11 @@ const handleGenerateBin = async () => {
     const encryptedInfo = enc.encrypt(userDataBytes);
     const encryptCombUser = btoa(String.fromCharCode(...encryptedInfo));
 
+    // 构建info对象（与抓包文件格式一致）
+    const infoObj = {
+      encryptCombUser: encryptCombUser
+    };
+
     let mainObj: any;
 
     if (formData.binFormat === 'standard') {
@@ -267,7 +272,7 @@ const handleGenerateBin = async () => {
       mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        info: encryptCombUser,
+        info: infoObj,
         serverId: formData.serverId,
         scene: 0,
         referrerInfo: "",
@@ -282,7 +287,7 @@ const handleGenerateBin = async () => {
       mainObj = {
         platform: "hortor",
         platformExt: "mix",
-        info: encryptCombUser,
+        info: infoObj,
         sign: sign,
         timestamp: timestamp,
         serverId: formData.serverId,
