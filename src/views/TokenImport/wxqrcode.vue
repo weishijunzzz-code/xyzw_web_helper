@@ -266,11 +266,17 @@ const handleDownloadStandardBinForRole = async (roleInfo: any) => {
       let sid = Number(roleInfo.serverId);
       const serverNum = sid - 27;
 
+      // 从roleList中获取该角色的token
+      const roleFromList = roleList.value.find(r => r.roleId === String(roleInfo.roleId));
+      const roleToken = roleFromList?.token || '';
+
       // 构建用户数据结构（与抓包文件格式一致）
+      // 必须包含roleToken，否则bin文件无法正常使用
       const userData = {
         ...currentCombUser.value,
         uid: roleInfo.roleId,
         name: roleInfo.name,
+        token: roleToken,
       };
 
       // 抓包文件格式：
