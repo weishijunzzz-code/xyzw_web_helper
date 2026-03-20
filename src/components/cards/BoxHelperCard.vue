@@ -62,7 +62,7 @@
           </div>
           <div class="strategy-info">
             <span class="label">策略：</span>
-            <span class="value">优先木质(不足200用青铜)</span>
+            <span class="value">木质→青铜→黄金→铂金（按层级递进）</span>
           </div>
           <div class="progress-info" v-if="state.isRunning">
             <n-progress
@@ -229,32 +229,37 @@ const calculateBoxesToOpen = (neededPoints) => {
 
   const wooden = roleInfo.value?.role?.items?.[2001]?.quantity || 0;
   const bronze = roleInfo.value?.role?.items?.[2002]?.quantity || 0;
-
-  if (wooden + bronze === 0) {
-    return [];
-  }
+  const gold = roleInfo.value?.role?.items?.[2003]?.quantity || 0;
+  const platinum = roleInfo.value?.role?.items?.[2004]?.quantity || 0;
 
   const boxes = [];
+  let remaining = neededPoints;
 
   if (wooden >= 200) {
-    const woodenCount = Math.min(wooden, Math.ceil(neededPoints / 1));
-    boxes.push({ itemId: 2001, name: "木质宝箱", count: woodenCount, points: 1 });
-  } else if (wooden > 0) {
-    const woodenPoints = wooden * 1;
-    const remainingNeeded = neededPoints - woodenPoints;
-
-    boxes.push({ itemId: 2001, name: "木质宝箱", count: wooden, points: 1 });
-
-    if (remainingNeeded > 0 && bronze > 0) {
-      const bronzeCount = Math.min(bronze, Math.ceil(remainingNeeded / 10));
-      boxes.push({ itemId: 2002, name: "青铜宝箱", count: bronzeCount, points: 10 });
-    }
-  } else if (bronze > 0) {
-    const bronzeCount = Math.min(bronze, Math.ceil(neededPoints / 10));
-    boxes.push({ itemId: 2002, name: "青铜宝箱", count: bronzeCount, points: 10 });
+    const count = Math.min(200, Math.min(wooden, remaining));
+    boxes.push({ itemId: 2001, name: "木质宝箱", count, points: 1 });
+    remaining -= count * 1;
   }
 
-  return boxes;
+  if (remaining > 0 && bronze > 0) {
+    const count = Math.min(bronze, Math.ceil(remaining / 10));
+    boxes.push({ itemId: 2002, name: "青铜宝箱", count, points: 10 });
+    remaining -= count * 10;
+  }
+
+  if (remaining > 0 && gold > 0) {
+    const count = Math.min(gold, Math.ceil(remaining / 20));
+    boxes.push({ itemId: 2003, name: "黄金宝箱", count, points: 20 });
+    remaining -= count * 20;
+  }
+
+  if (remaining > 0 && platinum > 0) {
+    const count = Math.min(platinum, Math.ceil(remaining / 50));
+    boxes.push({ itemId: 2004, name: "铂金宝箱", count, points: 50 });
+    remaining -= count * 50;
+  }
+
+  return boxes.filter(box => box.count > 0);
 };
 
 const stopAutoOpen = () => {
@@ -297,12 +302,26 @@ const startAutoOpen = async () => {
         if (!state.isRunning) break;
         if (box.count <= 0) continue;
 
+        const shouldUseBox = () => {
+          const currentWooden = roleInfo.value?.role?.items?.[2001]?.quantity || 0;
+          const currentBronze = roleInfo.value?.role?.items?.[2002]?.quantity || 0;
+          const currentGold = roleInfo.value?.role?.items?.[2003]?.quantity || 0;
+
+          if (box.itemId === 2001 && currentWooden < 200) return false;
+          if (box.itemId === 2002 && currentBronze < 10) return false;
+          if (box.itemId === 2003 && currentGold < 10) return false;
+          return true;
+        };
+
+        if (!shouldUseBox()) break;
+
         const batches = Math.floor(box.count / 10);
         const remainder = box.count % 10;
 
         for (let i = 0; i < batches; i++) {
           if (!state.isRunning) break;
           if (remainingPoints.value <= 0) break;
+          if (!shouldUseBox()) break;
           
           await tokenStore.sendMessageWithPromise(tokenId, "item_openbox", {
             itemId: box.itemId,
@@ -313,7 +332,7 @@ const startAutoOpen = async () => {
           state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remainingPoints.value})`;
         }
 
-        if (remainder > 0 && state.isRunning && remainingPoints.value > 0) {
+        if (remainder > 0 && state.isRunning && remainingPoints.value > 0 && shouldUseBox()) {
           await tokenStore.sendMessageWithPromise(tokenId, "item_openbox", {
             itemId: box.itemId,
             number: remainder,
@@ -331,15 +350,6 @@ const startAutoOpen = async () => {
       await tokenStore.sendMessage(tokenId, "role_getroleinfo");
 
       if (state.earnedPoints >= targetPoints.value) {
-        break;
-      }
-
-      const remainingBoxes = 
-        (roleInfo.value?.role?.items?.[2001]?.quantity || 0) +
-        (roleInfo.value?.role?.items?.[2002]?.quantity || 0);
-      
-      if (remainingBoxes === 0) {
-        message.warning("宝箱已用完");
         break;
       }
 
