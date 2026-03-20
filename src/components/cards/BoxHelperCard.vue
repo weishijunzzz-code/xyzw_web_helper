@@ -11,7 +11,7 @@
     </template>
     <template #default>
       <div class="total-points">
-        <span class="label">宝箱总积分：</span>
+        <span class="label">背包宝箱可获积分：</span>
         <span class="value">{{ totalPoints }}</span>
       </div>
       <div class="container">
@@ -50,13 +50,13 @@
               />
             </div>
             <div class="input-group">
-              <span class="label">当前积分：</span>
-              <span class="value">{{ totalPoints }}</span>
+              <span class="label">已获得积分：</span>
+              <span class="value earned">{{ state.earnedPoints }}</span>
             </div>
             <div class="input-group">
-              <span class="label">差值：</span>
-              <span class="value" :class="{ 'need-more': targetPoints > totalPoints }">
-                {{ targetPoints - totalPoints > 0 ? targetPoints - totalPoints : 0 }}
+              <span class="label">还需积分：</span>
+              <span class="value" :class="{ 'need-more': remainingPoints > 0 }">
+                {{ remainingPoints > 0 ? remainingPoints : 0 }}
               </span>
             </div>
           </div>
@@ -95,7 +95,7 @@
         <div class="auto-actions" v-else>
           <a-button
             type="primary"
-            :disabled="state.isRunning || !targetPoints || targetPoints <= totalPoints"
+            :disabled="state.isRunning || !targetPoints || remainingPoints <= 0"
             secondary
             size="small"
             block
@@ -111,8 +111,8 @@
           >
             停止
           </a-button>
-          <a-button type="primary" size="small" @click="batchclaimboxpointreward">
-            领取积分
+          <a-button type="primary" size="small" @click="resetEarnedPoints">
+            重置
           </a-button>
         </div>
       </div>
@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, watchEffect, reactive } from "vue";
+import { ref, computed, reactive } from "vue";
 import { useMessage } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
@@ -202,65 +202,46 @@ const targetPoints = ref(0);
 const state = reactive({
   isRunning: false,
   progressText: "",
-  currentPoints: 0,
+  earnedPoints: 0,
+});
+
+const remainingPoints = computed(() => {
+  return targetPoints.value - state.earnedPoints;
 });
 
 const progressPercentage = computed(() => {
   if (!targetPoints.value || targetPoints.value === 0) return 0;
-  const current = state.currentPoints || totalPoints.value;
-  return Math.min(100, Math.round((current / targetPoints.value) * 100));
+  return Math.min(100, Math.round((state.earnedPoints / targetPoints.value) * 100));
 });
 
-const getBoxStrategy = (neededPoints) => {
-  const boxes = [
-    { itemId: 2001, name: "木质宝箱", points: 1, threshold: 200 },
-    { itemId: 2002, name: "青铜宝箱", points: 10, threshold: 0 },
-  ];
-
-  const wooden = roleInfo.value?.role?.items?.[2001]?.quantity || 0;
-  const bronze = roleInfo.value?.role?.items?.[2002]?.quantity || 0;
-
-  let selectedBox = boxes[0];
-  let useCount = 0;
-
-  if (wooden >= boxes[0].threshold) {
-    selectedBox = boxes[0];
-    useCount = Math.min(wooden, Math.ceil(neededPoints / boxes[0].points));
-  } else {
-    if (bronze > 0) {
-      selectedBox = boxes[1];
-      useCount = Math.min(bronze, Math.ceil(neededPoints / boxes[1].points));
-    } else {
-      selectedBox = boxes[0];
-      useCount = wooden;
-    }
-  }
-
-  return { box: selectedBox, count: useCount };
+const resetEarnedPoints = () => {
+  state.earnedPoints = 0;
+  message.info("已重置已获得积分");
 };
 
-const calculateBoxesToOpen = (target) => {
-  const current = totalPoints.value;
-  const needed = target - current;
+const getBoxPoints = (itemId, count) => {
+  const pointsMap = { 2001: 1, 2002: 10, 2003: 20, 2004: 50 };
+  return (pointsMap[itemId] || 0) * count;
+};
 
-  if (needed <= 0) return [];
+const calculateBoxesToOpen = (neededPoints) => {
+  if (neededPoints <= 0) return [];
 
   const wooden = roleInfo.value?.role?.items?.[2001]?.quantity || 0;
   const bronze = roleInfo.value?.role?.items?.[2002]?.quantity || 0;
 
   if (wooden + bronze === 0) {
-    message.warning("没有足够的木质或青铜宝箱");
     return [];
   }
 
   const boxes = [];
 
   if (wooden >= 200) {
-    const woodenCount = Math.min(wooden, Math.ceil(needed / 1));
+    const woodenCount = Math.min(wooden, Math.ceil(neededPoints / 1));
     boxes.push({ itemId: 2001, name: "木质宝箱", count: woodenCount, points: 1 });
   } else if (wooden > 0) {
     const woodenPoints = wooden * 1;
-    const remainingNeeded = needed - woodenPoints;
+    const remainingNeeded = neededPoints - woodenPoints;
 
     boxes.push({ itemId: 2001, name: "木质宝箱", count: wooden, points: 1 });
 
@@ -269,7 +250,7 @@ const calculateBoxesToOpen = (target) => {
       boxes.push({ itemId: 2002, name: "青铜宝箱", count: bronzeCount, points: 10 });
     }
   } else if (bronze > 0) {
-    const bronzeCount = Math.min(bronze, Math.ceil(needed / 10));
+    const bronzeCount = Math.min(bronze, Math.ceil(neededPoints / 10));
     boxes.push({ itemId: 2002, name: "青铜宝箱", count: bronzeCount, points: 10 });
   }
 
@@ -288,22 +269,24 @@ const startAutoOpen = async () => {
     return;
   }
 
-  if (!targetPoints.value || targetPoints.value <= totalPoints.value) {
+  if (!targetPoints.value || targetPoints.value <= 0) {
     message.warning("请设置目标积分");
     return;
   }
 
   const tokenId = tokenStore.selectedToken.id;
   state.isRunning = true;
-  state.currentPoints = totalPoints.value;
+  state.earnedPoints = 0;
 
   message.info("开始自动开启宝箱...");
 
   try {
-    while (state.isRunning && state.currentPoints < targetPoints.value) {
-      state.progressText = `当前 ${state.currentPoints} / 目标 ${targetPoints.value}`;
+    while (state.isRunning && remainingPoints.value > 0) {
+      const remaining = remainingPoints.value;
       
-      const boxesToOpen = calculateBoxesToOpen(targetPoints.value);
+      state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remaining})`;
+      
+      const boxesToOpen = calculateBoxesToOpen(remaining);
 
       if (boxesToOpen.length === 0) {
         message.warning("没有足够的宝箱可开启");
@@ -319,17 +302,25 @@ const startAutoOpen = async () => {
 
         for (let i = 0; i < batches; i++) {
           if (!state.isRunning) break;
+          if (remainingPoints.value <= 0) break;
+          
           await tokenStore.sendMessageWithPromise(tokenId, "item_openbox", {
             itemId: box.itemId,
             number: 10,
           });
+          
+          state.earnedPoints += box.points * 10;
+          state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remainingPoints.value})`;
         }
 
-        if (remainder > 0 && state.isRunning) {
+        if (remainder > 0 && state.isRunning && remainingPoints.value > 0) {
           await tokenStore.sendMessageWithPromise(tokenId, "item_openbox", {
             itemId: box.itemId,
             number: remainder,
           });
+          
+          state.earnedPoints += box.points * remainder;
+          state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remainingPoints.value})`;
         }
 
         await new Promise((r) => setTimeout(r, 200));
@@ -339,9 +330,7 @@ const startAutoOpen = async () => {
       await new Promise((r) => setTimeout(r, 500));
       await tokenStore.sendMessage(tokenId, "role_getroleinfo");
 
-      state.currentPoints = totalPoints.value;
-
-      if (state.currentPoints >= targetPoints.value) {
+      if (state.earnedPoints >= targetPoints.value) {
         break;
       }
 
@@ -354,10 +343,14 @@ const startAutoOpen = async () => {
         break;
       }
 
+      if (remainingPoints.value <= 0) {
+        break;
+      }
+
       await new Promise((r) => setTimeout(r, 1000));
     }
 
-    if (state.currentPoints >= targetPoints.value) {
+    if (state.earnedPoints >= targetPoints.value) {
       message.success(`已达到目标积分 ${targetPoints.value}！`);
     }
   } catch (error) {
@@ -365,7 +358,7 @@ const startAutoOpen = async () => {
     message.error("开启出错: " + error.message);
   } finally {
     state.isRunning = false;
-    state.progressText = state.currentPoints >= targetPoints.value ? "已完成" : "已停止";
+    state.progressText = state.earnedPoints >= targetPoints.value ? "已完成" : "已停止";
   }
 };
 
@@ -379,7 +372,6 @@ const batchclaimboxpointreward = async () => {
   await new Promise((r) => setTimeout(r, 500));
   await tokenStore.sendMessage(tokenId, "role_getroleinfo");
   message.success("宝箱积分领取完毕");
-  state.currentPoints = totalPoints.value;
 };
 
 const handleBoxHelper = async () => {
@@ -394,14 +386,14 @@ const handleBoxHelper = async () => {
     const batches = Math.floor(number.value / 10);
     const remainder = number.value % 10;
     for (let i = 0; i < batches; i++) {
-      const result = await tokenStore.sendMessageWithPromise(
+      await tokenStore.sendMessageWithPromise(
         tokenId,
         "item_openbox",
         { itemId: type.value, number: 10 },
       );
     }
     if (remainder > 0) {
-      const result = await tokenStore.sendMessageWithPromise(
+      await tokenStore.sendMessageWithPromise(
         tokenId,
         "item_openbox",
         { itemId: type.value, number: remainder },
@@ -485,12 +477,16 @@ const handleBoxHelper = async () => {
       .label {
         color: var(--text-secondary);
         font-size: var(--font-size-sm);
-        min-width: 70px;
+        min-width: 80px;
       }
 
       .value {
         color: var(--text-primary);
         font-weight: var(--font-weight-semibold);
+
+        &.earned {
+          color: #18bc5c;
+        }
 
         &.need-more {
           color: #e6a23c;
