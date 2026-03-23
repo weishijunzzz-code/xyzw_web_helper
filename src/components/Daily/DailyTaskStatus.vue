@@ -42,16 +42,34 @@
 
     <!-- 卡片内容区域（自适应填充高度，居中展示） -->
     <div class="card-content">
-      <!-- 进度条 -->
-      <div class="progress-container">
-        <n-progress
-          type="line"
-          :percentage="dailyPoint"
-          :height="8"
-          :border-radius="4"
-          :color="progressColor"
-          rail-color="#f3f4f6"
-        />
+      <!-- 进度环和进度条组合 -->
+      <div class="progress-wrapper">
+        <div class="progress-ring-container">
+          <ProgressRing 
+            :percentage="dailyPoint" 
+            :size="90" 
+            :strokeWidth="8"
+            :color="progressColor"
+            :textSize="18"
+          />
+          <div class="progress-text">
+            <span class="current">{{ dailyPoint }}</span>
+            <span class="separator">/</span>
+            <span class="total">100</span>
+          </div>
+        </div>
+        
+        <!-- 线性进度条作为辅助 -->
+        <div class="progress-bar-container">
+          <n-progress
+            type="line"
+            :percentage="dailyPoint"
+            :height="6"
+            :border-radius="3"
+            :color="progressColor"
+            rail-color="#f3f4f6"
+          />
+        </div>
       </div>
 
       <!-- 提示信息 -->
@@ -287,6 +305,7 @@ import {
 import { useTokenStore } from "@/stores/tokenStore";
 import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { useMessage } from "naive-ui";
+import ProgressRing from "@/components/Common/ProgressRing.vue";
 import {
   Settings,
   Calendar,
@@ -771,6 +790,51 @@ onBeforeUnmount(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+// 进度环样式
+.progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+}
+
+.progress-ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  position: relative;
+}
+
+.progress-text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--font-size-lg);
+  
+  .current {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    font-size: 24px;
+  }
+  
+  .separator {
+    color: var(--text-tertiary);
+    margin: 0 2px;
+  }
+  
+  .total {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+  }
+}
+
+.progress-bar-container {
+  width: 100%;
+  max-width: 200px;
 }
 
 // 模态框样式

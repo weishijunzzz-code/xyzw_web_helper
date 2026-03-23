@@ -3,50 +3,105 @@
     <!-- 主要内容 -->
     <main class="dashboard-main">
       <div class="main-container">
-        <!-- 欢迎区域 -->
-        <section class="welcome-section">
-          <div class="welcome-content">
-            <div class="welcome-text">
-              <h1>
-                欢迎回来，{{ tokenStore.selectedToken?.name || "游戏玩家" }}！
-              </h1>
-              <p>今天是 {{ currentDate }}，继续您的游戏管理之旅吧</p>
+        <!-- 骨架屏加载状态 -->
+        <template v-if="isLoading">
+          <section class="welcome-section">
+            <SkeletonCard :rows="2" :showHeader="false" />
+          </section>
+          <section class="quick-actions-section">
+            <h2 class="section-title">快速操作</h2>
+            <div class="actions-grid">
+              <SkeletonCard 
+                v-for="i in 4" 
+                :key="i" 
+                :rows="2" 
+                :showHeader="false"
+              />
             </div>
-            <div class="welcome-actions">
-              <n-button
-                type="primary"
-                size="large"
-                @click="router.push('/admin/game-features')"
-              >
-                进入游戏功能
-              </n-button>
-              <n-button size="large" @click="handleManageTokens">
-                管理Token
-              </n-button>
-            </div>
-          </div>
-        </section>
+          </section>
+        </template>
 
-        <!-- 快速操作 -->
-        <section class="quick-actions-section">
-          <h2 class="section-title">快速操作</h2>
-          <div class="actions-grid">
-            <div
-              v-for="action in quickActions"
-              :key="action.id"
-              class="action-card"
-              @click="handleQuickAction(action)"
-            >
-              <div class="action-icon">
-                <component :is="action.icon" />
+        <!-- 实际内容 -->
+        <template v-else>
+          <!-- 欢迎区域 -->
+          <section class="welcome-section">
+            <div class="welcome-content">
+              <div class="welcome-text">
+                <h1>
+                  欢迎回来，{{ tokenStore.selectedToken?.name || "游戏玩家" }}！
+                </h1>
+                <p>今天是 {{ currentDate }}，继续您的游戏管理之旅吧</p>
               </div>
-              <div class="action-content">
-                <h3>{{ action.title }}</h3>
-                <p>{{ action.description }}</p>
+              <div class="welcome-actions">
+                <n-button
+                  type="primary"
+                  size="large"
+                  @click="router.push('/admin/game-features')"
+                >
+                  进入游戏功能
+                </n-button>
+                <n-button size="large" @click="handleManageTokens">
+                  管理Token
+                </n-button>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+
+          <!-- 统计卡片区域 -->
+          <section class="stats-section" v-if="tokenStore.hasTokens">
+            <h2 class="section-title">数据概览</h2>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <PersonCircle />
+                </div>
+                <div class="stat-number">
+                  <AnimatedNumber :value="tokenCount" :duration="1000" />
+                </div>
+                <div class="stat-label">已添加Token</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <CheckmarkCircle />
+                </div>
+                <div class="stat-number">
+                  <AnimatedNumber :value="connectedCount" :duration="1000" />
+                </div>
+                <div class="stat-label">已连接</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <Time />
+                </div>
+                <div class="stat-number">
+                  <AnimatedNumber :value="todayTasks" :duration="1000" />
+                </div>
+                <div class="stat-label">今日任务</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 快速操作 -->
+          <section class="quick-actions-section">
+            <h2 class="section-title">快速操作</h2>
+            <div class="actions-grid">
+              <div
+                v-for="action in quickActions"
+                :key="action.id"
+                class="action-card"
+                @click="handleQuickAction(action)"
+              >
+                <div class="action-icon">
+                  <component :is="action.icon" />
+                </div>
+                <div class="action-content">
+                  <h3>{{ action.title }}</h3>
+                  <p>{{ action.description }}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </template>
       </div>
     </main>
   </div>
@@ -57,6 +112,8 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useMessage } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
+import SkeletonCard from "@/components/Common/SkeletonCard.vue";
+import AnimatedNumber from "@/components/Common/AnimatedNumber.vue";
 import {
   PersonCircle,
   Cube,
@@ -73,6 +130,7 @@ const message = useMessage();
 const tokenStore = useTokenStore();
 
 // 响应式数据
+const isLoading = ref(true);
 // const recentActivities = ref([]);
 
 // 计算属性
@@ -83,6 +141,22 @@ const currentDate = computed(() => {
     day: "numeric",
     weekday: "long",
   });
+});
+
+// 统计数据
+const tokenCount = computed(() => {
+  return Object.keys(tokenStore.gameTokens || {}).length;
+});
+
+const connectedCount = computed(() => {
+  return Object.keys(tokenStore.gameTokens || {}).filter(id => {
+    return tokenStore.getWebSocketStatus?.(id) === 'connected';
+  }).length;
+});
+
+const todayTasks = computed(() => {
+  // 这里可以根据实际需求计算今日任务数
+  return Math.floor(Math.random() * 10) + 5; // 示例数据
 });
 
 const quickActions = ref([
@@ -189,6 +263,11 @@ const formatTime = (timestamp) => {
 
 // 生命周期
 onMounted(async () => {
+  // 模拟加载延迟，展示骨架屏效果
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 800);
+
   // 确保有Token
   if (!tokenStore.hasTokens) {
     router.push("/tokens");

@@ -25,19 +25,16 @@
             class="target-input"
             size="medium"
           />
-          <n-button
-            type="primary"
+          <ButtonRipple
             :disabled="loading1 || !targetId"
             @click="getTargetInfo"
-            size="medium"
+            class="ripple-btn-primary"
           >
-            <template #icon>
-              <n-icon>
-                <Refresh />
-              </n-icon>
-            </template>
+            <n-icon style="margin-right: 6px;">
+              <Refresh />
+            </n-icon>
             查询对手
-          </n-button>
+          </ButtonRipple>
         </div>
 
         <div class="fight-options">
@@ -57,33 +54,27 @@
           </div>
 
           <div class="option-actions">
-            <n-button
-              type="success"
+            <ButtonRipple
               :disabled="loading1 || !targetId || !memberData"
               @click="fightPVPRefresh"
-              size="medium"
+              class="ripple-btn-success"
             >
-              <template #icon>
-                <n-icon>
-                  <Trophy />
-                </n-icon>
-              </template>
+              <n-icon style="margin-right: 6px;">
+                <Trophy />
+              </n-icon>
               开始切磋
-            </n-button>
+            </ButtonRipple>
 
-            <n-button
-              type="default"
+            <ButtonRipple
               :disabled="loading1 || !memberData"
               @click="handleExport1"
-              size="medium"
+              class="ripple-btn-default"
             >
-              <template #icon>
-                <n-icon>
-                  <Copy />
-                </n-icon>
-              </template>
+              <n-icon style="margin-right: 6px;">
+                <Copy />
+              </n-icon>
               导出数据
-            </n-button>
+            </ButtonRipple>
           </div>
         </div>
       </div>
@@ -519,6 +510,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useMessage, NDatePicker, NPagination } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
+import ButtonRipple from "@/components/Common/ButtonRipple.vue";
 import {
   Trophy,
   Refresh,
@@ -1858,6 +1850,79 @@ onMounted(() => {
 
   .heroes-card .hero-card {
     padding: 12px;
+  }
+}
+
+// 涟漪按钮样式
+.ripple-btn-primary {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-medium);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  
+  &:hover:not(:disabled) {
+    background: var(--primary-color-hover);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.ripple-btn-success {
+  background: var(--success-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-medium);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  
+  &:hover:not(:disabled) {
+    background: var(--success-color-hover, #16a34a);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.ripple-btn-default {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  padding: 8px 16px;
+  border-radius: var(--border-radius-medium);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  
+  &:hover:not(:disabled) {
+    background: var(--bg-secondary);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 </style>

@@ -12,7 +12,9 @@
     <template #default>
       <div class="total-points">
         <span class="label">背包宝箱可获积分：</span>
-        <span class="value">{{ totalPoints }}</span>
+        <span class="value">
+          <AnimatedNumber :value="totalPoints" :duration="1000" />
+        </span>
       </div>
       <div class="container">
         <div class="list">
@@ -51,12 +53,14 @@
             </div>
             <div class="input-group">
               <span class="label">已获得积分：</span>
-              <span class="value earned">{{ state.earnedPoints }}</span>
+              <span class="value earned">
+                <AnimatedNumber :value="state.earnedPoints" :duration="800" />
+              </span>
             </div>
             <div class="input-group">
               <span class="label">还需积分：</span>
               <span class="value" :class="{ 'need-more': remainingPoints > 0 }">
-                {{ remainingPoints > 0 ? remainingPoints : 0 }}
+                <AnimatedNumber :value="remainingPoints > 0 ? remainingPoints : 0" :duration="800" />
               </span>
             </div>
           </div>
@@ -129,6 +133,7 @@ import { ref, computed, reactive } from "vue";
 import { useMessage } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
+import AnimatedNumber from "../Common/AnimatedNumber.vue";
 
 const tokenStore = useTokenStore();
 const message = useMessage();

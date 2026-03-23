@@ -52,7 +52,21 @@
         <h4>
           游戏角色Token ({{ Object.keys(localTokenStore.gameTokens).length }}个)
         </h4>
-        <div class="game-tokens-list">
+        
+        <!-- 空状态 -->
+        <EmptyState
+          v-if="Object.keys(localTokenStore.gameTokens).length === 0"
+          type="token"
+          title="暂无游戏Token"
+          description="您还没有导入任何游戏Token，请先导入Token以使用游戏功能"
+          :showAction="true"
+          actionText="导入Token"
+          :showGuide="true"
+          :guideSteps="guideSteps"
+          @action="$emit('import')"
+        />
+        
+        <div v-else class="game-tokens-list">
           <div
             v-for="(tokenData, roleId) in localTokenStore.gameTokens"
             :key="roleId"
@@ -145,6 +159,7 @@ import { useMessage, useDialog, NIcon } from "naive-ui";
 import { gameTokens } from "@/stores/tokenStore";
 import { useLocalTokenStore } from "@/stores/localTokenManager";
 import { useGameRolesStore } from "@/stores/gameRoles";
+import EmptyState from "@/components/Common/EmptyState.vue";
 import {
   Refresh,
   Download,
@@ -160,6 +175,15 @@ const message = useMessage();
 const dialog = useDialog();
 const localTokenStore = useLocalTokenStore();
 const gameRolesStore = useGameRolesStore();
+
+const emit = defineEmits(['import']);
+
+// 空状态引导步骤
+const guideSteps = [
+  '点击右上角的导入按钮',
+  '选择Token导入方式（手动/URL/扫码）',
+  '完成授权并导入Token'
+];
 
 // 方法
 const maskToken = (token) => {

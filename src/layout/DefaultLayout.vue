@@ -224,6 +224,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { ref, computed } from 'vue'
 import { isNowInLegionWarTime } from '@/utils/clubBattleUtils'
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 
 const tokenStore = useTokenStore();
 const router = useRouter();
@@ -234,6 +235,9 @@ const isMobileMenuOpen = ref(false);
 
 // 移动端检测
 const { isMobile, isMobileLayout } = useMobile();
+
+// 启用键盘快捷键
+useKeyboardShortcuts();
 
 // 底部导航项
 const bottomNavItems = computed(() => [

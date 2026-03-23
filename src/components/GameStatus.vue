@@ -34,6 +34,44 @@
     <!-- 每日任务状态（仅日常） -->
     <DailyTaskStatus v-show="activeSection === 'daily'" />
 
+    <!-- 任务进度概览（仅日常） -->
+    <div class="status-card task-progress-overview" v-show="activeSection === 'daily'">
+      <div class="card-header">
+        <div class="status-info">
+          <h3>今日进度</h3>
+        </div>
+      </div>
+      <div class="card-content progress-rings">
+        <div class="progress-item">
+          <ProgressRing 
+            :percentage="dailyTaskProgress.percentage" 
+            :size="70" 
+            :strokeWidth="6"
+            color="var(--primary-color)"
+          />
+          <div class="progress-label">
+            <span class="label-title">每日任务</span>
+            <span class="label-value">
+              <AnimatedNumber :value="dailyTaskProgress.current" :duration="800" /> / 
+              <AnimatedNumber :value="dailyTaskProgress.total" :duration="800" />
+            </span>
+          </div>
+        </div>
+        <div class="progress-item">
+          <ProgressRing 
+            :percentage="hangUpProgress.percentage" 
+            :size="70" 
+            :strokeWidth="6"
+            color="var(--success-color)"
+          />
+          <div class="progress-label">
+            <span class="label-title">挂机进度</span>
+            <span class="label-value">{{ formatTime(hangUpProgress.remaining) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 咸将塔状态 -->
     <TowerStatus v-show="activeSection === 'daily' && isShowTowerStatus" />
 
@@ -288,6 +326,8 @@ import PeachInfo from "./Club/PeachInfo.vue";
 import ServerRankList from "./cards/ServerRankListPageCard.vue";
 import LegionWarMap from "./Club/LegionWarMap.vue";
 import LegionWarStatistics from "./Club/LegionWarStatistics.vue";
+import ProgressRing from "./Common/ProgressRing.vue";
+import AnimatedNumber from "./Common/AnimatedNumber.vue";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
@@ -352,6 +392,37 @@ const isConnected = computed(() => {
   if (!tokenStore.selectedToken) return false;
   const status = tokenStore.getWebSocketStatus(tokenStore.selectedToken.id);
   return status === "connected";
+});
+
+// 每日任务进度
+const dailyTaskProgress = computed(() => {
+  const role = roleInfo.value?.role;
+  if (!role) return { percentage: 0, current: 0, total: 100 };
+  
+  const dailyPoint = role.daily?.point || 0;
+  const maxPoint = 100;
+  const percentage = Math.min(100, Math.round((dailyPoint / maxPoint) * 100));
+  
+  return {
+    percentage,
+    current: dailyPoint,
+    total: maxPoint
+  };
+});
+
+// 挂机进度
+const hangUpProgress = computed(() => {
+  if (!hangUp.value.hangUpTime) return { percentage: 0, remaining: 0 };
+  
+  const total = hangUp.value.hangUpTime;
+  const remaining = hangUp.value.remainingTime;
+  const elapsed = total - remaining;
+  const percentage = Math.min(100, Math.round((elapsed / total) * 100));
+  
+  return {
+    percentage,
+    remaining
+  };
 });
 
 // 格式化时间 - 确保显示到秒
@@ -900,6 +971,41 @@ onUnmounted(() => {
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+// 任务进度概览卡片样式
+.task-progress-overview {
+  .progress-rings {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: var(--spacing-md) 0;
+  }
+  
+  .progress-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .progress-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .label-title {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+  
+  .label-value {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
   }
 }
 
