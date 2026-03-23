@@ -174,9 +174,25 @@
         </router-link>
       </div>
     </n-drawer>
-    <div class="main">
+    <div class="main" :class="{ 'has-bottom-nav': isMobile }">
       <router-view />
     </div>
+
+    <!-- 移动端底部导航栏 -->
+    <nav class="mobile-bottom-nav" v-if="isMobile">
+      <router-link
+        v-for="item in bottomNavItems"
+        :key="item.path"
+        :to="item.path"
+        class="bottom-nav-item"
+        :class="{ active: isActiveRoute(item.path) }"
+      >
+        <n-icon size="20">
+          <component :is="item.icon" />
+        </n-icon>
+        <span class="bottom-nav-label">{{ item.label }}</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 
@@ -187,6 +203,7 @@ import {
   selectedTokenId,
 } from "@/stores/tokenStore";
 import ThemeToggle from "@/components/Common/ThemeToggle.vue";
+import { useMobile } from "@/composables/useMobile";
 import {
   Home,
   PersonCircle,
@@ -197,18 +214,60 @@ import {
   LockClosedSharp,LockOpen,
   Menu,
   Layers,
+  Grid,
+  Apps,
+  Person,
+  Mail,
 } from "@vicons/ionicons5";
 
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { isNowInLegionWarTime } from '@/utils/clubBattleUtils'
 
 const tokenStore = useTokenStore();
 const router = useRouter();
+const route = useRoute();
 const message = useMessage();
 
 const isMobileMenuOpen = ref(false);
+
+// 移动端检测
+const { isMobile, isMobileLayout } = useMobile();
+
+// 底部导航项
+const bottomNavItems = computed(() => [
+  {
+    path: '/admin/dashboard',
+    icon: Home,
+    label: '首页'
+  },
+  {
+    path: '/admin/game-features',
+    icon: Apps,
+    label: '功能'
+  },
+  {
+    path: '/tokens',
+    icon: Person,
+    label: 'Token'
+  },
+  {
+    path: '/admin/batch-daily-tasks',
+    icon: Layers,
+    label: '批量'
+  },
+  {
+    path: '/admin/message-test',
+    icon: Mail,
+    label: '消息'
+  }
+]);
+
+// 检查当前路由是否激活
+const isActiveRoute = (path) => {
+  return route.path === path || route.path.startsWith(path + '/');
+};
 
 const userMenuOptions = [
   {
@@ -387,5 +446,86 @@ const handleUserAction = async (key) => {
   color: #999999;
   cursor: not-allowed; /* 鼠标样式：禁止 */
   pointer-events: none; /* 可选：直接禁用所有鼠标事件（比阻止click更彻底） */
+}
+
+// 移动端底部导航栏
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
+  z-index: var(--z-sticky);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  min-height: 44px; // 触摸区域最小高度
+  
+  &:hover,
+  &.active {
+    color: var(--primary-color);
+  }
+  
+  &.active {
+    background: var(--primary-color-light);
+  }
+  
+  .n-icon {
+    font-size: 20px;
+  }
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+  }
+  
+  .main.has-bottom-nav {
+    padding-bottom: 56px; // 为底部导航栏留出空间
+  }
+  
+  .nav-item span {
+    display: none;
+  }
+
+  .nav-menu {
+    display: none;
+  }
+
+  .nav-item {
+    padding: var(--spacing-sm);
+    flex: 0 0 auto;
+  }
+
+  .nav-container {
+    height: 56px;
+  }
+
+  .brand-logo {
+    display: none;
+  }
+
+  .brand-toggle {
+    display: inline-flex;
+  }
 }
 </style>

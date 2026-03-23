@@ -114,13 +114,56 @@ export const useLegionWarStore = defineStore('legionWar', () => {
 
       legionWarWebSocket.setMessageListener((msg) => {
         const cmd = msg?.cmd || 'unknown';
+        console.log("[legionWarStore] 收到消息:", cmd, msg);
+        
         // 1. war_getbattlefieldinfo: 完整的战场快照
         if (cmd.includes("war_getbattlefieldinfo")) {
+          // 尝试多种方式获取数据
+          let battlefieldData = null;
+          
+          // 方式1: 直接访问 rawData (ProtoMsg对象)
+          if (msg.rawData !== undefined) {
+            battlefieldData = msg.rawData;
+            console.log("[legionWarStore] 从 msg.rawData 获取数据");
+          }
+          // 方式2: 访问 decodedBody (手动解码)
+          else if (msg.decodedBody !== undefined) {
+            battlefieldData = msg.decodedBody;
+            console.log("[legionWarStore] 从 msg.decodedBody 获取数据");
+          }
+          // 方式3: 访问 body (原始body)
+          else if (msg.body !== undefined) {
+            battlefieldData = msg.body;
+            console.log("[legionWarStore] 从 msg.body 获取数据");
+          }
+          // 方式4: 检查 _raw 包装
+          else if (msg._raw !== undefined) {
+            if (msg._raw.rawData !== undefined) {
+              battlefieldData = msg._raw.rawData;
+              console.log("[legionWarStore] 从 msg._raw.rawData 获取数据");
+            } else if (msg._raw.decodedBody !== undefined) {
+              battlefieldData = msg._raw.decodedBody;
+              console.log("[legionWarStore] 从 msg._raw.decodedBody 获取数据");
+            } else if (msg._raw.body !== undefined) {
+              battlefieldData = msg._raw.body;
+              console.log("[legionWarStore] 从 msg._raw.body 获取数据");
+            }
+          }
+          
+          console.log("[legionWarStore] 战场数据内容:", battlefieldData);
+          
+          if (!battlefieldData) {
+            console.error("[legionWarStore] 无法从消息中提取战场数据，msg:", msg);
+            return;
+          }
+          
           // 更新数据
-          const extracted = extractValidData(msg.rawData);
+          const extracted = extractValidData(battlefieldData);
+          console.log("[legionWarStore] 数据提取结果:", extracted ? "成功" : "失败");
           if (extracted) {
             validData.value = extracted;
             lastUpdateTime.value = getCurrentTimeByFormat("HH:mm:ss");
+            console.log("[legionWarStore] validData已更新，俱乐部数量:", Object.keys(extracted.legionInfo).length);
             
             // 获取俱乐部详情以获取公告
             Object.values(extracted.legionInfo).forEach(legion => {
@@ -129,6 +172,8 @@ export const useLegionWarStore = defineStore('legionWar', () => {
                 fetchLegionDetail(legion.id);
               }
             });
+          } else {
+            console.error("[legionWarStore] 数据提取失败，battlefieldData:", battlefieldData);
           }
         }
       });

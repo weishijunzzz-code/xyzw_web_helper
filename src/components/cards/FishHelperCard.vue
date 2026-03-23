@@ -227,10 +227,17 @@ const startAuto = async () => {
 
   try {
     while (state.isRunning && remainingTimes.value > 0) {
-      const rod = getAvailableRod();
-      
-      if (!rod) {
-        message.warning("没有可用的鱼竿");
+      const normalRod = roleInfo.value?.role?.items?.[1011]?.quantity || 0;
+      const goldRod = roleInfo.value?.role?.items?.[1012]?.quantity || 0;
+
+      let rodType = type.value;
+      let rodName = rodType === 1 ? "普通鱼竿" : "黄金鱼竿";
+
+      if (rodType === 1 && normalRod <= 0) {
+        message.warning("普通鱼竿已用完，停止钓鱼");
+        break;
+      } else if (rodType === 2 && goldRod <= 0) {
+        message.warning("黄金鱼竿已用完，停止钓鱼");
         break;
       }
 
@@ -239,7 +246,7 @@ const startAuto = async () => {
 
       if (batches > 0) {
         await tokenStore.sendMessageWithPromise(tokenId, "artifact_lottery", {
-          type: rod.type,
+          type: rodType,
           lotteryNumber: 10,
           newFree: true,
         });
@@ -248,10 +255,10 @@ const startAuto = async () => {
       }
 
       if (remainder > 0 && state.isRunning && remainingTimes.value > 0) {
-        const rodCheck = getAvailableRod();
-        if (rodCheck) {
+        const currentRod = rodType === 1 ? normalRod : goldRod;
+        if (currentRod > 0) {
           await tokenStore.sendMessageWithPromise(tokenId, "artifact_lottery", {
-            type: rodCheck.type,
+            type: rodType,
             lotteryNumber: remainder,
             newFree: true,
           });

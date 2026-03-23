@@ -40,7 +40,7 @@
               <n-radio-button value="manual"> 手动输入 </n-radio-button>
               <n-radio-button value="url"> URL获取 </n-radio-button>
               <n-radio-button value="wxQrcode"> 微信扫码获取 </n-radio-button>
-              <n-radio-button value="tokenToBin"> Token转Bin </n-radio-button>
+              <!-- <n-radio-button value="tokenToBin"> Token转Bin </n-radio-button> -->
               <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
               <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
             </n-radio-group>
@@ -62,11 +62,11 @@
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'wxQrcode'"
           />
-          <token-to-bin-form
+          <!-- <token-to-bin-form
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
             v-if="importMethod === 'tokenToBin'"
-          />
+          /> -->
           <bin-token-form
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"

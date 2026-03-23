@@ -36,9 +36,9 @@
           <n-button type="info" size="small" block @click="emit('download', row)">
             下载
           </n-button>
-          <n-button type="success" size="small" block @click="emit('downloadStandardBin', row)">
+          <!-- <n-button type="success" size="small" block @click="emit('downloadStandardBin', row)">
             下载标准Bin
-          </n-button>
+          </n-button> -->
         </div>
       </div>
     </div>
@@ -222,15 +222,15 @@ const columns = computed(() => [
             },
             { default: () => "下载" }
           ),
-          h(
-            NButton,
-            {
-              size: "small",
-              type: "success",
-              onClick: () => emit("downloadStandardBin", row),
-            },
-            { default: () => "下载标准Bin" }
-          ),
+          // h(
+          //   NButton,
+          //   {
+          //     size: "small",
+          //     type: "success",
+          //     onClick: () => emit("downloadStandardBin", row),
+          //   },
+          //   { default: () => "下载标准Bin" }
+          // ),
         ]
       );
     },

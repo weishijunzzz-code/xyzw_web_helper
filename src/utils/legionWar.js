@@ -2792,59 +2792,91 @@ const colorArray = [
   //从result的battlefield提取有效信息
   const rawResult = result; 
   if (!rawResult || !rawResult.battlefield) {
+    console.error("[extractValidData] 无效的result数据:", rawResult);
     return false;
   }
-  let buildingData = rawResult.battlefield.buildingData;
-  let legionInfo = Object.fromEntries(Object.values(rawResult.battlefield.legions).map((item,index) => {
-    return [item.id, {
-      "blessingCount": item.blessingIdList.length, //四圣个数
-      "blessingScore": item.blessingScore, //四圣分数
-      "buildings": item.buildings, //占领的点位
-      "redCount": item.custom["red:quench"] || 0, //俱乐部红数
-      "killCnt": item.killCnt, //击杀数
-      "level": item.level, //俱乐部等级
-      "name": item.name, //俱乐部名称
-      "color": colorArray[item.color], //俱乐部颜色
-      "id": item.id, //俱乐部序号
-      "memberCount": Object.keys(item.membersV2).length,
-      "point": item.point, //老版的分
-      "position": item.position, //大本营坐标
-      "strongholdId": item.strongholdId,//大本营坐标字符串
-      "score": Object.keys(item?.buildings||{}).map(item => buildingData[item]?.point??0).reduce((total, current) => total + current,0)
-      +item.blessingScore,//积分
-      "power": item.power, //战力
-      "OnlineCount": 0,//在线人数
-      "participantsCount": 0,//在线人数
-      "danCount": 0,//总复活丹
-      "reviveCount": 0,  //免费复活次数
-      "serverId": item.serverId, //服务器ID
-    }]
-  }))
-  //统计具体信息
-  let memberInfo = Object.values(rawResult.battlefield.roles).map(item => {
-    legionInfo[item.legionID + ""].participantsCount++;
-    if (item.isOnline) {
-      legionInfo[item.legionID + ""].OnlineCount++;
-    }
-    legionInfo[item.legionID].reviveCount += item.revive;
-    legionInfo[item.legionID].danCount += item.d - 6 > 0 ? item.d - 6 : 0;
+  
+  try {
+    let buildingData = rawResult.battlefield.buildingData || {};
+    let legions = rawResult.battlefield.legions || {};
+    let roles = rawResult.battlefield.roles || {};
+    
+    console.log("[extractValidData] 数据检查:", {
+      buildingDataKeys: Object.keys(buildingData).length,
+      legionsKeys: Object.keys(legions).length,
+      rolesKeys: Object.keys(roles).length
+    });
+    
+    let legionInfo = Object.fromEntries(Object.values(legions).map((item, index) => {
+      // 安全获取字段，防止undefined错误
+      const blessingIdList = item.blessingIdList || [];
+      const custom = item.custom || {};
+      const membersV2 = item.membersV2 || {};
+      const buildings = item.buildings || {};
+      
+      return [item.id, {
+        "blessingCount": blessingIdList.length, //四圣个数
+        "blessingScore": item.blessingScore || 0, //四圣分数
+        "buildings": buildings, //占领的点位
+        "redCount": custom["red:quench"] || 0, //俱乐部红数
+        "killCnt": item.killCnt || 0, //击杀数
+        "level": item.level || 0, //俱乐部等级
+        "name": item.name || "未知", //俱乐部名称
+        "color": colorArray[item.color] || colorArray[0], //俱乐部颜色
+        "id": item.id, //俱乐部序号
+        "memberCount": Object.keys(membersV2).length,
+        "point": item.point || 0, //老版的分
+        "position": item.position, //大本营坐标
+        "strongholdId": item.strongholdId,//大本营坐标字符串
+        "score": Object.keys(buildings).map(b => buildingData[b]?.point ?? 0).reduce((total, current) => total + current, 0)
+          + (item.blessingScore || 0),//积分
+        "power": item.power || 0, //战力
+        "OnlineCount": 0,//在线人数
+        "participantsCount": 0,//在线人数
+        "danCount": 0,//总复活丹
+        "reviveCount": 0,  //免费复活次数
+        "serverId": item.serverId || 0, //服务器ID
+      }]
+    }))
+    
+    //统计具体信息
+    let memberInfo = Object.values(roles).map(item => {
+      const legion = legionInfo[item.legionID + ""];
+      if (legion) {
+        legion.participantsCount++;
+        if (item.isOnline) {
+          legion.OnlineCount++;
+        }
+        legion.reviveCount += item.revive || 0;
+        legion.danCount += (item.d || 0) - 6 > 0 ? (item.d || 0) - 6 : 0;
+      }
+      return {
+        "name": item.name || "未知",
+        "legionName": legion?.name || "未知",
+        "legionId": item.legionID,
+        "lastState": formatState(item.state),
+        "digGround": item.aB || 0, //刨地
+        "kill": item.killCnt || 0, //击杀
+        "revive": item.revive || 0, //五次复活,使用了几次
+        "die": item.d || 0, //死亡次数
+        "dan": (item.d || 0) - 6 > 0 ? (item.d || 0) - 6 : 0,
+        "score": item.point || 0
+      }
+    })
+    
+    console.log("[extractValidData] 数据提取成功:", {
+      legionCount: Object.keys(legionInfo).length,
+      memberCount: memberInfo.length
+    });
+    
     return {
-      "name": item.name,
-      "legionName": legionInfo[item.legionID].name,
-      "legionId": item.legionID,
-      "lastState": formatState(item.state),
-      "digGround": item.aB, //刨地
-      "kill": item.killCnt, //击杀
-      "revive": item.revive, //五次复活,使用了几次
-      "die": item.d, //死亡次数
-      "dan": item.d - 6 > 0 ? item.d - 6 : 0,
-      "score": item.point
+      buildingData,
+      memberInfo,
+      legionInfo
     }
-  })
-  return {
-    buildingData,
-    memberInfo,
-    legionInfo
+  } catch (error) {
+    console.error("[extractValidData] 数据提取失败:", error);
+    return false;
   }
 }
 

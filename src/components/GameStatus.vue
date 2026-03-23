@@ -221,7 +221,7 @@
            <n-tab-pane name="toprank" tab="巅峰榜" />
            <n-tab-pane name="topclubrank" tab="俱乐部榜" />
            <n-tab-pane name="goldclubrank" tab="黄金积分榜" />
-           <n-tab-pane name="greatRouteRank" tab="伟大航路积分榜" />
+           <n-tab-pane name="greatRouteRank" tab="伟大航路积分榜" />  
         </n-tabs>
       </div>
 
@@ -726,6 +726,31 @@ onUnmounted(() => {
   grid-column: 1 / -1;
   border-bottom: 1px solid var(--border-light);
   overflow: auto;
+  
+  // 移动端优化
+  @media (max-width: 768px) {
+    margin: 0 0 var(--spacing-sm) 0;
+    
+    :deep(.n-tabs-nav) {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; // Firefox
+      -ms-overflow-style: none; // IE
+      
+      &::-webkit-scrollbar {
+        display: none; // Chrome/Safari
+      }
+    }
+    
+    :deep(.n-tabs-tab) {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    
+    :deep(.n-tabs-tab__label) {
+      font-size: 13px;
+    }
+  }
 }
 
 .section-tabs :deep(.n-tabs-pane-wrapper) {

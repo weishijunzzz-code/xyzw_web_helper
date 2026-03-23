@@ -64,6 +64,10 @@
             <span class="label">策略：</span>
             <span class="value">木质→青铜→黄金→铂金（按层级递进）</span>
           </div>
+          <div class="tier-info" v-if="state.isRunning">
+            <span class="label">层级进度：</span>
+            <span class="value">{{ tierProgressText }}</span>
+          </div>
           <div class="progress-info" v-if="state.isRunning">
             <n-progress
               type="line"
@@ -205,6 +209,41 @@ const state = reactive({
   earnedPoints: 0,
 });
 
+const TIER_LEVELS = [2000, 4000, 6000, 8000];
+
+const getEffectiveTierProgress = (points) => {
+  return points % 8000;
+};
+
+const getCurrentTierInCycle = (points) => {
+  const effective = getEffectiveTierProgress(points);
+  for (let i = TIER_LEVELS.length - 1; i >= 0; i--) {
+    if (effective >= TIER_LEVELS[i]) {
+      return TIER_LEVELS[i];
+    }
+  }
+  return 0;
+};
+
+const getNextTierTarget = (points) => {
+  const effective = getEffectiveTierProgress(points);
+  for (const tier of TIER_LEVELS) {
+    if (effective < tier) {
+      return tier;
+    }
+  }
+  return null;
+};
+
+const tierProgressText = computed(() => {
+  const effective = getEffectiveTierProgress(state.earnedPoints);
+  const nextTier = getNextTierTarget(state.earnedPoints);
+  if (nextTier === null) {
+    return `本轮已达成最高层级 (${TIER_LEVELS[TIER_LEVELS.length - 1]})`;
+  }
+  return `本轮距离下一层级: ${nextTier - effective} 积分`;
+});
+
 const remainingPoints = computed(() => {
   return targetPoints.value - state.earnedPoints;
 });
@@ -268,6 +307,21 @@ const stopAutoOpen = () => {
   message.info("已停止自动开启");
 };
 
+const checkAndClaimTierReward = async (tokenId, currentPoints, newPoints) => {
+  const currentTierInCycle = getCurrentTierInCycle(currentPoints);
+  const newTierInCycle = getCurrentTierInCycle(newPoints);
+
+  if (newTierInCycle > currentTierInCycle) {
+    message.info(`已达积分层级 ${newTierInCycle}，自动领取宝箱积分...`);
+    await tokenStore.sendMessage(tokenId, "item_batchclaimboxpointreward");
+    await new Promise((r) => setTimeout(r, 500));
+    await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+    await new Promise((r) => setTimeout(r, 300));
+    return true;
+  }
+  return false;
+};
+
 const startAutoOpen = async () => {
   if (!tokenStore.selectedToken) {
     message.warning("请先选择Token");
@@ -288,9 +342,9 @@ const startAutoOpen = async () => {
   try {
     while (state.isRunning && remainingPoints.value > 0) {
       const remaining = remainingPoints.value;
-      
+
       state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remaining})`;
-      
+
       const boxesToOpen = calculateBoxesToOpen(remaining);
 
       if (boxesToOpen.length === 0) {
@@ -322,28 +376,38 @@ const startAutoOpen = async () => {
           if (!state.isRunning) break;
           if (remainingPoints.value <= 0) break;
           if (!shouldUseBox()) break;
-          
+
+          const pointsBefore = state.earnedPoints;
+
           await tokenStore.sendMessageWithPromise(tokenId, "item_openbox", {
             itemId: box.itemId,
             number: 10,
           });
-          
+
           state.earnedPoints += box.points * 10;
           state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remainingPoints.value})`;
+
+          await checkAndClaimTierReward(tokenId, pointsBefore, state.earnedPoints);
         }
 
         if (remainder > 0 && state.isRunning && remainingPoints.value > 0 && shouldUseBox()) {
+          const pointsBefore = state.earnedPoints;
+
           await tokenStore.sendMessageWithPromise(tokenId, "item_openbox", {
             itemId: box.itemId,
             number: remainder,
           });
-          
+
           state.earnedPoints += box.points * remainder;
           state.progressText = `已获得 ${state.earnedPoints} / 目标 ${targetPoints.value} (还需 ${remainingPoints.value})`;
+
+          await checkAndClaimTierReward(tokenId, pointsBefore, state.earnedPoints);
         }
 
         await new Promise((r) => setTimeout(r, 200));
       }
+
+      if (!state.isRunning) break;
 
       await tokenStore.sendMessage(tokenId, "item_batchclaimboxpointreward");
       await new Promise((r) => setTimeout(r, 500));
@@ -506,6 +570,26 @@ const handleBoxHelper = async () => {
   }
 
   .strategy-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 6px;
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-medium);
+
+    .label {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    .value {
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  .tier-info {
     display: flex;
     align-items: center;
     gap: 8px;
