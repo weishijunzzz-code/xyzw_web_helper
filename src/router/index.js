@@ -152,6 +152,21 @@ const router = createRouter({
   }
 })
 
+// 路由过渡动画配置
+router.afterEach((to, from) => {
+  // 根据路由深度决定过渡方向
+  const toDepth = to.path.split('/').length
+  const fromDepth = from.path.split('/').length
+  
+  if (toDepth > fromDepth) {
+    to.meta.transition = 'slide-left'
+  } else if (toDepth < fromDepth) {
+    to.meta.transition = 'slide-right'
+  } else {
+    to.meta.transition = 'fade-slide'
+  }
+})
+
 // 热更新路由
 autoRoutes.handleHotUpdate?.(router);
 

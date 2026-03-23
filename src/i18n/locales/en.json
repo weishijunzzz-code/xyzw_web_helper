@@ -1,0 +1,102 @@
+{
+  "app": {
+    "name": "XYZW Helper",
+    "title": "XYZW Console",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "gameFeatures": "Game Features",
+    "tokenManager": "Token Manager",
+    "batchTasks": "Batch Tasks",
+    "messageTest": "Message Test",
+    "legionWar": "Legion War",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "token": {
+    "title": "Token Manager",
+    "add": "Add Token",
+    "edit": "Edit Token",
+    "delete": "Delete Token",
+    "select": "Select Token",
+    "search": "Search tokens...",
+    "online": "Online",
+    "offline": "Offline",
+    "all": "All",
+    "noToken": "No tokens",
+    "import": "Import Token",
+    "export": "Export Token",
+    "copy": "Copy Token",
+    "copied": "Copied"
+  },
+  "game": {
+    "daily": "Daily",
+    "club": "Club",
+    "activity": "Activity",
+    "tools": "Tools",
+    "saltField": "Salt Field",
+    "peach": "Peach Garden",
+    "rank": "Ranking",
+    "fight": "Fight"
+  },
+  "helpers": {
+    "box": "Box Helper",
+    "fish": "Fish Helper",
+    "dream": "Dream Helper",
+    "fight": "Fight Helper",
+    "recruit": "Recruit Helper",
+    "star": "Star Upgrade",
+    "hero": "Hero Upgrade",
+    "refine": "Refine Helper",
+    "bottle": "Bottle Robot"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "Load failed",
+    "empty": "No data",
+    "noData": "No data found",
+    "retry": "Retry"
+  },
+  "notification": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAllRead": "Mark all read",
+    "clearAll": "Clear all",
+    "unread": "Unread"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "title": "Language",
+      "zh": "简体中文",
+      "en": "English"
+    }
+  }
+}

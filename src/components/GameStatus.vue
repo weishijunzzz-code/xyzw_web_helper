@@ -34,44 +34,6 @@
     <!-- 每日任务状态（仅日常） -->
     <DailyTaskStatus v-show="activeSection === 'daily'" />
 
-    <!-- 任务进度概览（仅日常） -->
-    <div class="status-card task-progress-overview" v-show="activeSection === 'daily'">
-      <div class="card-header">
-        <div class="status-info">
-          <h3>今日进度</h3>
-        </div>
-      </div>
-      <div class="card-content progress-rings">
-        <div class="progress-item">
-          <ProgressRing 
-            :percentage="dailyTaskProgress.percentage" 
-            :size="70" 
-            :strokeWidth="6"
-            color="var(--primary-color)"
-          />
-          <div class="progress-label">
-            <span class="label-title">每日任务</span>
-            <span class="label-value">
-              <AnimatedNumber :value="dailyTaskProgress.current" :duration="800" /> / 
-              <AnimatedNumber :value="dailyTaskProgress.total" :duration="800" />
-            </span>
-          </div>
-        </div>
-        <div class="progress-item">
-          <ProgressRing 
-            :percentage="hangUpProgress.percentage" 
-            :size="70" 
-            :strokeWidth="6"
-            color="var(--success-color)"
-          />
-          <div class="progress-label">
-            <span class="label-title">挂机进度</span>
-            <span class="label-value">{{ formatTime(hangUpProgress.remaining) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 咸将塔状态 -->
     <TowerStatus v-show="activeSection === 'daily' && isShowTowerStatus" />
 
@@ -296,6 +258,9 @@ import {
   preloadQuestions,
   getQuestionCount,
 } from "@/utils/studyQuestionsFromJSON.js";
+import IdentityCard from "./Common/IdentityCard.vue";
+import DailyTaskStatus from "./Daily/DailyTaskStatus.vue";
+import TeamFormation from "./Team/TeamFormation.vue";
 import BottleHelperCard from "./cards/BottleHelperCard.vue";
 import BoxHelperCard from "./cards/BoxHelperCard.vue";
 import FishHelperCard from "./cards/FishHelperCard.vue";

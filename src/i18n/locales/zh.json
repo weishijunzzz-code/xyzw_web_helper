@@ -1,0 +1,102 @@
+{
+  "app": {
+    "name": "XYZW 助手",
+    "title": "XYZW 控制台",
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索",
+    "filter": "筛选",
+    "sort": "排序",
+    "refresh": "刷新",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "submit": "提交",
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "提示"
+  },
+  "nav": {
+    "home": "首页",
+    "dashboard": "控制台",
+    "gameFeatures": "游戏功能",
+    "tokenManager": "Token管理",
+    "batchTasks": "批量日常",
+    "messageTest": "消息测试",
+    "legionWar": "实时盐场",
+    "profile": "个人设置",
+    "logout": "退出登录"
+  },
+  "token": {
+    "title": "Token管理",
+    "add": "添加Token",
+    "edit": "编辑Token",
+    "delete": "删除Token",
+    "select": "选择Token",
+    "search": "搜索Token...",
+    "online": "在线",
+    "offline": "离线",
+    "all": "全部",
+    "noToken": "暂无Token",
+    "import": "导入Token",
+    "export": "导出Token",
+    "copy": "复制Token",
+    "copied": "已复制"
+  },
+  "game": {
+    "daily": "日常",
+    "club": "俱乐部",
+    "activity": "活动",
+    "tools": "工具",
+    "saltField": "盐场",
+    "peach": "蟠桃园",
+    "rank": "排行榜",
+    "fight": "切磋"
+  },
+  "helpers": {
+    "box": "宝箱助手",
+    "fish": "钓鱼助手",
+    "dream": "梦境助手",
+    "fight": "战斗助手",
+    "recruit": "招募助手",
+    "star": "升星助手",
+    "hero": "武将升级",
+    "refine": "洗练助手",
+    "bottle": "盐罐机器人"
+  },
+  "status": {
+    "loading": "加载中...",
+    "error": "加载失败",
+    "empty": "暂无数据",
+    "noData": "没有找到相关数据",
+    "retry": "重试"
+  },
+  "notification": {
+    "title": "消息中心",
+    "empty": "暂无消息",
+    "markAllRead": "全部已读",
+    "clearAll": "清空消息",
+    "unread": "未读消息"
+  },
+  "settings": {
+    "title": "设置",
+    "theme": {
+      "title": "主题",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    },
+    "language": {
+      "title": "语言",
+      "zh": "简体中文",
+      "en": "English"
+    }
+  }
+}
