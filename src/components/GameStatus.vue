@@ -394,12 +394,13 @@ const isConnected = computed(() => {
   return status === "connected";
 });
 
-// 每日任务进度
+// 每日任务进度 - 使用与 DailyTaskStatus 相同的数据源
 const dailyTaskProgress = computed(() => {
   const role = roleInfo.value?.role;
   if (!role) return { percentage: 0, current: 0, total: 100 };
   
-  const dailyPoint = role.daily?.point || 0;
+  // 使用 dailyTask.dailyPoint 而不是 daily.point
+  const dailyPoint = role.dailyTask?.dailyPoint || 0;
   const maxPoint = 100;
   const percentage = Math.min(100, Math.round((dailyPoint / maxPoint) * 100));
   

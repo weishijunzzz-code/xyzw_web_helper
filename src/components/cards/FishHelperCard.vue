@@ -36,6 +36,10 @@
         <div v-else class="auto-mode">
           <div class="auto-inputs">
             <div class="input-group">
+              <span class="label">鱼竿类型：</span>
+              <n-select v-model:value="autoRodType" :options="typeOptions" style="width: 150px" />
+            </div>
+            <div class="input-group">
               <span class="label">目标次数：</span>
               <n-input-number
                 v-model:value="targetTimes"
@@ -162,6 +166,7 @@ const numberOptions = [
 ];
 
 const targetTimes = ref(0);
+const autoRodType = ref(1); // 自动模式默认使用普通鱼竿
 
 const state = reactive({
   isRunning: false,
@@ -230,7 +235,7 @@ const startAuto = async () => {
       const normalRod = roleInfo.value?.role?.items?.[1011]?.quantity || 0;
       const goldRod = roleInfo.value?.role?.items?.[1012]?.quantity || 0;
 
-      let rodType = type.value;
+      let rodType = autoRodType.value;
       let rodName = rodType === 1 ? "普通鱼竿" : "黄金鱼竿";
 
       if (rodType === 1 && normalRod <= 0) {
@@ -255,7 +260,7 @@ const startAuto = async () => {
       }
 
       if (remainder > 0 && state.isRunning && remainingTimes.value > 0) {
-        const currentRod = rodType === 1 ? normalRod : goldRod;
+        const currentRod = autoRodType.value === 1 ? normalRod : goldRod;
         if (currentRod > 0) {
           await tokenStore.sendMessageWithPromise(tokenId, "artifact_lottery", {
             type: rodType,
