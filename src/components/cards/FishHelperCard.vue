@@ -271,7 +271,7 @@ const rodTypeOptions = rodDefinitions.map((rod) => ({
   value: rod.lotteryType,
 }));
 
-const numberOptions = generateNumberOptions([10, 20, 50, 80, 100, 160]);
+const numberOptions = generateNumberOptions([10, 20, 50, 80, 100, 160, 1300, 1450, 1600]);
 
 // 选中的鱼竿
 const selectedRodIndex = ref(0);
