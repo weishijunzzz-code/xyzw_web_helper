@@ -114,6 +114,7 @@
             />
             <n-button size="tiny" @click="setPresetTarget(2000)">2000</n-button>
             <n-button size="tiny" @click="setPresetTarget(4000)">4000</n-button>
+            <n-button size="tiny" @click="setPresetTarget(6000)">6000</n-button>
             <n-button size="tiny" @click="setPresetTarget(8000)">8000</n-button>
           </div>
 

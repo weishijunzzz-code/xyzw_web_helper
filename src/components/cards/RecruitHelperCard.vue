@@ -38,17 +38,39 @@
           </div>
         </div>
 
-        <!-- 保底提示 -->
-        <div class="guarantee-info">
-          <div class="guarantee-title">保底机制</div>
-          <div class="guarantee-progress">
-            <div class="guarantee-bar">
-              <div 
-                class="guarantee-fill" 
-                :style="{ width: guaranteeProgress + '%' }"
-              ></div>
+        <!-- 活动层级进度 -->
+        <div class="activity-tiers-info">
+          <div class="tiers-header">
+            <span class="tiers-title">活动层级进度</span>
+            <span class="tiers-round">第 {{ currentRound }}/4 轮</span>
+          </div>
+          <div class="tiers-list">
+            <div
+              v-for="(tier, index) in activityTiers"
+              :key="index"
+              class="tier-item"
+              :class="{ 
+                completed: completedCount >= tier.threshold,
+                current: isCurrentTier(tier.threshold)
+              }"
+            >
+              <div class="tier-dot"></div>
+              <span class="tier-value">{{ tier.value }}</span>
+              <span v-if="index < activityTiers.length - 1" class="tier-line"></span>
             </div>
-            <span class="guarantee-text">{{ guaranteeText }}</span>
+          </div>
+          <div class="tiers-progress-bar">
+            <div 
+              class="tiers-fill" 
+              :style="{ width: tierProgressPercentage + '%' }"
+            ></div>
+          </div>
+          <div class="tiers-status">
+            <span v-if="isMaxRoundCompleted" class="status-completed">本轮活动已完成（{{ completedCount }}/1600）</span>
+            <span v-else-if="nextTierInfo">
+              距离 {{ nextTierInfo.target }} 还差 {{ nextTierInfo.remaining }} 次
+            </span>
+            <span v-else>活动已完成</span>
           </div>
         </div>
 
@@ -94,17 +116,31 @@
             </n-button>
             <n-button 
               size="tiny" 
-              @click="setPresetTarget(Math.min(50, totalRecruitTokens))"
-              :disabled="totalRecruitTokens < 50"
+              @click="setPresetTarget(Math.min(1000, totalRecruitTokens))"
+              :disabled="totalRecruitTokens < 1000"
             >
-              50
+              1000
             </n-button>
             <n-button 
               size="tiny" 
-              @click="setPresetTarget(totalRecruitTokens)"
-              :disabled="totalRecruitTokens === 0"
+              @click="setPresetTarget(Math.min(2000, totalRecruitTokens))"
+              :disabled="totalRecruitTokens < 2000"
             >
-              全部
+              2000
+            </n-button>
+            <n-button 
+              size="tiny" 
+              @click="setPresetTarget(Math.min(3000, totalRecruitTokens))"
+              :disabled="totalRecruitTokens < 3000"
+            >
+              3000
+            </n-button>
+            <n-button 
+              size="tiny" 
+              @click="setPresetTarget(Math.min(4000, totalRecruitTokens))"
+              :disabled="totalRecruitTokens < 4000"
+            >
+              4000
             </n-button>
           </div>
 
@@ -231,23 +267,73 @@ const totalRecruitTokens = computed(() => {
   return roleInfo.value?.role?.items?.[1001]?.quantity || 0;
 });
 
-// 选项
-const numberOptions = generateNumberOptions([10, 50, 100, 200, 400]);
+// 选项 - 支持大活动4000上限
+const numberOptions = generateNumberOptions([10, 50, 100, 200, 400, 4000]);
 
-// 保底机制（假设每100次保底）
-const GUARANTEE_THRESHOLD = 100;
-const guaranteeProgress = computed(() => {
-  const current = autoConfig.completedValue % GUARANTEE_THRESHOLD;
-  return (current / GUARANTEE_THRESHOLD) * 100;
+// 活动层级配置：50-100-200-300-400，每轮400，最多4轮
+const ACTIVITY_TIERS = [
+  { value: 50, threshold: 50 },
+  { value: 100, threshold: 100 },
+  { value: 200, threshold: 200 },
+  { value: 300, threshold: 300 },
+  { value: 400, threshold: 400 },
+];
+const ROUND_TOTAL = 400; // 每轮400
+const MAX_ROUNDS = 4; // 最多4轮
+
+// 活动层级数据
+const activityTiers = ref(ACTIVITY_TIERS);
+
+// 已完成次数（从游戏数据获取，这里用completedValue模拟）
+const completedCount = computed(() => autoConfig.completedValue);
+
+// 当前轮次
+const currentRound = computed(() => {
+  return Math.min(MAX_ROUNDS, Math.floor(completedCount.value / ROUND_TOTAL) + 1);
 });
 
-const guaranteeText = computed(() => {
-  const current = autoConfig.completedValue % GUARANTEE_THRESHOLD;
-  const remaining = GUARANTEE_THRESHOLD - current;
-  if (remaining === GUARANTEE_THRESHOLD && autoConfig.completedValue > 0) {
-    return "本轮保底已达成！";
+// 当前轮次内的进度
+const roundProgress = computed(() => {
+  return completedCount.value % ROUND_TOTAL;
+});
+
+// 是否已完成最大轮次
+const isMaxRoundCompleted = computed(() => {
+  return completedCount.value >= MAX_ROUNDS * ROUND_TOTAL;
+});
+
+// 层级进度百分比
+const tierProgressPercentage = computed(() => {
+  if (isMaxRoundCompleted.value) return 100;
+  const progress = roundProgress.value;
+  return Math.min(100, (progress / ROUND_TOTAL) * 100);
+});
+
+// 判断是否是当前层级
+const isCurrentTier = (threshold) => {
+  const progress = roundProgress.value;
+  const prevThreshold = threshold === 50 ? 0 : 
+    ACTIVITY_TIERS.find(t => t.value === threshold - 50)?.threshold || 0;
+  return progress >= prevThreshold && progress < threshold;
+};
+
+// 下一层级信息
+const nextTierInfo = computed(() => {
+  if (isMaxRoundCompleted.value) return null;
+  const progress = roundProgress.value;
+  for (const tier of ACTIVITY_TIERS) {
+    if (progress < tier.threshold) {
+      return {
+        target: tier.value,
+        remaining: tier.threshold - progress,
+      };
+    }
   }
-  return `距离保底还差 ${remaining} 次`;
+  // 当前轮次已完成，进入下一轮
+  return {
+    target: '下一轮',
+    remaining: ROUND_TOTAL - progress,
+  };
 });
 
 // 运行时长
@@ -496,44 +582,107 @@ watch(totalRecruitTokens, (newVal) => {
     }
   }
 
-  // 保底信息
-  .guarantee-info {
+  // 活动层级信息
+  .activity-tiers-info {
     background: var(--bg-tertiary);
     border-radius: var(--border-radius-medium);
-    padding: 10px;
+    padding: 12px;
 
-    .guarantee-title {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .guarantee-progress {
+    .tiers-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 10px;
+      margin-bottom: 10px;
 
-      .guarantee-bar {
-        flex: 1;
-        height: 8px;
-        background: var(--bg-secondary);
-        border-radius: 4px;
-        overflow: hidden;
-
-        .guarantee-fill {
-          height: 100%;
-          background: linear-gradient(90deg, var(--primary-color), var(--primary-color-light));
-          border-radius: 4px;
-          transition: width 0.3s ease;
-        }
+      .tiers-title {
+        font-size: 12px;
+        color: var(--text-secondary);
       }
 
-      .guarantee-text {
-        font-size: 11px;
-        color: var(--text-secondary);
-        white-space: nowrap;
-        min-width: 100px;
-        text-align: right;
+      .tiers-round {
+        font-size: 12px;
+        color: var(--primary-color);
+        font-weight: var(--font-weight-bold);
+      }
+    }
+
+    .tiers-list {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      position: relative;
+
+      .tier-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        position: relative;
+        z-index: 1;
+
+        .tier-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: var(--bg-secondary);
+          border: 2px solid var(--text-tertiary);
+          transition: all 0.3s ease;
+        }
+
+        .tier-value {
+          font-size: 10px;
+          color: var(--text-secondary);
+          font-weight: var(--font-weight-medium);
+        }
+
+        &.completed {
+          .tier-dot {
+            background: #18bc5c;
+            border-color: #18bc5c;
+          }
+          .tier-value {
+            color: #18bc5c;
+          }
+        }
+
+        &.current {
+          .tier-dot {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 6px var(--primary-color);
+          }
+          .tier-value {
+            color: var(--primary-color);
+            font-weight: var(--font-weight-bold);
+          }
+        }
+      }
+    }
+
+    .tiers-progress-bar {
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+
+      .tiers-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-color-light));
+        border-radius: 3px;
+        transition: width 0.3s ease;
+      }
+    }
+
+    .tiers-status {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-secondary);
+
+      .status-completed {
+        color: #18bc5c;
+        font-weight: var(--font-weight-bold);
       }
     }
   }

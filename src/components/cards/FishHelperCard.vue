@@ -102,6 +102,9 @@
             />
             <n-button size="tiny" @click="setPresetTarget(160)">160</n-button>
             <n-button size="tiny" @click="setPresetTarget(320)">320</n-button>
+            <n-button size="tiny" @click="setPresetTarget(1300)">1300</n-button>
+            <n-button size="tiny" @click="setPresetTarget(1450)">1450</n-button>
+            <n-button size="tiny" @click="setPresetTarget(1600)">1600</n-button>
           </div>
 
           <div class="progress-stats">
