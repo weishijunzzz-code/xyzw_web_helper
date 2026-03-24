@@ -1,0 +1,222 @@
+// ============================================
+// 移动端响应式优化
+// ============================================
+
+// 移动端断点
+$mobile-breakpoint: 768px;
+$tablet-breakpoint: 1024px;
+
+// ============================================
+// 1. 基础布局适配
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  // 页面容器
+  .page-container,
+  .dashboard-container {
+    padding: 0.5rem !important;
+  }
+
+  // 卡片网格
+  .cards-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  // 助手卡片
+  .box-helper,
+  .fish-helper,
+  .recruit-helper {
+    .box-grid,
+    .rods-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+}
+
+// ============================================
+// 2. 导航栏移动端适配
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  .dashboard-nav {
+    .nav-container {
+      padding: 0 0.5rem;
+    }
+
+    .nav-brand {
+      .brand-text {
+        display: none;
+      }
+    }
+
+    .nav-menu {
+      display: none; // 移动端隐藏菜单，使用抽屉
+    }
+
+    .nav-user {
+      .token-selector {
+        .token-name {
+          display: none;
+        }
+      }
+    }
+  }
+
+  // 移动端底部导航
+  .mobile-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    z-index: 1000;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom);
+
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--text-secondary);
+      font-size: 10px;
+      padding: 4px 12px;
+
+      &.active {
+        color: var(--primary-color);
+      }
+
+      .n-icon {
+        font-size: 20px;
+      }
+    }
+  }
+}
+
+// ============================================
+// 3. 表单和输入适配
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  // 输入框组
+  .target-input-row,
+  .config-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    .n-button {
+      flex: 1;
+      min-width: 60px;
+    }
+  }
+
+  // 快捷按钮组
+  .preset-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+
+    .n-button {
+      width: 100%;
+    }
+  }
+}
+
+// ============================================
+// 4. 表格和列表适配
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  // 表格横向滚动
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    table {
+      min-width: 600px;
+    }
+  }
+
+  // 列表项
+  .list-item {
+    padding: 0.75rem !important;
+  }
+}
+
+// ============================================
+// 5. 弹窗和抽屉适配
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  .n-modal {
+    width: 90vw !important;
+    max-width: 90vw !important;
+  }
+
+  .n-drawer {
+    width: 80vw !important;
+  }
+}
+
+// ============================================
+// 6. 触摸优化
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  // 增大触摸目标
+  .n-button,
+  .nav-item,
+  .list-item {
+    min-height: 44px;
+  }
+
+  // 禁用hover效果（移动端无hover）
+  .hover-effect {
+    &:hover {
+      transform: none;
+    }
+
+    &:active {
+      opacity: 0.8;
+    }
+  }
+}
+
+// ============================================
+// 7. 字体和间距优化
+// ============================================
+
+@media (max-width: $mobile-breakpoint) {
+  html {
+    font-size: 14px;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+}
+
+// ============================================
+// 8. 安全区域适配（刘海屏）
+// ============================================
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
