@@ -47,6 +47,7 @@ declare module 'vue' {
     DataChart: typeof import('./src/components/Common/DataChart.vue')['default']
     DreamHelperCard: typeof import('./src/components/cards/DreamHelperCard.vue')['default']
     EmptyState: typeof import('./src/components/Common/EmptyState.vue')['default']
+    EmptyStateIllustration: typeof import('./src/components/Common/EmptyStateIllustration.vue')['default']
     ErrorBoundary: typeof import('./src/components/Common/ErrorBoundary.vue')['default']
     FightHelperCard: typeof import('./src/components/cards/FightHelperCard.vue')['default']
     FightPvp: typeof import('./src/components/cards/FightPvp.vue')['default']
