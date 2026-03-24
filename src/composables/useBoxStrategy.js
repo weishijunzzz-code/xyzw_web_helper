@@ -3,16 +3,16 @@ import { computed } from "vue";
 /**
  * 宝箱策略配置
  */
-const BOX_CONFIG = {
+export const BOX_CONFIG = {
   2001: { name: "木质宝箱", points: 1, minReserve: 200, tier: 0 },
   2002: { name: "青铜宝箱", points: 10, minReserve: 10, tier: 1 },
   2003: { name: "黄金宝箱", points: 20, minReserve: 10, tier: 2 },
   2004: { name: "铂金宝箱", points: 50, minReserve: 0, tier: 3 },
 };
 
-const TIER_LEVELS = [2000, 4000, 6000, 8000];
-const TIER_CYCLE = 8000;
-const WOODEN_FALLBACK_THRESHOLD = 100; // 距离目标小于100分使用木质宝箱兜底
+export const TIER_LEVELS = [2000, 4000, 6000, 8000];
+export const TIER_CYCLE = 8000;
+export const WOODEN_FALLBACK_THRESHOLD = 100; // 距离目标小于100分使用木质宝箱兜底
 
 /**
  * 获取当前层级
