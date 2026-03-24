@@ -19,6 +19,8 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     '/BatchDailyTasks': RouteRecordInfo<'/BatchDailyTasks', '/BatchDailyTasks', Record<never, never>, Record<never, never>>,
+    '/BatchDailyTasks/GroupManager': RouteRecordInfo<'/BatchDailyTasks/GroupManager', '/BatchDailyTasks/GroupManager', Record<never, never>, Record<never, never>>,
+    '/BatchDailyTasks/TokenSelector': RouteRecordInfo<'/BatchDailyTasks/TokenSelector', '/BatchDailyTasks/TokenSelector', Record<never, never>, Record<never, never>>,
     '/Changelog': RouteRecordInfo<'/Changelog', '/Changelog', Record<never, never>, Record<never, never>>,
     '/DailyTasks': RouteRecordInfo<'/DailyTasks', '/DailyTasks', Record<never, never>, Record<never, never>>,
     '/Dashboard': RouteRecordInfo<'/Dashboard', '/Dashboard', Record<never, never>, Record<never, never>>,
