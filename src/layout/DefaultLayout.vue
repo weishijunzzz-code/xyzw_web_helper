@@ -151,7 +151,7 @@
                         size="small"
                         fallback-src="/icons/xiaoyugan.png"
                       />
-                      <div class="token-status" :class="{ 'is-online': token.isOnline }"></div>
+                      <div class="token-status" :class="{ 'is-online': isTokenOnline(token.id) }"></div>
                     </div>
                     <div class="token-item-info">
                       <div class="token-item-name">{{ token.name }}</div>
@@ -362,25 +362,30 @@ const { isMobile, isMobileLayout } = useMobile();
 // 启用键盘快捷键
 useKeyboardShortcuts();
 
+// 判断token是否在线的辅助函数
+const isTokenOnline = (tokenId) => {
+  return tokenStore.wsConnections[tokenId]?.status === 'connected';
+};
+
 // Token分组
 const tokenGroups = computed(() => [
   { key: 'all', label: '全部', count: gameTokens.value.length },
-  { key: 'online', label: '在线', count: gameTokens.value.filter(t => t.isOnline).length },
-  { key: 'offline', label: '离线', count: gameTokens.value.filter(t => !t.isOnline).length },
+  { key: 'online', label: '在线', count: gameTokens.value.filter(t => isTokenOnline(t.id)).length },
+  { key: 'offline', label: '离线', count: gameTokens.value.filter(t => !isTokenOnline(t.id)).length },
 ]);
 
 // 在线Token数量
-const onlineTokenCount = computed(() => gameTokens.value.filter(t => t.isOnline).length);
+const onlineTokenCount = computed(() => gameTokens.value.filter(t => isTokenOnline(t.id)).length);
 
 // 过滤后的Token列表
 const filteredTokens = computed(() => {
   let tokens = gameTokens.value;
-  
+
   // 按分组过滤
   if (selectedGroup.value === 'online') {
-    tokens = tokens.filter(t => t.isOnline);
+    tokens = tokens.filter(t => isTokenOnline(t.id));
   } else if (selectedGroup.value === 'offline') {
-    tokens = tokens.filter(t => !t.isOnline);
+    tokens = tokens.filter(t => !isTokenOnline(t.id));
   }
   
   // 按搜索词过滤

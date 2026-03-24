@@ -139,20 +139,23 @@ const searchItems = computed(() => [
   { id: 'game-roles', title: '游戏角色', description: '查看角色信息', icon: PersonCircle, path: '/admin/game-roles', category: 'data', tag: '角色', tagType: 'info' },
 
   // Token列表（动态）
-  ...gameTokens.value.map(token => ({
-    id: `token-${token.id}`,
-    title: token.name,
-    description: `服务器: ${token.server || '未知'}`,
-    icon: PersonCircle,
-    path: '/admin/dashboard',
-    category: 'token',
-    tag: token.isOnline ? '在线' : '离线',
-    tagType: token.isOnline ? 'success' : 'default',
-    action: () => {
-      tokenStore.selectToken?.(token.id)
-      message.success(`已切换到: ${token.name}`)
+  ...gameTokens.value.map(token => {
+    const isOnline = tokenStore.wsConnections[token.id]?.status === 'connected';
+    return {
+      id: `token-${token.id}`,
+      title: token.name,
+      description: `服务器: ${token.server || '未知'}`,
+      icon: PersonCircle,
+      path: '/admin/dashboard',
+      category: 'token',
+      tag: isOnline ? '在线' : '离线',
+      tagType: isOnline ? 'success' : 'default',
+      action: () => {
+        tokenStore.selectToken?.(token.id)
+        message.success(`已切换到: ${token.name}`)
+      }
     }
-  }))
+  })
 ])
 
 // 过滤结果

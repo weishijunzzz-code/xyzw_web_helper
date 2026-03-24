@@ -858,6 +858,11 @@ watch(mode, () => {
         color: var(--text-secondary);
         min-width: 60px;
       }
+
+      // 快捷按钮组
+      .n-button {
+        flex: 0 0 auto;
+      }
     }
 
     .progress-stats {
@@ -909,7 +914,7 @@ watch(mode, () => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         font-size: 12px;
         color: var(--text-secondary);
 
@@ -922,7 +927,8 @@ watch(mode, () => {
       .tier-bar {
         display: flex;
         gap: 4px;
-        margin-bottom: 8px;
+        margin-bottom: 28px;
+        position: relative;
 
         .tier-segment {
           flex: 1;
@@ -943,16 +949,17 @@ watch(mode, () => {
 
           .tier-marker {
             position: absolute;
-            top: 12px;
+            top: 14px;
             left: 50%;
             transform: translateX(-50%);
             font-size: 10px;
             color: var(--text-tertiary);
+            white-space: nowrap;
           }
 
           .tier-reward {
             position: absolute;
-            top: 24px;
+            top: 28px;
             left: 50%;
             transform: translateX(-50%);
             font-size: 9px;
@@ -966,7 +973,9 @@ watch(mode, () => {
         text-align: center;
         font-size: 11px;
         color: var(--text-secondary);
-        margin-top: 20px;
+        margin-top: 8px;
+        padding-top: 4px;
+        border-top: 1px solid var(--bg-secondary);
       }
     }
 
