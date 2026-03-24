@@ -2821,6 +2821,7 @@ import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
 import { Settings } from "@vicons/ionicons5";
+import { useBatchProgress } from "@/composables/useBatchProgress";
 
 // Import batch task modules
 import {
@@ -5779,6 +5780,16 @@ const startBatch = async () => {
     tokenStatus.value[id] = "waiting";
   });
 
+  // 初始化进度反馈
+  const progress = useBatchProgress();
+  progress.start({
+    title: '批量日常任务执行中',
+    total: selectedTokens.value.length,
+  });
+
+  let successCount = 0;
+  let errorCount = 0;
+
   // 并行执行任务，但通过connectionQueue限制并发连接数
   const taskPromises = selectedTokens.value.map(async (tokenId) => {
     if (shouldStop.value) return;
@@ -5789,10 +5800,13 @@ const startBatch = async () => {
     const MAX_RETRIES = 1;
     let success = false;
 
+    const token = tokens.value.find((t) => t.id === tokenId);
+
+    // 更新进度 - 开始处理
+    progress.update(token.name);
+
     while (retryCount <= MAX_RETRIES && !success) {
       if (shouldStop.value) break;
-
-      const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
         if (retryCount === 0) {
@@ -5827,6 +5841,8 @@ const startBatch = async () => {
 
         success = true;
         tokenStatus.value[tokenId] = "completed";
+        successCount++;
+        progress.success();
         addLog({
           time: new Date().toLocaleTimeString(),
           message: `=== ${token.name} 执行完成 ===`,
@@ -5845,6 +5861,8 @@ const startBatch = async () => {
           retryCount++;
         } else {
           tokenStatus.value[tokenId] = "failed";
+          errorCount++;
+          progress.fail(token.name, error.message);
           addLog({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} 执行失败: ${error.message}`,
@@ -5867,12 +5885,19 @@ const startBatch = async () => {
   // 等待所有任务完成
   await Promise.all(taskPromises);
 
+  // 更新进度为完成状态
+  progress.complete();
+
   // 等待所有任务完成后再继续
   await new Promise((r) => setTimeout(r, 1000));
 
   isRunning.value = false;
   currentRunningTokenId.value = null;
-  message.success("批量任务执行结束");
+
+  // 等待用户关闭进度弹窗
+  progress.onClose(() => {
+    message.success(`批量任务执行结束 - 成功: ${successCount}, 失败: ${errorCount}`);
+  });
 };
 
 const stopBatch = () => {
