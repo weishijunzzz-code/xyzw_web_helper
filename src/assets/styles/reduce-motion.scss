@@ -1,0 +1,3064 @@
+/**
+ * 减少动画样式 - Reduce Motion
+ * 为偏好减少动画的用户或性能考虑提供支持
+ */
+
+.reduce-motion {
+  // 禁用所有过渡动画
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  // 保留必要的焦点动画以确保可访问性
+  *:focus-visible {
+    transition-duration: 0.01ms !important;
+  }
+
+  // 禁用悬停效果
+  .card-hover,
+  .hover-lift-card,
+  .feature-card {
+    &:hover {
+      transform: none !important;
+    }
+  }
+
+  // 禁用按钮涟漪效果
+  .btn-ripple {
+    &::after {
+      display: none !important;
+    }
+  }
+
+  // 禁用进度条闪光动画
+  .progress-shimmer {
+    animation: none !important;
+  }
+
+  // 禁用骨架屏动画
+  .skeleton-shimmer {
+    animation: none !important;
+    background: var(--color-bg-tertiary) !important;
+  }
+
+  // 禁用脉冲动画
+  .animate-pulse {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  // 禁用弹跳动画
+  .animate-bounce {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  // 禁用旋转动画
+  .animate-spin {
+    animation: none !important;
+  }
+
+  // 禁用数字滚动动画
+  .number-roll {
+    animation: none !important;
+  }
+
+  // 禁用呼吸灯效果
+  .breathe {
+    animation: none !important;
+    box-shadow: none !important;
+  }
+
+  // 禁用扫描线效果
+  .scanline-effect {
+    &::after {
+      display: none !important;
+    }
+  }
+
+  // 禁用列表进入动画
+  .list-animate > * {
+    animation: none !important;
+  }
+
+  // 禁用加载动画
+  .loading-dots {
+    span {
+      animation: none !important;
+      opacity: 1 !important;
+    }
+  }
+
+  // 禁用心跳动画
+  .animate-heartbeat {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  // 禁用模糊进入效果
+  .animate-blur-in {
+    animation: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+
+  // 禁用3D翻转效果
+  .animate-flip-in {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  // 禁用模态框动画
+  .batch-progress-modal,
+  .n-modal {
+    animation: none !important;
+  }
+
+  // 禁用工具提示动画
+  .tooltip {
+    &::before,
+    &::after {
+      transition: none !important;
+    }
+  }
+
+  // 禁用开关切换动画
+  .toggle-switch {
+    &::after {
+      transition: none !important;
+    }
+  }
+
+  // 禁用导航项下划线动画
+  .nav-item {
+    &::before {
+      transition: none !important;
+    }
+  }
+
+  // 禁用积分圆环入场动画
+  .points-ring {
+    animation: none !important;
+  }
+
+  // 禁用宝箱项动画
+  .box-item {
+    transition: none !important;
+
+    &:hover,
+    &.active {
+      transform: none !important;
+    }
+  }
+
+  // 禁用Token选择器动画
+  .token-trigger {
+    transition: none !important;
+
+    &:hover {
+      transform: none !important;
+    }
+  }
+
+  // 禁用品牌Logo动画
+  .brand-logo {
+    transition: none !important;
+
+    &:hover {
+      transform: none !important;
+    }
+  }
+
+  // 禁用主题切换按钮动画
+  .theme-toggle-btn {
+    transition: none !important;
+
+    &:hover {
+      transform: none !important;
+    }
+  }
+
+  // 禁用颜色选项动画
+  .color-option {
+    transition: none !important;
+
+    &:hover {
+      transform: none !important;
+    }
+
+    &.active {
+      transform: scale(1.15) !important;
+    }
+  }
+
+  // 禁用主题选项动画
+  .theme-option {
+    transition: none !important;
+  }
+
+  // 禁用进度条过渡
+  .progress-bar-fill {
+    transition: none !important;
+  }
+
+  // 禁用统计项动画
+  .stat-item {
+    animation: none !important;
+  }
+
+  // 禁用错误项动画
+  .error-item {
+    animation: none !important;
+  }
+
+  // 禁用全局覆盖层动画
+  .batch-progress-overlay {
+    animation: none !important;
+  }
+
+  // 禁用滚动条平滑滚动
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  // 禁用页面过渡动画
+  .page-transition-enter-active,
+  .page-transition-leave-active {
+    transition: none !important;
+  }
+
+  .page-transition-enter-from,
+  .page-transition-leave-to {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  // 禁用折叠面板动画
+  .n-collapse {
+    .n-collapse-item {
+      transition: none !important;
+    }
+  }
+
+  // 禁用树形控件动画
+  .n-tree {
+    .n-tree-node {
+      transition: none !important;
+    }
+  }
+
+  // 禁用菜单动画
+  .n-menu {
+    .n-menu-item {
+      transition: none !important;
+    }
+  }
+
+  // 禁用下拉菜单动画
+  .n-dropdown-menu {
+    transition: none !important;
+  }
+
+  // 禁用选择器动画
+  .n-select {
+    .n-select-menu {
+      transition: none !important;
+    }
+  }
+
+  // 禁用日期选择器动画
+  .n-date-picker {
+    .n-date-panel {
+      transition: none !important;
+    }
+  }
+
+  // 禁用时间选择器动画
+  .n-time-picker {
+    .n-time-panel {
+      transition: none !important;
+    }
+  }
+
+  // 禁用滑块动画
+  .n-slider {
+    .n-slider-rail {
+      transition: none !important;
+    }
+
+    .n-slider-handle {
+      transition: none !important;
+    }
+  }
+
+  // 禁用开关动画
+  .n-switch {
+    .n-switch__rail {
+      transition: none !important;
+    }
+
+    .n-switch__button {
+      transition: none !important;
+    }
+  }
+
+  // 禁用单选框动画
+  .n-radio {
+    .n-radio__dot {
+      transition: none !important;
+    }
+  }
+
+  // 禁用复选框动画
+  .n-checkbox {
+    .n-checkbox__dot {
+      transition: none !important;
+    }
+  }
+
+  // 禁用标签页动画
+  .n-tabs {
+    .n-tabs-bar {
+      transition: none !important;
+    }
+
+    .n-tabs-tab {
+      transition: none !important;
+    }
+  }
+
+  // 禁用步骤条动画
+  .n-steps {
+    .n-step {
+      transition: none !important;
+    }
+  }
+
+  // 禁用时间线动画
+  .n-timeline {
+    .n-timeline-item {
+      transition: none !important;
+    }
+  }
+
+  // 禁用轮播图动画
+  .n-carousel {
+    .n-carousel__slide {
+      transition: none !important;
+    }
+  }
+
+  // 禁用图片预览动画
+  .n-image-preview {
+    transition: none !important;
+  }
+
+  // 禁用抽屉动画
+  .n-drawer {
+    transition: none !important;
+  }
+
+  // 禁用消息提示动画
+  .n-message {
+    transition: none !important;
+  }
+
+  // 禁用通知动画
+  .n-notification {
+    transition: none !important;
+  }
+
+  // 禁用对话框动画
+  .n-dialog {
+    transition: none !important;
+  }
+
+  // 禁用加载动画
+  .n-spin {
+    .n-spin__spinner {
+      animation: none !important;
+    }
+  }
+
+  // 禁用进度环动画
+  .n-progress {
+    .n-progress-graph-circle {
+      transition: none !important;
+    }
+  }
+
+  // 禁用徽章动画
+  .n-badge {
+    .n-badge-sup {
+      transition: none !important;
+    }
+  }
+
+  // 禁用头像动画
+  .n-avatar {
+    transition: none !important;
+  }
+
+  // 禁用标签动画
+  .n-tag {
+    transition: none !important;
+  }
+
+  // 禁用按钮动画
+  .n-button {
+    transition: none !important;
+  }
+
+  // 禁用输入框动画
+  .n-input {
+    transition: none !important;
+  }
+
+  // 禁用文本域动画
+  .n-textarea {
+    transition: none !important;
+  }
+
+  // 禁用数字输入框动画
+  .n-input-number {
+    transition: none !important;
+  }
+
+  // 禁用自动完成动画
+  .n-auto-complete {
+    transition: none !important;
+  }
+
+  // 禁用级联选择器动画
+  .n-cascader {
+    transition: none !important;
+  }
+
+  // 禁用穿梭框动画
+  .n-transfer {
+    transition: none !important;
+  }
+
+  // 禁用颜色选择器动画
+  .n-color-picker {
+    transition: none !important;
+  }
+
+  // 禁用评分动画
+  .n-rate {
+    .n-rate__item {
+      transition: none !important;
+    }
+  }
+
+  // 禁用上传动画
+  .n-upload {
+    transition: none !important;
+  }
+
+  // 禁用表格行动画
+  .n-data-table {
+    .n-data-table-tr {
+      transition: none !important;
+    }
+  }
+
+  // 禁用列表项动画
+  .n-list {
+    .n-list-item {
+      transition: none !important;
+    }
+  }
+
+  // 禁用描述列表动画
+  .n-descriptions {
+    .n-descriptions-item {
+      transition: none !important;
+    }
+  }
+
+  // 禁用统计数值动画
+  .n-statistic {
+    .n-statistic__value {
+      transition: none !important;
+    }
+  }
+
+  // 禁用倒计时动画
+  .n-countdown {
+    .n-countdown__content {
+      transition: none !important;
+    }
+  }
+
+  // 禁用数值动画
+  .n-number-animation {
+    transition: none !important;
+  }
+
+  // 禁用滚动条动画
+  ::-webkit-scrollbar {
+    transition: none !important;
+  }
+
+  // 禁用工具提示动画
+  [data-tooltip] {
+    &::before,
+    &::after {
+      transition: none !important;
+    }
+  }
+
+  // 禁用弹出确认动画
+  .n-popconfirm {
+    transition: none !important;
+  }
+
+  // 禁用气泡卡片动画
+  .n-popover {
+    transition: none !important;
+  }
+
+  // 禁用文字提示动画
+  .n-tooltip {
+    transition: none !important;
+  }
+
+  // 禁用全局提示动画
+  .n-alert {
+    transition: none !important;
+  }
+
+  // 禁用结果页动画
+  .n-result {
+    transition: none !important;
+  }
+
+  // 禁用异常页动画
+  .n-exception {
+    transition: none !important;
+  }
+
+  // 禁用空状态动画
+  .n-empty {
+    transition: none !important;
+  }
+
+  // 禁用评论动画
+  .n-comment {
+    transition: none !important;
+  }
+
+  // 禁用日历动画
+  .n-calendar {
+    transition: none !important;
+  }
+
+  // 禁用分割面板动画
+  .n-split {
+    transition: none !important;
+  }
+
+  // 禁用锚点动画
+  .n-anchor {
+    transition: none !important;
+  }
+
+  // 禁用回到顶部动画
+  .n-back-top {
+    transition: none !important;
+  }
+
+  // 禁用加载更多动画
+  .n-infinite-scroll {
+    transition: none !important;
+  }
+
+  // 禁用虚拟滚动动画
+  .n-virtual-list {
+    transition: none !important;
+  }
+
+  // 禁用水印动画
+  .n-watermark {
+    transition: none !important;
+  }
+
+  // 禁用二维码动画
+  .n-qr-code {
+    transition: none !important;
+  }
+
+  // 禁用签名动画
+  .n-signature {
+    transition: none !important;
+  }
+
+  // 禁用语音输入动画
+  .n-voice-input {
+    transition: none !important;
+  }
+
+  // 禁用视频播放器动画
+  .n-video {
+    transition: none !important;
+  }
+
+  // 禁用音频播放器动画
+  .n-audio {
+    transition: none !important;
+  }
+
+  // 禁用地图动画
+  .n-map {
+    transition: none !important;
+  }
+
+  // 禁用图表动画
+  .n-chart {
+    transition: none !important;
+  }
+
+  // 禁用编辑器动画
+  .n-editor {
+    transition: none !important;
+  }
+
+  // 禁用代码编辑器动画
+  .n-code-editor {
+    transition: none !important;
+  }
+
+  // 禁用Markdown编辑器动画
+  .n-markdown {
+    transition: none !important;
+  }
+
+  // 禁用富文本编辑器动画
+  .n-rich-text {
+    transition: none !important;
+  }
+
+  // 禁用公式编辑器动画
+  .n-formula {
+    transition: none !important;
+  }
+
+  // 禁用流程图编辑器动画
+  .n-flow {
+    transition: none !important;
+  }
+
+  // 禁用思维导图编辑器动画
+  .n-mind {
+    transition: none !important;
+  }
+
+  // 禁用白板动画
+  .n-whiteboard {
+    transition: none !important;
+  }
+
+  // 禁用3D查看器动画
+  .n-3d-viewer {
+    transition: none !important;
+  }
+
+  // 禁用VR查看器动画
+  .n-vr-viewer {
+    transition: none !important;
+  }
+
+  // 禁用AR查看器动画
+  .n-ar-viewer {
+    transition: none !important;
+  }
+
+  // 禁用全景查看器动画
+  .n-panorama {
+    transition: none !important;
+  }
+
+  // 禁用直播播放器动画
+  .n-live {
+    transition: none !important;
+  }
+
+  // 禁用录屏播放器动画
+  .n-record {
+    transition: none !important;
+  }
+
+  // 禁用截屏工具动画
+  .n-screenshot {
+    transition: none !important;
+  }
+
+  // 禁用录屏工具动画
+  .n-screen-record {
+    transition: none !important;
+  }
+
+  // 禁用远程控制动画
+  .n-remote {
+    transition: none !important;
+  }
+
+  // 禁用文件预览动画
+  .n-file-preview {
+    transition: none !important;
+  }
+
+  // 禁用打印预览动画
+  .n-print-preview {
+    transition: none !important;
+  }
+
+  // 禁用导出预览动画
+  .n-export-preview {
+    transition: none !important;
+  }
+
+  // 禁用导入预览动画
+  .n-import-preview {
+    transition: none !important;
+  }
+
+  // 禁用批量操作预览动画
+  .n-batch-preview {
+    transition: none !important;
+  }
+
+  // 禁用任务队列预览动画
+  .n-task-queue {
+    transition: none !important;
+  }
+
+  // 禁用通知中心预览动画
+  .n-notification-center {
+    transition: none !important;
+  }
+
+  // 禁用消息中心预览动画
+  .n-message-center {
+    transition: none !important;
+  }
+
+  // 禁用搜索中心预览动画
+  .n-search-center {
+    transition: none !important;
+  }
+
+  // 禁用帮助中心预览动画
+  .n-help-center {
+    transition: none !important;
+  }
+
+  // 禁用设置中心预览动画
+  .n-settings-center {
+    transition: none !important;
+  }
+
+  // 禁用用户中心预览动画
+  .n-user-center {
+    transition: none !important;
+  }
+
+  // 禁用权限中心预览动画
+  .n-permission-center {
+    transition: none !important;
+  }
+
+  // 禁用日志中心预览动画
+  .n-log-center {
+    transition: none !important;
+  }
+
+  // 禁用监控中心预览动画
+  .n-monitor-center {
+    transition: none !important;
+  }
+
+  // 禁用分析中心预览动画
+  .n-analytics-center {
+    transition: none !important;
+  }
+
+  // 禁用报表中心预览动画
+  .n-report-center {
+    transition: none !important;
+  }
+
+  // 禁用数据中心预览动画
+  .n-data-center {
+    transition: none !important;
+  }
+
+  // 禁用配置中心预览动画
+  .n-config-center {
+    transition: none !important;
+  }
+
+  // 禁用缓存中心预览动画
+  .n-cache-center {
+    transition: none !important;
+  }
+
+  // 禁用队列中心预览动画
+  .n-queue-center {
+    transition: none !important;
+  }
+
+  // 禁用调度中心预览动画
+  .n-schedule-center {
+    transition: none !important;
+  }
+
+  // 禁用工作流中心预览动画
+  .n-workflow-center {
+    transition: none !important;
+  }
+
+  // 禁用规则引擎预览动画
+  .n-rule-engine {
+    transition: none !important;
+  }
+
+  // 禁用公式引擎预览动画
+  .n-formula-engine {
+    transition: none !important;
+  }
+
+  // 禁用脚本引擎预览动画
+  .n-script-engine {
+    transition: none !important;
+  }
+
+  // 禁用模板引擎预览动画
+  .n-template-engine {
+    transition: none !important;
+  }
+
+  // 禁用查询引擎预览动画
+  .n-query-engine {
+    transition: none !important;
+  }
+
+  // 禁用搜索引擎预览动画
+  .n-search-engine {
+    transition: none !important;
+  }
+
+  // 禁用推荐引擎预览动画
+  .n-recommend-engine {
+    transition: none !important;
+  }
+
+  // 禁用AI引擎预览动画
+  .n-ai-engine {
+    transition: none !important;
+  }
+
+  // 禁用机器学习引擎预览动画
+  .n-ml-engine {
+    transition: none !important;
+  }
+
+  // 禁用深度学习引擎预览动画
+  .n-dl-engine {
+    transition: none !important;
+  }
+
+  // 禁用自然语言处理引擎预览动画
+  .n-nlp-engine {
+    transition: none !important;
+  }
+
+  // 禁用计算机视觉引擎预览动画
+  .n-cv-engine {
+    transition: none !important;
+  }
+
+  // 禁用语音识别引擎预览动画
+  .n-asr-engine {
+    transition: none !important;
+  }
+
+  // 禁用语义理解引擎预览动画
+  .n-nlu-engine {
+    transition: none !important;
+  }
+
+  // 禁用对话引擎预览动画
+  .n-dialog-engine {
+    transition: none !important;
+  }
+
+  // 禁用知识图谱引擎预览动画
+  .n-kg-engine {
+    transition: none !important;
+  }
+
+  // 禁用图计算引擎预览动画
+  .n-graph-engine {
+    transition: none !important;
+  }
+
+  // 禁用流计算引擎预览动画
+  .n-stream-engine {
+    transition: none !important;
+  }
+
+  // 禁用批处理引擎预览动画
+  .n-batch-engine {
+    transition: none !important;
+  }
+
+  // 禁用实时计算引擎预览动画
+  .n-realtime-engine {
+    transition: none !important;
+  }
+
+  // 禁用离线计算引擎预览动画
+  .n-offline-engine {
+    transition: none !important;
+  }
+
+  // 禁用交互式计算引擎预览动画
+  .n-interactive-engine {
+    transition: none !important;
+  }
+
+  // 禁用即席查询引擎预览动画
+  .n-adhoc-engine {
+    transition: none !important;
+  }
+
+  // 禁用OLAP引擎预览动画
+  .n-olap-engine {
+    transition: none !important;
+  }
+
+  // 禁用OLTP引擎预览动画
+  .n-oltp-engine {
+    transition: none !important;
+  }
+
+  // 禁用HTAP引擎预览动画
+  .n-htap-engine {
+    transition: none !important;
+  }
+
+  // 禁用数据仓库预览动画
+  .n-data-warehouse {
+    transition: none !important;
+  }
+
+  // 禁用数据湖预览动画
+  .n-data-lake {
+    transition: none !important;
+  }
+
+  // 禁用数据网格预览动画
+  .n-data-mesh {
+    transition: none !important;
+  }
+
+  // 禁用数据编织预览动画
+  .n-data-fabric {
+    transition: none !important;
+  }
+
+  // 禁用数据虚拟化预览动画
+  .n-data-virtualization {
+    transition: none !important;
+  }
+
+  // 禁用数据集成预览动画
+  .n-data-integration {
+    transition: none !important;
+  }
+
+  // 禁用数据治理预览动画
+  .n-data-governance {
+    transition: none !important;
+  }
+
+  // 禁用数据质量预览动画
+  .n-data-quality {
+    transition: none !important;
+  }
+
+  // 禁用数据安全预览动画
+  .n-data-security {
+    transition: none !important;
+  }
+
+  // 禁用数据隐私预览动画
+  .n-data-privacy {
+    transition: none !important;
+  }
+
+  // 禁用数据合规预览动画
+  .n-data-compliance {
+    transition: none !important;
+  }
+
+  // 禁用数据血缘预览动画
+  .n-data-lineage {
+    transition: none !important;
+  }
+
+  // 禁用数据目录预览动画
+  .n-data-catalog {
+    transition: none !important;
+  }
+
+  // 禁用数据资产预览动画
+  .n-data-asset {
+    transition: none !important;
+  }
+
+  // 禁用数据服务预览动画
+  .n-data-service {
+    transition: none !important;
+  }
+
+  // 禁用数据API预览动画
+  .n-data-api {
+    transition: none !important;
+  }
+
+  // 禁用数据交换预览动画
+  .n-data-exchange {
+    transition: none !important;
+  }
+
+  // 禁用数据共享预览动画
+  .n-data-sharing {
+    transition: none !important;
+  }
+
+  // 禁用数据开放预览动画
+  .n-data-open {
+    transition: none !important;
+  }
+
+  // 禁用数据交易预览动画
+  .n-data-trading {
+    transition: none !important;
+  }
+
+  // 禁用数据定价预览动画
+  .n-data-pricing {
+    transition: none !important;
+  }
+
+  // 禁用数据估值预览动画
+  .n-data-valuation {
+    transition: none !important;
+  }
+
+  // 禁用数据货币化预览动画
+  .n-data-monetization {
+    transition: none !important;
+  }
+
+  // 禁用数据商业化预览动画
+  .n-data-commercialization {
+    transition: none !important;
+  }
+
+  // 禁用数据产品化预览动画
+  .n-data-productization {
+    transition: none !important;
+  }
+
+  // 禁用数据平台化预览动画
+  .n-data-platformization {
+    transition: none !important;
+  }
+
+  // 禁用数据生态化预览动画
+  .n-data-ecosystem {
+    transition: none !important;
+  }
+
+  // 禁用数据智能化预览动画
+  .n-data-intelligence {
+    transition: none !important;
+  }
+
+  // 禁用数据自动化预览动画
+  .n-data-automation {
+    transition: none !important;
+  }
+
+  // 禁用数据自治化预览动画
+  .n-data-autonomy {
+    transition: none !important;
+  }
+
+  // 禁用数据民主化预览动画
+  .n-data-democratization {
+    transition: none !important;
+  }
+
+  // 禁用数据普惠化预览动画
+  .n-data-inclusiveness {
+    transition: none !important;
+  }
+
+  // 禁用数据可持续化预览动画
+  .n-data-sustainability {
+    transition: none !important;
+  }
+
+  // 禁用数据可信化预览动画
+  .n-data-trustworthiness {
+    transition: none !important;
+  }
+
+  // 禁用数据透明化预览动画
+  .n-data-transparency {
+    transition: none !important;
+  }
+
+  // 禁用数据公平化预览动画
+  .n-data-fairness {
+    transition: none !important;
+  }
+
+  // 禁用数据可解释化预览动画
+  .n-data-explainability {
+    transition: none !important;
+  }
+
+  // 禁用数据可审计化预览动画
+  .n-data-auditability {
+    transition: none !important;
+  }
+
+  // 禁用数据可追溯化预览动画
+  .n-data-traceability {
+    transition: none !important;
+  }
+
+  // 禁用数据可验证化预览动画
+  .n-data-verifiability {
+    transition: none !important;
+  }
+
+  // 禁用数据可重现化预览动画
+  .n-data-reproducibility {
+    transition: none !important;
+  }
+
+  // 禁用数据可复用化预览动画
+  .n-data-reusability {
+    transition: none !important;
+  }
+
+  // 禁用数据可移植化预览动画
+  .n-data-portability {
+    transition: none !important;
+  }
+
+  // 禁用数据可扩展化预览动画
+  .n-data-scalability {
+    transition: none !important;
+  }
+
+  // 禁用数据可维护化预览动画
+  .n-data-maintainability {
+    transition: none !important;
+  }
+
+  // 禁用数据可测试化预览动画
+  .n-data-testability {
+    transition: none !important;
+  }
+
+  // 禁用数据可观测化预览动画
+  .n-data-observability {
+    transition: none !important;
+  }
+
+  // 禁用数据可监控化预览动画
+  .n-data-monitorability {
+    transition: none !important;
+  }
+
+  // 禁用数据可告警化预览动画
+  .n-data-alertability {
+    transition: none !important;
+  }
+
+  // 禁用数据可恢复化预览动画
+  .n-data-recoverability {
+    transition: none !important;
+  }
+
+  // 禁用数据可备份化预览动画
+  .n-data-backupability {
+    transition: none !important;
+  }
+
+  // 禁用数据可归档化预览动画
+  .n-data-archivability {
+    transition: none !important;
+  }
+
+  // 禁用数据可销毁化预览动画
+  .n-data-destructibility {
+    transition: none !important;
+  }
+
+  // 禁用数据可遗忘化预览动画
+  .n-data-forgettability {
+    transition: none !important;
+  }
+
+  // 禁用数据可擦除化预览动画
+  .n-data-erasability {
+    transition: none !important;
+  }
+
+  // 禁用数据可净化化预览动画
+  .n-data-sanitizability {
+    transition: none !important;
+  }
+
+  // 禁用数据可匿名化预览动画
+  .n-data-anonymizability {
+    transition: none !important;
+  }
+
+  // 禁用数据可假名化预览动画
+  .n-data-pseudonymizability {
+    transition: none !important;
+  }
+
+  // 禁用数据可加密化预览动画
+  .n-data-encryptability {
+    transition: none !important;
+  }
+
+  // 禁用数据可解密化预览动画
+  .n-data-decryptability {
+    transition: none !important;
+  }
+
+  // 禁用数据可签名化预览动画
+  .n-data-signability {
+    transition: none !important;
+  }
+
+  // 禁用数据可验证化预览动画
+  .n-data-verifyability {
+    transition: none !important;
+  }
+
+  // 禁用数据可认证化预览动画
+  .n-data-authenticatability {
+    transition: none !important;
+  }
+
+  // 禁用数据可授权化预览动画
+  .n-data-authorizability {
+    transition: none !important;
+  }
+
+  // 禁用数据可审计化预览动画
+  .n-data-auditability-2 {
+    transition: none !important;
+  }
+
+  // 禁用数据可记账化预览动画
+  .n-data-accountability {
+    transition: none !important;
+  }
+
+  // 禁用数据可归责化预览动画
+  .n-data-attributability {
+    transition: none !important;
+  }
+
+  // 禁用数据可溯源化预览动画
+  .n-data-provenance {
+    transition: none !important;
+  }
+
+  // 禁用数据可确权化预览动画
+  .n-data-ownership {
+    transition: none !important;
+  }
+
+  // 禁用数据可流通化预览动画
+  .n-data-circulability {
+    transition: none !important;
+  }
+
+  // 禁用数据可交易化预览动画
+  .n-data-tradability {
+    transition: none !important;
+  }
+
+  // 禁用数据可质押化预览动画
+  .n-data-pledgeability {
+    transition: none !important;
+  }
+
+  // 禁用数据可抵押化预览动画
+  .n-data-mortgageability {
+    transition: none !important;
+  }
+
+  // 禁用数据可租赁化预览动画
+  .n-data-leasability {
+    transition: none !important;
+  }
+
+  // 禁用数据可许可化预览动画
+  .n-data-licensability {
+    transition: none !important;
+  }
+
+  // 禁用数据可订阅化预览动画
+  .n-data-subscribability {
+    transition: none !important;
+  }
+
+  // 禁用数据可会员化预览动画
+  .n-data-membership {
+    transition: none !important;
+  }
+
+  // 禁用数据可积分化预览动画
+  .n-data-pointability {
+    transition: none !important;
+  }
+
+  // 禁用数据可代币化预览动画
+  .n-data-tokenizability {
+    transition: none !important;
+  }
+
+  // 禁用数据可NFT化预览动画
+  .n-data-nftability {
+    transition: none !important;
+  }
+
+  // 禁用数据可区块链化预览动画
+  .n-data-blockchainability {
+    transition: none !important;
+  }
+
+  // 禁用数据可智能合约化预览动画
+  .n-data-smart-contractability {
+    transition: none !important;
+  }
+
+  // 禁用数据可DAO化预览动画
+  .n-data-daoability {
+    transition: none !important;
+  }
+
+  // 禁用数据可元宇宙化预览动画
+  .n-data-metaverseability {
+    transition: none !important;
+  }
+
+  // 禁用数据可数字孪生化预览动画
+  .n-data-digital-twinability {
+    transition: none !important;
+  }
+
+  // 禁用数据可虚拟现实化预览动画
+  .n-data-vrability {
+    transition: none !important;
+  }
+
+  // 禁用数据可增强现实化预览动画
+  .n-data-arability {
+    transition: none !important;
+  }
+
+  // 禁用数据可混合现实化预览动画
+  .n-data-mrability {
+    transition: none !important;
+  }
+
+  // 禁用数据可扩展现实化预览动画
+  .n-data-xrability {
+    transition: none !important;
+  }
+
+  // 禁用数据可空间计算化预览动画
+  .n-data-spatial-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可脑机接口化预览动画
+  .n-data-bci {
+    transition: none !important;
+  }
+
+  // 禁用数据可神经接口化预览动画
+  .n-data-neural-interface {
+    transition: none !important;
+  }
+
+  // 禁用数据可量子计算化预览动画
+  .n-data-quantum-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可边缘计算化预览动画
+  .n-data-edge-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可雾计算化预览动画
+  .n-data-fog-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可云计算化预览动画
+  .n-data-cloud-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可分布式计算化预览动画
+  .n-data-distributed-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可并行计算化预览动画
+  .n-data-parallel-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可高性能计算化预览动画
+  .n-data-hpc {
+    transition: none !important;
+  }
+
+  // 禁用数据可网格计算化预览动画
+  .n-data-grid-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可集群计算化预览动画
+  .n-data-cluster-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可弹性计算化预览动画
+  .n-data-elastic-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可无服务器计算化预览动画
+  .n-data-serverless-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可函数计算化预览动画
+  .n-data-function-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可容器计算化预览动画
+  .n-data-container-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可微服务计算化预览动画
+  .n-data-microservices-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可服务网格计算化预览动画
+  .n-data-service-mesh-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可事件驱动计算化预览动画
+  .n-data-event-driven-computing {
+    transition: none !important;
+  }
+
+  // 禁用数据可流处理计算化预览动画
+  .n-data-stream-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可批处理计算化预览动画
+  .n-data-batch-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可实时处理计算化预览动画
+  .n-data-realtime-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可近实时处理计算化预览动画
+  .n-data-near-realtime-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可离线处理计算化预览动画
+  .n-data-offline-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可交互式处理计算化预览动画
+  .n-data-interactive-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可即席查询处理计算化预览动画
+  .n-data-adhoc-processing {
+    transition: none !important;
+  }
+
+  // 禁用数据可预测分析处理计算化预览动画
+  .n-data-predictive-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可描述分析处理计算化预览动画
+  .n-data-descriptive-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可诊断分析处理计算化预览动画
+  .n-data-diagnostic-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可规范分析处理计算化预览动画
+  .n-data-prescriptive-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可认知分析处理计算化预览动画
+  .n-data-cognitive-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可情感分析处理计算化预览动画
+  .n-data-sentiment-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可文本分析处理计算化预览动画
+  .n-data-text-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可语音分析处理计算化预览动画
+  .n-data-speech-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可图像分析处理计算化预览动画
+  .n-data-image-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可视频分析处理计算化预览动画
+  .n-data-video-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可音频分析处理计算化预览动画
+  .n-data-audio-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可网络分析处理计算化预览动画
+  .n-data-network-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可社交分析处理计算化预览动画
+  .n-data-social-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可行为分析处理计算化预览动画
+  .n-data-behavioral-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可位置分析处理计算化预览动画
+  .n-data-location-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可时间分析处理计算化预览动画
+  .n-data-temporal-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可空间分析处理计算化预览动画
+  .n-data-spatial-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可时空分析处理计算化预览动画
+  .n-data-spatiotemporal-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可图分析处理计算化预览动画
+  .n-data-graph-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可关联分析处理计算化预览动画
+  .n-data-association-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可序列分析处理计算化预览动画
+  .n-data-sequence-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可模式分析处理计算化预览动画
+  .n-data-pattern-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可异常分析处理计算化预览动画
+  .n-data-anomaly-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可趋势分析处理计算化预览动画
+  .n-data-trend-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可预测分析处理计算化预览动画
+  .n-data-forecast-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可优化分析处理计算化预览动画
+  .n-data-optimization-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可模拟分析处理计算化预览动画
+  .n-data-simulation-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可可视化分析处理计算化预览动画
+  .n-data-visualization-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可交互式可视化分析处理计算化预览动画
+  .n-data-interactive-visualization-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可探索性分析处理计算化预览动画
+  .n-data-exploratory-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可验证性分析处理计算化预览动画
+  .n-data-confirmatory-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可对比分析处理计算化预览动画
+  .n-data-comparative-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可因果分析处理计算化预览动画
+  .n-data-causal-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可根因分析处理计算化预览动画
+  .n-data-root-cause-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可影响分析处理计算化预览动画
+  .n-data-impact-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可风险分析处理计算化预览动画
+  .n-data-risk-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可机会分析处理计算化预览动画
+  .n-data-opportunity-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可价值分析处理计算化预览动画
+  .n-data-value-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可成本分析处理计算化预览动画
+  .n-data-cost-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可收益分析处理计算化预览动画
+  .n-data-benefit-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ROI分析处理计算化预览动画
+  .n-data-roi-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可效率分析处理计算化预览动画
+  .n-data-efficiency-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可效果分析处理计算化预览动画
+  .n-data-effectiveness-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可性能分析处理计算化预览动画
+  .n-data-performance-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可质量分析处理计算化预览动画
+  .n-data-quality-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可满意度分析处理计算化预览动画
+  .n-data-satisfaction-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可忠诚度分析处理计算化预览动画
+  .n-data-loyalty-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可留存分析处理计算化预览动画
+  .n-data-retention-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可流失分析处理计算化预览动画
+  .n-data-churn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可转化分析处理计算化预览动画
+  .n-data-conversion-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可漏斗分析处理计算化预览动画
+  .n-data-funnel-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可路径分析处理计算化预览动画
+  .n-data-path-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可归因分析处理计算化预览动画
+  .n-data-attribution-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可细分分析处理计算化预览动画
+  .n-data-segmentation-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可聚类分析处理计算化预览动画
+  .n-data-clustering-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可分类分析处理计算化预览动画
+  .n-data-classification-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可回归分析处理计算化预览动画
+  .n-data-regression-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可时间序列分析处理计算化预览动画
+  .n-data-time-series-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可生存分析处理计算化预览动画
+  .n-data-survival-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可实验分析处理计算化预览动画
+  .n-data-experimental-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可A/B测试分析处理计算化预览动画
+  .n-data-ab-testing-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可多变量测试分析处理计算化预览动画
+  .n-data-mvt-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可_bandit_测试分析处理计算化预览动画
+  .n-data-bandit-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可假设检验分析处理计算化预览动画
+  .n-data-hypothesis-testing-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可置信区间分析处理计算化预览动画
+  .n-data-confidence-interval-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可显著性检验分析处理计算化预览动画
+  .n-data-significance-testing-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可效应量分析处理计算化预览动画
+  .n-data-effect-size-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可统计功效分析处理计算化预览动画
+  .n-data-statistical-power-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可样本量分析处理计算化预览动画
+  .n-data-sample-size-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可抽样分析处理计算化预览动画
+  .n-data-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可分层抽样分析处理计算化预览动画
+  .n-data-stratified-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可整群抽样分析处理计算化预览动画
+  .n-data-cluster-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可系统抽样分析处理计算化预览动画
+  .n-data-systematic-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可方便抽样分析处理计算化预览动画
+  .n-data-convenience-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可判断抽样分析处理计算化预览动画
+  .n-data-judgmental-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可配额抽样分析处理计算化预览动画
+  .n-data-quota-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可滚雪球抽样分析处理计算化预览动画
+  .n-data-snowball-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可理论抽样分析处理计算化预览动画
+  .n-data-theoretical-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可目的抽样分析处理计算化预览动画
+  .n-data-purposive-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可极端案例抽样分析处理计算化预览动画
+  .n-data-extreme-case-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可典型案例抽样分析处理计算化预览动画
+  .n-data-typical-case-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可关键案例抽样分析处理计算化预览动画
+  .n-data-critical-case-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可最大变异抽样分析处理计算化预览动画
+  .n-data-maximum-variation-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可同质抽样分析处理计算化预览动画
+  .n-data-homogeneous-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可异质抽样分析处理计算化预览动画
+  .n-data-heterogeneous-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可混合抽样分析处理计算化预览动画
+  .n-data-mixed-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可概率抽样分析处理计算化预览动画
+  .n-data-probability-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可非概率抽样分析处理计算化预览动画
+  .n-data-non-probability-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可随机抽样分析处理计算化预览动画
+  .n-data-random-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可简单随机抽样分析处理计算化预览动画
+  .n-data-simple-random-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可加权抽样分析处理计算化预览动画
+  .n-data-weighted-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可重要性抽样分析处理计算化预览动画
+  .n-data-importance-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可拒绝抽样分析处理计算化预览动画
+  .n-data-rejection-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可MCMC抽样分析处理计算化预览动画
+  .n-data-mcmc-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Gibbs抽样分析处理计算化预览动画
+  .n-data-gibbs-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Metropolis-Hastings抽样分析处理计算化预览动画
+  .n-data-metropolis-hastings-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可哈密顿蒙特卡洛抽样分析处理计算化预览动画
+  .n-data-hmc-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可No-U-Turn抽样分析处理计算化预览动画
+  .n-data-nuts-sampling-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可变分推断分析处理计算化预览动画
+  .n-data-variational-inference-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可期望传播分析处理计算化预览动画
+  .n-data-expectation-propagation-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可置信传播分析处理计算化预览动画
+  .n-data-belief-propagation-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可平均场分析处理计算化预览动画
+  .n-data-mean-field-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可贝叶斯推断分析处理计算化预览动画
+  .n-data-bayesian-inference-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可频率推断分析处理计算化预览动画
+  .n-data-frequentist-inference-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可似然分析处理计算化预览动画
+  .n-data-likelihood-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可后验分析处理计算化预览动画
+  .n-data-posterior-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可先验分析处理计算化预览动画
+  .n-data-prior-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可证据分析处理计算化预览动画
+  .n-data-evidence-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可边际似然分析处理计算化预览动画
+  .n-data-marginal-likelihood-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可模型选择分析处理计算化预览动画
+  .n-data-model-selection-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可模型平均分析处理计算化预览动画
+  .n-data-model-averaging-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可模型组合分析处理计算化预览动画
+  .n-data-model-combination-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可集成学习分析处理计算化预览动画
+  .n-data-ensemble-learning-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可堆叠分析处理计算化预览动画
+  .n-data-stacking-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可混合分析处理计算化预览动画
+  .n-data-blending-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可提升分析处理计算化预览动画
+  .n-data-boosting-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可装袋分析处理计算化预览动画
+  .n-data-bagging-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可随机森林分析处理计算化预览动画
+  .n-data-random-forest-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可梯度提升分析处理计算化预览动画
+  .n-data-gradient-boosting-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可XGBoost分析处理计算化预览动画
+  .n-data-xgboost-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可LightGBM分析处理计算化预览动画
+  .n-data-lightgbm-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CatBoost分析处理计算化预览动画
+  .n-data-catboost-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可神经网络分析处理计算化预览动画
+  .n-data-neural-network-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可深度学习分析处理计算化预览动画
+  .n-data-deep-learning-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可卷积神经网络分析处理计算化预览动画
+  .n-data-cnn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可循环神经网络分析处理计算化预览动画
+  .n-data-rnn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可长短期记忆网络分析处理计算化预览动画
+  .n-data-lstm-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可门控循环单元分析处理计算化预览动画
+  .n-data-gru-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Transformer分析处理计算化预览动画
+  .n-data-transformer-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可注意力机制分析处理计算化预览动画
+  .n-data-attention-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可自注意力分析处理计算化预览动画
+  .n-data-self-attention-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可多头注意力分析处理计算化预览动画
+  .n-data-multi-head-attention-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可BERT分析处理计算化预览动画
+  .n-data-bert-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GPT分析处理计算化预览动画
+  .n-data-gpt-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可T5分析处理计算化预览动画
+  .n-data-t5-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ViT分析处理计算化预览动画
+  .n-data-vit-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CLIP分析处理计算化预览动画
+  .n-data-clip-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DALL-E分析处理计算化预览动画
+  .n-data-dall-e-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Stable Diffusion分析处理计算化预览动画
+  .n-data-stable-diffusion-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Midjourney分析处理计算化预览动画
+  .n-data-midjourney-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ChatGPT分析处理计算化预览动画
+  .n-data-chatgpt-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可LLaMA分析处理计算化预览动画
+  .n-data-llama-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Claude分析处理计算化预览动画
+  .n-data-claude-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Gemini分析处理计算化预览动画
+  .n-data-gemini-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Copilot分析处理计算化预览动画
+  .n-data-copilot-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CodeWhisperer分析处理计算化预览动画
+  .n-data-codewhisperer-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可TabNine分析处理计算化预览动画
+  .n-data-tabnine-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GitHub Copilot分析处理计算化预览动画
+  .n-data-github-copilot-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Amazon CodeGuru分析处理计算化预览动画
+  .n-data-amazon-codeguru-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Google Cloud Code分析处理计算化预览动画
+  .n-data-google-cloud-code-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Azure DevOps分析处理计算化预览动画
+  .n-data-azure-devops-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Jenkins分析处理计算化预览动画
+  .n-data-jenkins-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GitLab CI分析处理计算化预览动画
+  .n-data-gitlab-ci-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GitHub Actions分析处理计算化预览动画
+  .n-data-github-actions-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CircleCI分析处理计算化预览动画
+  .n-data-circleci-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Travis CI分析处理计算化预览动画
+  .n-data-travis-ci-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Drone分析处理计算化预览动画
+  .n-data-drone-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可TeamCity分析处理计算化预览动画
+  .n-data-teamcity-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Bamboo分析处理计算化预览动画
+  .n-data-bamboo-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Argo CD分析处理计算化预览动画
+  .n-data-argo-cd-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Spinnaker分析处理计算化预览动画
+  .n-data-spinnaker-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Flux CD分析处理计算化预览动画
+  .n-data-flux-cd-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Tekton分析处理计算化预览动画
+  .n-data-tekton-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Prow分析处理计算化预览动画
+  .n-data-prow-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Flagger分析处理计算化预览动画
+  .n-data-flagger-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Keptn分析处理计算化预览动画
+  .n-data-keptn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Litmus分析处理计算化预览动画
+  .n-data-litmus-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Chaos Mesh分析处理计算化预览动画
+  .n-data-chaos-mesh-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Gremlin分析处理计算化预览动画
+  .n-data-gremlin-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Chaos Monkey分析处理计算化预览动画
+  .n-data-chaos-monkey-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可AWS FIS分析处理计算化预览动画
+  .n-data-aws-fis-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Azure Chaos Studio分析处理计算化预览动画
+  .n-data-azure-chaos-studio-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Google Cloud Chaos Engineering分析处理计算化预览动画
+  .n-data-google-cloud-chaos-engineering-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Snyk分析处理计算化预览动画
+  .n-data-snyk-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SonarQube分析处理计算化预览动画
+  .n-data-sonarqube-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Checkmarx分析处理计算化预览动画
+  .n-data-checkmarx-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Veracode分析处理计算化预览动画
+  .n-data-veracode-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可WhiteSource分析处理计算化预览动画
+  .n-data-whitesource-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Black Duck分析处理计算化预览动画
+  .n-data-black-duck-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可FOSSA分析处理计算化预览动画
+  .n-data-fossa-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可FOSSID分析处理计算化预览动画
+  .n-data-fossid-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ScanCode分析处理计算化预览动画
+  .n-data-scancode-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可OSS Review Toolkit分析处理计算化预览动画
+  .n-data-ort-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SPDX分析处理计算化预览动画
+  .n-data-spdx-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CycloneDX分析处理计算化预览动画
+  .n-data-cyclonedx-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SWID分析处理计算化预览动画
+  .n-data-swid-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CPE分析处理计算化预览动画
+  .n-data-cpe-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CVE分析处理计算化预览动画
+  .n-data-cve-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CVSS分析处理计算化预览动画
+  .n-data-cvss-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CWE分析处理计算化预览动画
+  .n-data-cwe-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CAPEC分析处理计算化预览动画
+  .n-data-capec-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ATT&CK分析处理计算化预览动画
+  .n-data-att-and-ck-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可D3FEND分析处理计算化预览动画
+  .n-data-d3fend-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可MITRE分析处理计算化预览动画
+  .n-data-mitre-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可NIST分析处理计算化预览动画
+  .n-data-nist-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO分析处理计算化预览动画
+  .n-data-iso-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GDPR分析处理计算化预览动画
+  .n-data-gdpr-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CCPA分析处理计算化预览动画
+  .n-data-ccpa-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可HIPAA分析处理计算化预览动画
+  .n-data-hipaa-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可PCI DSS分析处理计算化预览动画
+  .n-data-pci-dss-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SOC 2分析处理计算化预览动画
+  .n-data-soc-2-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO 27001分析处理计算化预览动画
+  .n-data-iso-27001-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO 27017分析处理计算化预览动画
+  .n-data-iso-27017-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO 27018分析处理计算化预览动画
+  .n-data-iso-27018-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO 27701分析处理计算化预览动画
+  .n-data-iso-27701-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO 22301分析处理计算化预览动画
+  .n-data-iso-22301-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ISO 31000分析处理计算化预览动画
+  .n-data-iso-31000-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可COBIT分析处理计算化预览动画
+  .n-data-cobit-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ITIL分析处理计算化预览动画
+  .n-data-itil-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可TOGAF分析处理计算化预览动画
+  .n-data-togaf-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ArchiMate分析处理计算化预览动画
+  .n-data-archimate-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可BPMN分析处理计算化预览动画
+  .n-data-bpmn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DMN分析处理计算化预览动画
+  .n-data-dmn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CMMN分析处理计算化预览动画
+  .n-data-cmmn-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可UML分析处理计算化预览动画
+  .n-data-uml-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SysML分析处理计算化预览动画
+  .n-data-sysml-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ER分析处理计算化预览动画
+  .n-data-er-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ORM分析处理计算化预览动画
+  .n-data-orm-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可FMC分析处理计算化预览动画
+  .n-data-fmc-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可IDEF分析处理计算化预览动画
+  .n-data-idef-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ARIS分析处理计算化预览动画
+  .n-data-aris-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可EPC分析处理计算化预览动画
+  .n-data-epc-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可Petri网分析处理计算化预览动画
+  .n-data-petri-net-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可状态机分析处理计算化预览动画
+  .n-data-state-machine-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可活动图分析处理计算化预览动画
+  .n-data-activity-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可序列图分析处理计算化预览动画
+  .n-data-sequence-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可协作图分析处理计算化预览动画
+  .n-data-collaboration-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可状态图分析处理计算化预览动画
+  .n-data-statechart-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可组件图分析处理计算化预览动画
+  .n-data-component-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可部署图分析处理计算化预览动画
+  .n-data-deployment-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可包图分析处理计算化预览动画
+  .n-data-package-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可组合结构图分析处理计算化预览动画
+  .n-data-composite-structure-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可轮廓图分析处理计算化预览动画
+  .n-data-profile-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可用例图分析处理计算化预览动画
+  .n-data-use-case-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可类图分析处理计算化预览动画
+  .n-data-class-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可对象图分析处理计算化预览动画
+  .n-data-object-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可通信图分析处理计算化预览动画
+  .n-data-communication-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可交互概览图分析处理计算化预览动画
+  .n-data-interaction-overview-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可时序图分析处理计算化预览动画
+  .n-data-timing-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可制品图分析处理计算化预览动画
+  .n-data-artifact-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可网络图分析处理计算化预览动画
+  .n-data-network-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可云架构图分析处理计算化预览动画
+  .n-data-cloud-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可安全架构图分析处理计算化预览动画
+  .n-data-security-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可数据架构图分析处理计算化预览动画
+  .n-data-data-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可应用架构图分析处理计算化预览动画
+  .n-data-application-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可技术架构图分析处理计算化预览动画
+  .n-data-technology-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可业务架构图分析处理计算化预览动画
+  .n-data-business-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可企业架构图分析处理计算化预览动画
+  .n-data-enterprise-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可解决方案架构图分析处理计算化预览动画
+  .n-data-solution-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可基础设施架构图分析处理计算化预览动画
+  .n-data-infrastructure-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可部署架构图分析处理计算化预览动画
+  .n-data-deployment-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可运维架构图分析处理计算化预览动画
+  .n-data-operations-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DevOps架构图分析处理计算化预览动画
+  .n-data-devops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DataOps架构图分析处理计算化预览动画
+  .n-data-dataops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可MLOps架构图分析处理计算化预览动画
+  .n-data-mlops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可AIOps架构图分析处理计算化预览动画
+  .n-data-aiops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可FinOps架构图分析处理计算化预览动画
+  .n-data-finops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GreenOps架构图分析处理计算化预览动画
+  .n-data-greenops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GitOps架构图分析处理计算化预览动画
+  .n-data-gitops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SecOps架构图分析处理计算化预览动画
+  .n-data-secops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DevSecOps架构图分析处理计算化预览动画
+  .n-data-devsecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DataSecOps架构图分析处理计算化预览动画
+  .n-data-datasecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可MLSecOps架构图分析处理计算化预览动画
+  .n-data-mlsecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可AISecOps架构图分析处理计算化预览动画
+  .n-data-aisecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CloudSecOps架构图分析处理计算化预览动画
+  .n-data-cloudsecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可NetSecOps架构图分析处理计算化预览动画
+  .n-data-netsecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可AppSecOps架构图分析处理计算化预览动画
+  .n-data-appsecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ContainerSecOps架构图分析处理计算化预览动画
+  .n-data-containersecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可K8sSecOps架构图分析处理计算化预览动画
+  .n-data-k8ssecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ServerlessSecOps架构图分析处理计算化预览动画
+  .n-data-serverlesssecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可APIMSecOps架构图分析处理计算化预览动画
+  .n-data-apimsecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可IdentitySecOps架构图分析处理计算化预览动画
+  .n-data-identitysecops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DataPrivacyOps架构图分析处理计算化预览动画
+  .n-data-dataprivacyops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ComplianceOps架构图分析处理计算化预览动画
+  .n-data-complianceops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可RiskOps架构图分析处理计算化预览动画
+  .n-data-riskops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GovernanceOps架构图分析处理计算化预览动画
+  .n-data-governanceops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可AuditOps架构图分析处理计算化预览动画
+  .n-data-auditops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ObservabilityOps架构图分析处理计算化预览动画
+  .n-data-observabilityops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ReliabilityOps架构图分析处理计算化预览动画
+  .n-data-reliabilityops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ResilienceOps架构图分析处理计算化预览动画
+  .n-data-resilienceops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ChaosOps架构图分析处理计算化预览动画
+  .n-data-chaosops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SRE架构图分析处理计算化预览动画
+  .n-data-sre-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可PlatformOps架构图分析处理计算化预览动画
+  .n-data-platformops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ProductOps架构图分析处理计算化预览动画
+  .n-data-productops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可DesignOps架构图分析处理计算化预览动画
+  .n-data-designops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ResearchOps架构图分析处理计算化预览动画
+  .n-data-researchops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ContentOps架构图分析处理计算化预览动画
+  .n-data-contentops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可MarketingOps架构图分析处理计算化预览动画
+  .n-data-marketingops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SalesOps架构图分析处理计算化预览动画
+  .n-data-salesops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CustomerOps架构图分析处理计算化预览动画
+  .n-data-customerops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SupportOps架构图分析处理计算化预览动画
+  .n-data-supportops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可SuccessOps架构图分析处理计算化预览动画
+  .n-data-successops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可CommunityOps架构图分析处理计算化预览动画
+  .n-data-communityops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可PartnerOps架构图分析处理计算化预览动画
+  .n-data-partnerops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ChannelOps架构图分析处理计算化预览动画
+  .n-data-channelops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可EcosystemOps架构图分析处理计算化预览动画
+  .n-data-ecosystemops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可AllianceOps架构图分析处理计算化预览动画
+  .n-data-allianceops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可IntegrationOps架构图分析处理计算化预览动画
+  .n-data-integrationops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可MigrationOps架构图分析处理计算化预览动画
+  .n-data-migrationops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ModernizationOps架构图分析处理计算化预览动画
+  .n-data-modernizationops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可TransformationOps架构图分析处理计算化预览动画
+  .n-data-transformationops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可InnovationOps架构图分析处理计算化预览动画
+  .n-data-innovationops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可IncubationOps架构图分析处理计算化预览动画
+  .n-data-incubationops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可VentureOps架构图分析处理计算化预览动画
+  .n-data-ventureops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可StartupOps架构图分析处理计算化预览动画
+  .n-data-startupops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可ScaleUpOps架构图分析处理计算化预览动画
+  .n-data-scaleupops-architecture-diagram-analytics {
+    transition: none !important;
+  }
+
+  // 禁用数据可GrowthOps架构图分析处理计算化预览动画
+  .n-data-growthops-architecture-diagram

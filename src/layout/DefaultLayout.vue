@@ -72,8 +72,8 @@
           <!-- 全局搜索 -->
           <GlobalSearch ref="globalSearchRef" />
 
-          <!-- 主题切换按钮 -->
-          <ThemeToggle />
+          <!-- 主题设置按钮 -->
+          <ThemeSettings />
 
           <!-- Token 选择器 -->
           <div class="token-selector">
@@ -316,7 +316,7 @@ import {
   selectedToken,
   selectedTokenId,
 } from "@/stores/tokenStore";
-import ThemeToggle from "@/components/Common/ThemeToggle.vue";
+import ThemeSettings from "@/components/Common/ThemeSettings.vue";
 import PageTransition from "@/components/DesignSystem/PageTransition.vue";
 import GlobalSearch from "@/components/Common/GlobalSearch.vue";
 import { useMobile } from "@/composables/useMobile";

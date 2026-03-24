@@ -1,0 +1,279 @@
+/**
+ * 紧凑模式样式 - Compact Mode
+ * 减小间距和字体大小，适合小屏幕或需要显示更多内容的场景
+ */
+
+.compact-mode {
+  // 减小基础字体大小
+  font-size: 14px;
+
+  // 减小间距
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-8: 20px;
+  --space-10: 24px;
+  --space-12: 28px;
+
+  // 导航栏
+  .dashboard-nav {
+    .nav-container {
+      height: 48px;
+    }
+
+    .nav-item {
+      padding: var(--space-1) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 卡片
+  .modern-card,
+  .glass-card,
+  .gradient-card {
+    border-radius: var(--radius-lg);
+
+    .card-header {
+      padding: var(--space-3) var(--space-4);
+    }
+
+    .card-body {
+      padding: var(--space-4);
+    }
+
+    .card-footer {
+      padding: var(--space-3) var(--space-4);
+    }
+  }
+
+  // 统计卡片
+  .stat-card {
+    padding: var(--space-4);
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      margin-bottom: var(--space-3);
+    }
+
+    .stat-value {
+      font-size: var(--font-size-2xl);
+    }
+  }
+
+  // 功能卡片
+  .feature-card {
+    padding: var(--space-4);
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      margin-bottom: var(--space-3);
+    }
+  }
+
+  // 按钮
+  .n-button {
+    padding: var(--space-1) var(--space-3);
+
+    &.n-button--medium {
+      padding: var(--space-2) var(--space-4);
+    }
+  }
+
+  // 表格
+  .n-data-table {
+    .n-data-table-th {
+      padding: var(--space-2) var(--space-3);
+    }
+
+    .n-data-table-td {
+      padding: var(--space-2) var(--space-3);
+    }
+  }
+
+  // 表单
+  .n-form-item {
+    margin-bottom: var(--space-3);
+  }
+
+  // 输入框
+  .n-input {
+    .n-input__input-el {
+      height: 32px;
+    }
+  }
+
+  // 标签页
+  .n-tabs {
+    .n-tabs-nav {
+      padding: var(--space-1);
+    }
+
+    .n-tabs-tab {
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 弹窗
+  .n-modal {
+    .n-modal-content {
+      padding: var(--space-4);
+    }
+  }
+
+  // 下拉菜单
+  .n-dropdown-menu {
+    .n-dropdown-option {
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 列表
+  .n-list {
+    .n-list-item {
+      padding: var(--space-2) var(--space-3);
+    }
+  }
+
+  // 树形控件
+  .n-tree {
+    .n-tree-node {
+      padding: var(--space-1) 0;
+    }
+  }
+
+  // 分页
+  .n-pagination {
+    .n-pagination-item {
+      min-width: 28px;
+      height: 28px;
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 徽章
+  .n-badge {
+    .n-badge-sup {
+      height: 16px;
+      line-height: 16px;
+      font-size: 10px;
+      padding: 0 4px;
+    }
+  }
+
+  // 头像
+  .n-avatar {
+    &.n-avatar--small {
+      width: 28px;
+      height: 28px;
+    }
+
+    &.n-avatar--medium {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  // 步骤条
+  .n-steps {
+    .n-step {
+      .n-step-indicator {
+        width: 24px;
+        height: 24px;
+        font-size: var(--font-size-sm);
+      }
+
+      .n-step-title {
+        font-size: var(--font-size-sm);
+      }
+
+      .n-step-description {
+        font-size: var(--font-size-xs);
+      }
+    }
+  }
+
+  // 时间线
+  .n-timeline {
+    .n-timeline-item {
+      padding-bottom: var(--space-3);
+
+      .n-timeline-item-content {
+        font-size: var(--font-size-sm);
+      }
+    }
+  }
+
+  // 评论
+  .n-comment {
+    .n-comment__avatar {
+      margin-right: var(--space-3);
+    }
+
+    .n-comment__content {
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 描述列表
+  .n-descriptions {
+    .n-descriptions-table-header {
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+
+    .n-descriptions-table-content {
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 统计数值
+  .n-statistic {
+    .n-statistic__label {
+      font-size: var(--font-size-xs);
+    }
+
+    .n-statistic__value {
+      font-size: var(--font-size-xl);
+    }
+  }
+
+  // 空状态
+  .n-empty {
+    padding: var(--space-6) 0;
+
+    .n-empty__description {
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 结果页
+  .n-result {
+    .n-result__title {
+      font-size: var(--font-size-lg);
+    }
+
+    .n-result__description {
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // 异常页
+  .n-exception {
+    .n-exception__title {
+      font-size: var(--font-size-lg);
+    }
+
+    .n-exception__description {
+      font-size: var(--font-size-sm);
+    }
+  }
+}
