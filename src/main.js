@@ -1,5 +1,8 @@
 import "@arco-design/web-vue/dist/arco.css";
 import "virtual:uno.css";
+import "./assets/styles/design-tokens.scss";
+import "./assets/styles/micro-interactions.scss";
+import "./assets/styles/modern-cards.scss";
 import "./assets/styles/global.scss";
 import "./assets/styles/mobile.scss";
 

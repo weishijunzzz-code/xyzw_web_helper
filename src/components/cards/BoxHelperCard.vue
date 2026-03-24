@@ -589,38 +589,41 @@ watch(mode, () => {
 <style scoped lang="scss">
 .box-helper {
   .container {
-    padding: 12px 0;
+    padding: var(--space-4) 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
   }
 
-  // 总积分卡片
+  // 总积分卡片 - 使用新的设计令牌
   .total-points-card {
     display: flex;
     justify-content: center;
-    padding: 8px 0;
+    padding: var(--space-3) 0;
 
     .points-ring {
       position: relative;
-      width: 100px;
-      height: 100px;
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
       background: conic-gradient(
-        var(--primary-color) calc(var(--progress) * 1%),
-        var(--bg-tertiary) 0
+        var(--color-primary-500) calc(var(--progress) * 1%),
+        var(--color-bg-tertiary) 0
       );
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: var(--shadow-md);
+      animation: scaleIn var(--duration-slow) var(--ease-out-back);
 
       &::before {
         content: "";
         position: absolute;
-        width: 80px;
-        height: 80px;
+        width: 96px;
+        height: 96px;
         border-radius: 50%;
-        background: var(--bg-secondary);
+        background: var(--color-bg-secondary);
+        box-shadow: inset var(--shadow-sm);
       }
 
       .ring-content {
@@ -628,46 +631,65 @@ watch(mode, () => {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: var(--space-1);
 
         .points-value {
-          font-size: 20px;
+          font-size: var(--font-size-2xl);
           font-weight: var(--font-weight-bold);
-          color: var(--primary-color);
+          background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-400));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .points-label {
-          font-size: 11px;
-          color: var(--text-secondary);
+          font-size: var(--font-size-xs);
+          color: var(--color-text-secondary);
+          font-weight: var(--font-weight-medium);
         }
       }
     }
   }
 
-  // 宝箱网格
+  // 宝箱网格 - 使用新的设计令牌
   .box-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    gap: var(--space-3);
 
     .box-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 8px 4px;
-      border-radius: var(--border-radius-medium);
-      background: var(--bg-tertiary);
+      padding: var(--space-3) var(--space-2);
+      border-radius: var(--radius-xl);
+      background: var(--color-bg-tertiary);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--duration-normal) var(--ease-out-expo);
       border: 2px solid transparent;
+      box-shadow: var(--shadow-sm);
 
       &:hover {
-        background: var(--bg-hover);
+        background: var(--color-bg-secondary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
       }
 
       &.active {
-        border-color: var(--primary-color);
-        background: var(--primary-color-light);
+        border-color: var(--color-primary-500);
+        background: var(--color-primary-50);
+        box-shadow: var(--shadow-glow);
+        transform: translateY(-2px) scale(1.02);
+      }
+
+      &.low-stock {
+        border-color: var(--color-warning-300);
+        background: var(--color-warning-50);
+      }
+
+      &.no-stock {
+        opacity: 0.6;
+        filter: grayscale(0.5);
       }
 
       .box-icon-wrapper {

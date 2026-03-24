@@ -480,14 +480,20 @@ const handleUserAction = async (key) => {
 </script>
 
 <style scoped lang="scss">
-// 导航栏
+// 导航栏 - 使用新的设计令牌
 .dashboard-nav {
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-light);
-  padding: 0 var(--spacing-lg);
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-default);
+  padding: 0 var(--space-6);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.dark .dashboard-nav {
+  background: rgba(15, 23, 42, 0.9);
 }
 
 .nav-container {
@@ -501,28 +507,37 @@ const handleUserAction = async (key) => {
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  margin-right: var(--spacing-xl);
+  gap: var(--space-2);
+  margin-right: var(--space-8);
 }
 
 .brand-logo {
   width: 40px;
   height: 40px;
-  border-radius: var(--border-radius-small);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-normal) var(--ease-out);
+
+  &:hover {
+    transform: scale(1.05) rotate(5deg);
+  }
 }
 
 .brand-text {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .brand-toggle {
   display: none;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--space-2);
   cursor: pointer;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
 }
 
 .brand-toggle .n-icon {
@@ -531,28 +546,51 @@ const handleUserAction = async (key) => {
 
 .nav-menu {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--space-2);
   flex: 1;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-medium);
-  color: var(--text-secondary);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
   text-decoration: none;
-  transition: all var(--transition-fast);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--duration-fast) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--color-primary-500);
+    transition: all var(--duration-normal) var(--ease-out-expo);
+    transform: translateX(-50%);
+  }
 
   &:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+
+    &::before {
+      width: 60%;
+    }
   }
 
   &.active {
-    background: var(--primary-color-light);
-    color: var(--primary-color);
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+
+    &::before {
+      width: 60%;
+    }
   }
 }
 
@@ -560,25 +598,28 @@ const handleUserAction = async (key) => {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
 }
 
 .token-selector {
   .token-trigger {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--border-radius-medium);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-light);
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-default);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all var(--duration-normal) var(--ease-out-expo);
+    box-shadow: var(--shadow-sm);
 
     &:hover,
     &.is-active {
-      border-color: var(--primary-color);
-      background: var(--bg-tertiary);
+      border-color: var(--color-primary-300);
+      background: var(--color-bg-tertiary);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
     }
 
     .token-name {
