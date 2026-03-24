@@ -1,7 +1,7 @@
 <template>
-  <MyCard class="helper" :statusClass="{ active: state.isRunning }">
+  <MyCard class="fish-helper" :statusClass="{ active: state.isRunning }">
     <template #icon>
-      <img :src="iconPath" alt="普通鱼竿图标" />
+      <img :src="iconPath" alt="钓鱼图标" />
     </template>
     <template #title>
       <h3>钓鱼助手</h3>
@@ -11,60 +11,138 @@
     </template>
     <template #default>
       <div class="container">
-        <div class="list">
-          <div class="item" v-for="item in dataList" :key="item.type">
-            <img :src="item.img" :alt="item.type" />
-            <div class="box-info">
-              <div class="box-type">{{ item.type }}</div>
-              <div class="box-count">数量：{{ item.count }}</div>
+        <!-- 鱼竿资源卡片 -->
+        <div class="rods-resource-card">
+          <div class="resource-title">鱼竿库存</div>
+          <div class="rods-grid">
+            <div
+              v-for="(rod, index) in rodDataList"
+              :key="rod.type"
+              class="rod-item"
+              :class="{ 
+                active: selectedRodIndex === index,
+                exhausted: rod.count === 0 
+              }"
+              @click="selectedRodIndex = index"
+            >
+              <div class="rod-icon-wrapper">
+                <img :src="rod.img" :alt="rod.type" />
+                <span class="rod-quantity" :class="{ zero: rod.count === 0 }">
+                  {{ rod.count }}
+                </span>
+              </div>
+              <span class="rod-name">{{ rod.type }}</span>
+              <span class="rod-desc">{{ rod.description }}</span>
             </div>
           </div>
         </div>
 
+        <!-- 智能策略提示 -->
+        <div class="strategy-tip" v-if="recommendedRod">
+          <div class="tip-icon">💡</div>
+          <div class="tip-content">
+            <span class="tip-label">智能推荐：</span>
+            <span class="tip-text">{{ recommendedRod.reason }}</span>
+          </div>
+        </div>
+
+        <!-- 模式切换 -->
         <n-tabs v-model:value="mode" type="segment" class="mode-tabs">
           <n-tab name="manual" tab="手动模式" />
           <n-tab name="auto" tab="自动模式" />
         </n-tabs>
 
+        <!-- 手动模式 -->
         <div v-if="mode === 'manual'" class="manual-mode">
-          <div class="selects">
-            <n-select v-model:value="type" :options="typeOptions" />
-            <n-select v-model:value="number" :options="numberOptions" />
+          <div class="config-row">
+            <span class="config-label">鱼竿类型</span>
+            <n-select
+              v-model:value="manualConfig.rodType"
+              :options="rodTypeOptions"
+              style="width: 140px"
+            />
+          </div>
+          <div class="config-row">
+            <span class="config-label">钓鱼次数</span>
+            <n-select
+              v-model:value="manualConfig.number"
+              :options="numberOptions"
+              style="width: 140px"
+            />
           </div>
         </div>
 
+        <!-- 自动模式 -->
         <div v-else class="auto-mode">
-          <div class="auto-inputs">
-            <div class="input-group">
-              <span class="label">鱼竿类型：</span>
-              <n-select v-model:value="autoRodType" :options="typeOptions" style="width: 150px" />
-            </div>
-            <div class="input-group">
-              <span class="label">目标次数：</span>
-              <n-input-number
-                v-model:value="targetTimes"
-                :min="0"
-                :step="10"
-                placeholder="输入目标次数"
-                style="width: 150px"
+          <div class="auto-config">
+            <div class="config-row">
+              <span class="config-label">优先使用</span>
+              <n-select
+                v-model:value="autoConfig.rodType"
+                :options="rodTypeOptions"
+                style="width: 140px"
               />
             </div>
-            <div class="input-group">
-              <span class="label">已完成：</span>
-              <span class="value earned">{{ state.completedTimes }}</span>
-            </div>
-            <div class="input-group">
-              <span class="label">还需次数：</span>
-              <span class="value" :class="{ 'need-more': remainingTimes > 0 }">
-                {{ remainingTimes > 0 ? remainingTimes : 0 }}
-              </span>
+            <div class="config-row">
+              <span class="config-label">智能切换</span>
+              <n-switch v-model:value="autoConfig.autoSwitch" />
+              <span class="switch-hint">用完自动切换另一种</span>
             </div>
           </div>
-          <div class="progress-info" v-if="state.isRunning">
+
+          <div class="target-input-row">
+            <span class="input-label">目标次数</span>
+            <n-input-number
+              v-model:value="autoConfig.targetValue"
+              :min="0"
+              :step="10"
+              :max="10000"
+              placeholder="输入目标次数"
+              style="width: 150px"
+            />
+            <n-button size="tiny" @click="setPresetTarget(160)">160</n-button>
+            <n-button size="tiny" @click="setPresetTarget(320)">320</n-button>
+          </div>
+
+          <div class="progress-stats">
+            <div class="stat-item completed">
+              <span class="stat-label">已完成</span>
+              <span class="stat-value">
+                <AnimatedNumber :value="autoConfig.completedValue" :duration="800" />
+              </span>
+            </div>
+            <div class="stat-item remaining" v-if="remainingValue > 0">
+              <span class="stat-label">剩余</span>
+              <span class="stat-value">{{ remainingValue }}</span>
+            </div>
+            <div class="stat-item time" v-if="state.isRunning">
+              <span class="stat-label">运行时间</span>
+              <span class="stat-value">{{ runningDuration }}</span>
+            </div>
+          </div>
+
+          <!-- 消耗预估 -->
+          <div class="consumption-estimate" v-if="autoConfig.targetValue > 0">
+            <div class="estimate-title">预计消耗</div>
+            <div class="estimate-content">
+              <div class="estimate-item">
+                <img :src="currentRodImg" class="estimate-icon" />
+                <span class="estimate-value">{{ estimatedConsumption }} 个</span>
+              </div>
+              <div class="estimate-item" v-if="estimatedTime">
+                <span class="estimate-label">约需</span>
+                <span class="estimate-value">{{ estimatedTime }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 进度条 -->
+          <div class="progress-section" v-if="state.isRunning || autoConfig.completedValue > 0">
             <n-progress
               type="line"
               :percentage="progressPercentage"
               :indicator-placement="'inside'"
+              :status="isCompleted ? 'success' : 'default'"
             />
             <span class="progress-text">{{ state.progressText }}</span>
           </div>
@@ -73,26 +151,26 @@
     </template>
     <template #action>
       <div class="actions">
-        <div class="manual-actions" v-if="mode === 'manual'">
+        <template v-if="mode === 'manual'">
           <a-button
             type="primary"
-            :disabled="state.isRunning"
+            :disabled="state.isRunning || !hasSelectedRod"
             secondary
             size="small"
             block
-            @click="handleHelper"
+            @click="handleManualFish"
           >
             {{ state.isRunning ? "运行中" : "开始钓鱼" }}
           </a-button>
-        </div>
-        <div class="auto-actions" v-else>
+        </template>
+        <template v-else>
           <a-button
             type="primary"
-            :disabled="state.isRunning || !targetTimes || remainingTimes <= 0"
+            :disabled="!canStart || !hasAnyRod"
             secondary
             size="small"
             block
-            @click="startAuto"
+            @click="startAutoFish"
           >
             {{ state.isRunning ? "运行中..." : "开始自动钓鱼" }}
           </a-button>
@@ -104,341 +182,621 @@
           >
             停止
           </a-button>
-          <a-button type="primary" size="small" @click="resetCompleted">
+          <a-button type="default" size="small" @click="reset">
             重置
           </a-button>
-        </div>
+        </template>
       </div>
     </template>
   </MyCard>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, watch } from "vue";
 import { useMessage } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
+import { useHelperBase } from "@/composables/useHelperBase";
 import MyCard from "../Common/MyCard.vue";
+import AnimatedNumber from "../Common/AnimatedNumber.vue";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
 
-const iconPath = computed(() => {
-  return import.meta.env.BASE_URL + "fish/hjyg.png";
+// 使用基础组合式函数
+const {
+  mode,
+  manualConfig,
+  autoConfig,
+  state,
+  remainingValue,
+  progressPercentage,
+  isCompleted,
+  canStart,
+  start,
+  stop,
+  reset,
+  updateProgress,
+  executeBatches,
+  getRunningDuration,
+  generateNumberOptions,
+} = useHelperBase("fish", {
+  name: "钓鱼",
+  batchSize: 10,
+  defaultTarget: 0,
+  targetStep: 10,
 });
 
+// 初始化配置
+manualConfig.rodType = 1;
+manualConfig.number = 10;
+autoConfig.rodType = 1;
+autoConfig.autoSwitch = true;
+
+const iconPath = computed(() => import.meta.env.BASE_URL + "fish/hjyg.png");
 const roleInfo = computed(() => tokenStore.gameData?.roleInfo || null);
 
-const dataList = computed(() => {
-  const getImgPath = (path) =>
-    import.meta.env.BASE_URL + path.replace(/^\//, "");
-  return [
-    {
-      type: "普通鱼竿",
-      img: getImgPath("/fish/ptyg.png"),
-      count: roleInfo.value?.role?.items?.[1011]?.quantity || 0,
-      itemId: 1011,
-    },
-    {
-      type: "黄金鱼竿",
-      img: getImgPath("/fish/hjyg.png"),
-      count: roleInfo.value?.role?.items?.[1012]?.quantity || 0,
-      itemId: 1012,
-    },
-  ];
-});
-
-const mode = ref("manual");
-
-const type = ref(1);
-const typeOptions = [
-  { label: "普通鱼竿", value: 1 },
-  { label: "黄金鱼竿", value: 2 },
+// 鱼竿定义
+const rodDefinitions = [
+  { 
+    type: "普通鱼竿", 
+    itemId: 1011, 
+    icon: "ptyg.png",
+    description: "基础鱼竿",
+    lotteryType: 1
+  },
+  { 
+    type: "黄金鱼竿", 
+    itemId: 1012, 
+    icon: "hjyg.png",
+    description: "高级鱼竿",
+    lotteryType: 2
+  },
 ];
 
-const number = ref(10);
-const numberOptions = [
-  { label: "10", value: 10 },
-  { label: "20", value: 20 },
-  { label: "50", value: 50 },
-  { label: "80", value: 80 },
-  { label: "100", value: 100 },
-  { label: "160", value: 160 },
-];
-
-const targetTimes = ref(0);
-const autoRodType = ref(1); // 自动模式默认使用普通鱼竿
-
-const state = reactive({
-  isRunning: false,
-  progressText: "",
-  completedTimes: 0,
+const rodDataList = computed(() => {
+  const getImgPath = (path) => import.meta.env.BASE_URL + path;
+  return rodDefinitions.map((rod) => ({
+    ...rod,
+    img: getImgPath(`fish/${rod.icon}`),
+    count: roleInfo.value?.role?.items?.[rod.itemId]?.quantity || 0,
+  }));
 });
 
-const remainingTimes = computed(() => {
-  return targetTimes.value - state.completedTimes;
+// 选项
+const rodTypeOptions = rodDefinitions.map((rod) => ({
+  label: rod.type,
+  value: rod.lotteryType,
+}));
+
+const numberOptions = generateNumberOptions([10, 20, 50, 80, 100, 160]);
+
+// 选中的鱼竿
+const selectedRodIndex = ref(0);
+
+// 计算属性
+const hasSelectedRod = computed(() => {
+  const rod = rodDataList.value.find(r => r.lotteryType === manualConfig.rodType);
+  return rod && rod.count > 0;
 });
 
-const progressPercentage = computed(() => {
-  if (!targetTimes.value || targetTimes.value === 0) return 0;
-  return Math.min(100, Math.round((state.completedTimes / targetTimes.value) * 100));
+const hasAnyRod = computed(() => {
+  return rodDataList.value.some(rod => rod.count > 0);
 });
 
-const resetCompleted = () => {
-  state.completedTimes = 0;
-  message.info("已重置已完成次数");
+const currentRodImg = computed(() => {
+  const rod = rodDataList.value.find(r => r.lotteryType === autoConfig.rodType);
+  return rod ? rod.img : '';
+});
+
+// 智能推荐
+const recommendedRod = computed(() => {
+  const normalRod = rodDataList.value.find(r => r.lotteryType === 1);
+  const goldRod = rodDataList.value.find(r => r.lotteryType === 2);
+  
+  if (!normalRod || !goldRod) return null;
+  
+  if (mode.value === 'auto') {
+    if (autoConfig.rodType === 1 && normalRod.count > 0) {
+      return { reason: `优先使用普通鱼竿（剩余 ${normalRod.count} 个）` };
+    }
+    if (autoConfig.rodType === 2 && goldRod.count > 0) {
+      return { reason: `优先使用黄金鱼竿（剩余 ${goldRod.count} 个）` };
+    }
+    if (autoConfig.autoSwitch) {
+      if (normalRod.count > 0) {
+        return { reason: `黄金鱼竿不足，将自动切换为普通鱼竿（${normalRod.count} 个）` };
+      }
+      if (goldRod.count > 0) {
+        return { reason: `普通鱼竿不足，将自动切换为黄金鱼竿（${goldRod.count} 个）` };
+      }
+    }
+  } else {
+    if (normalRod.count >= 10) {
+      return { reason: `普通鱼竿充足（${normalRod.count} 个），推荐批量使用` };
+    }
+    if (goldRod.count > 0 && normalRod.count < 10) {
+      return { reason: `普通鱼竿不足，推荐使用黄金鱼竿` };
+    }
+  }
+  return null;
+});
+
+// 消耗预估
+const estimatedConsumption = computed(() => {
+  return Math.min(autoConfig.targetValue, getAvailableRodCount(autoConfig.rodType));
+});
+
+const estimatedTime = computed(() => {
+  const seconds = Math.ceil(autoConfig.targetValue * 1.5);
+  if (seconds < 60) return `${seconds}秒`;
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes}分钟`;
+});
+
+// 运行时长
+const runningDuration = ref("00:00");
+let durationTimer = null;
+
+const startDurationTimer = () => {
+  durationTimer = setInterval(() => {
+    runningDuration.value = getRunningDuration();
+  }, 1000);
 };
 
-const stopAuto = () => {
-  state.isRunning = false;
-  state.progressText = "已停止";
-  message.info("已停止自动钓鱼");
+const stopDurationTimer = () => {
+  if (durationTimer) {
+    clearInterval(durationTimer);
+    durationTimer = null;
+  }
 };
 
-const getAvailableRod = () => {
-  const normalRod = roleInfo.value?.role?.items?.[1011]?.quantity || 0;
-  const goldRod = roleInfo.value?.role?.items?.[1012]?.quantity || 0;
+// 设置预设目标
+const setPresetTarget = (value) => {
+  autoConfig.targetValue = value;
+};
 
-  if (type.value === 1 && normalRod > 0) {
-    return { type: 1, name: "普通鱼竿" };
+// 获取可用鱼竿数量
+const getAvailableRodCount = (rodType) => {
+  const rod = rodDataList.value.find(r => r.lotteryType === rodType);
+  return rod ? rod.count : 0;
+};
+
+// 获取当前应使用的鱼竿类型（考虑自动切换）
+const getCurrentRodType = () => {
+  const preferredCount = getAvailableRodCount(autoConfig.rodType);
+  if (preferredCount > 0) return autoConfig.rodType;
+  
+  if (autoConfig.autoSwitch) {
+    // 尝试切换另一种鱼竿
+    const otherType = autoConfig.rodType === 1 ? 2 : 1;
+    const otherCount = getAvailableRodCount(otherType);
+    if (otherCount > 0) {
+      return otherType;
+    }
   }
-  if (type.value === 2 && goldRod > 0) {
-    return { type: 2, name: "黄金鱼竿" };
-  }
-  if (normalRod > 0) {
-    return { type: 1, name: "普通鱼竿" };
-  }
-  if (goldRod > 0) {
-    return { type: 2, name: "黄金鱼竿" };
-  }
+  
   return null;
 };
 
-const startAuto = async () => {
-  if (!tokenStore.selectedToken) {
-    message.warning("请先选择Token");
-    return;
-  }
+// 手动钓鱼
+const handleManualFish = async () => {
+  const success = await start(async () => {
+    const tokenId = tokenStore.selectedToken.id;
+    const count = manualConfig.number;
+    const rodType = manualConfig.rodType;
 
-  if (!targetTimes.value || targetTimes.value <= 0) {
-    message.warning("请设置目标次数");
-    return;
-  }
-
-  const tokenId = tokenStore.selectedToken.id;
-  state.isRunning = true;
-  state.completedTimes = 0;
-
-  message.info("开始自动钓鱼...");
-
-  try {
-    while (state.isRunning && remainingTimes.value > 0) {
-      const normalRod = roleInfo.value?.role?.items?.[1011]?.quantity || 0;
-      const goldRod = roleInfo.value?.role?.items?.[1012]?.quantity || 0;
-
-      let rodType = autoRodType.value;
-      let rodName = rodType === 1 ? "普通鱼竿" : "黄金鱼竿";
-
-      if (rodType === 1 && normalRod <= 0) {
-        message.warning("普通鱼竿已用完，停止钓鱼");
-        break;
-      } else if (rodType === 2 && goldRod <= 0) {
-        message.warning("黄金鱼竿已用完，停止钓鱼");
-        break;
-      }
-
-      const batches = Math.floor(remainingTimes.value / 10);
-      const remainder = remainingTimes.value % 10;
-
-      if (batches > 0) {
+    await executeBatches(
+      count,
+      async (batchSize) => {
         await tokenStore.sendMessageWithPromise(tokenId, "artifact_lottery", {
           type: rodType,
-          lotteryNumber: 10,
+          lotteryNumber: batchSize,
           newFree: true,
         });
-        state.completedTimes += 10;
-        state.progressText = `已完成 ${state.completedTimes} / 目标 ${targetTimes.value}`;
+      },
+      {
+        batchSize: 10,
+        delay: 200,
       }
+    );
 
-      if (remainder > 0 && state.isRunning && remainingTimes.value > 0) {
-        const currentRod = autoRodType.value === 1 ? normalRod : goldRod;
-        if (currentRod > 0) {
-          await tokenStore.sendMessageWithPromise(tokenId, "artifact_lottery", {
-            type: rodType,
-            lotteryNumber: remainder,
-            newFree: true,
-          });
-          state.completedTimes += remainder;
-          state.progressText = `已完成 ${state.completedTimes} / 目标 ${targetTimes.value}`;
-        }
-      }
-
-      await tokenStore.sendMessage(tokenId, "role_getroleinfo");
-
-      if (state.completedTimes >= targetTimes.value) {
-        break;
-      }
-
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-
-    if (state.completedTimes >= targetTimes.value) {
-      message.success(`已达到目标次数 ${targetTimes.value}！`);
-    }
-  } catch (error) {
-    console.error("自动钓鱼出错:", error);
-    message.error("钓鱼出错: " + error.message);
-  } finally {
-    state.isRunning = false;
-    state.progressText = state.completedTimes >= targetTimes.value ? "已完成" : "已停止";
-  }
-};
-
-const handleHelper = async () => {
-  if (!tokenStore.selectedToken) {
-    message.warning("请先选择Token");
-    return;
-  }
-  const tokenId = tokenStore.selectedToken.id;
-  state.isRunning = true;
-  message.info("钓鱼助手运行中");
-  console.log("🚀 ~ handleHelper ~ type.value:", type.value);
-  if (number.value >= 10) {
-    const batches = Math.floor(number.value / 10);
-    const remainder = number.value % 10;
-    for (let i = 0; i < batches; i++) {
-      const result = await tokenStore.sendMessageWithPromise(
-        tokenId,
-        "artifact_lottery",
-        { type: type.value, lotteryNumber: 10, newFree: true },
-      );
-    }
-    if (remainder > 0) {
-      const result = await tokenStore.sendMessageWithPromise(
-        tokenId,
-        "artifact_lottery",
-        {
-          type: type.value,
-          lotteryNumber: remainder,
-          newFree: true,
-        },
-      );
-    }
     await tokenStore.sendMessage(tokenId, "role_getroleinfo");
     tokenStore.sendMessage(tokenId, "activity_get");
     message.success("钓鱼完毕");
-    state.isRunning = false;
-    return;
+  });
+
+  if (success) {
+    stop();
   }
 };
+
+// 自动钓鱼
+const startAutoFish = async () => {
+  const success = await start(async () => {
+    const tokenId = tokenStore.selectedToken.id;
+    startDurationTimer();
+
+    message.info("开始自动钓鱼...");
+
+    try {
+      while (state.isRunning && remainingValue.value > 0) {
+        const rodType = getCurrentRodType();
+        
+        if (!rodType) {
+          const rodName = autoConfig.rodType === 1 ? "普通鱼竿" : "黄金鱼竿";
+          message.warning(`${rodName}已用完`);
+          break;
+        }
+
+        const rodName = rodType === 1 ? "普通鱼竿" : "黄金鱼竿";
+        const availableCount = getAvailableRodCount(rodType);
+        const remaining = Math.min(remainingValue.value, availableCount);
+
+        if (remaining <= 0) {
+          if (autoConfig.autoSwitch) {
+            continue; // 尝试切换
+          }
+          break;
+        }
+
+        updateProgress(autoConfig.completedValue, autoConfig.targetValue, `使用${rodName}`);
+
+        await executeBatches(
+          remaining,
+          async (batchSize) => {
+            await tokenStore.sendMessageWithPromise(tokenId, "artifact_lottery", {
+              type: rodType,
+              lotteryNumber: batchSize,
+              newFree: true,
+            });
+          },
+          {
+            batchSize: 10,
+            delay: 200,
+            onBatchComplete: async (batchSize) => {
+              autoConfig.completedValue += batchSize;
+            },
+          }
+        );
+
+        await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+
+        if (autoConfig.completedValue >= autoConfig.targetValue) {
+          break;
+        }
+
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      if (autoConfig.completedValue >= autoConfig.targetValue) {
+        message.success(`已达到目标次数 ${autoConfig.targetValue}！`);
+      }
+    } catch (error) {
+      console.error("自动钓鱼出错:", error);
+      message.error("钓鱼出错: " + error.message);
+    } finally {
+      stopDurationTimer();
+    }
+  });
+
+  if (success) {
+    stop();
+  }
+};
+
+// 停止
+const stopAuto = () => {
+  stop(stopDurationTimer);
+  message.info("已停止自动钓鱼");
+};
+
+// 监听模式切换
+watch(mode, () => {
+  if (!state.isRunning) {
+    reset();
+  }
+});
 </script>
 
 <style scoped lang="scss">
-.container {
-  padding: 10px 0;
-  display: flex;
-  flex-direction: column;
-
-  .list {
+.fish-helper {
+  .container {
+    padding: 12px 0;
     display: flex;
-    align-items: center;
-    justify-content: space-around;
-
-    .item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-
-      > img {
-        width: 40px;
-        height: 40px;
-      }
-
-      .box-info {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        .box-type {
-          font-weight: bold;
-          margin-top: 4px;
-        }
-
-        .box-count {
-          margin-top: 2px;
-          color: #666;
-        }
-      }
-    }
-  }
-
-  .mode-tabs {
-    margin-top: 12px;
-  }
-
-  .manual-mode,
-  .auto-mode {
-    margin-top: 12px;
-  }
-
-  .selects {
-    display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 12px;
   }
 
-  .auto-inputs {
+  // 资源卡片
+  .rods-resource-card {
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-medium);
+    padding: 12px;
+
+    .resource-title {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .rods-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+
+      .rod-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 6px;
+        border-radius: var(--border-radius-medium);
+        background: var(--bg-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+
+        &:hover {
+          background: var(--bg-hover);
+        }
+
+        &.active {
+          border-color: var(--primary-color);
+          background: var(--primary-color-light);
+        }
+
+        &.exhausted {
+          opacity: 0.5;
+          .rod-quantity {
+            background: var(--text-tertiary);
+          }
+        }
+
+        .rod-icon-wrapper {
+          position: relative;
+          width: 48px;
+          height: 48px;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+
+          .rod-quantity {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+
+            &.zero {
+              background: var(--text-tertiary);
+            }
+          }
+        }
+
+        .rod-name {
+          font-size: 12px;
+          color: var(--text-primary);
+          margin-top: 6px;
+          font-weight: var(--font-weight-medium);
+        }
+
+        .rod-desc {
+          font-size: 10px;
+          color: var(--text-secondary);
+        }
+      }
+    }
+  }
+
+  // 策略提示
+  .strategy-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    background: var(--primary-color-light);
+    border-radius: var(--border-radius-medium);
+    border-left: 3px solid var(--primary-color);
+
+    .tip-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .tip-content {
+      .tip-label {
+        font-size: 11px;
+        color: var(--primary-color);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .tip-text {
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  // 模式标签
+  .mode-tabs {
+    margin-top: 4px;
+  }
+
+  // 手动模式
+  .manual-mode {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
+    padding: 8px 0;
 
-    .input-group {
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .config-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+    }
+  }
+
+  // 自动模式
+  .auto-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0;
+
+    .auto-config {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border-radius: var(--border-radius-medium);
+
+      .config-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .config-label {
+          font-size: 13px;
+          color: var(--text-secondary);
+          min-width: 60px;
+        }
+
+        .switch-hint {
+          font-size: 11px;
+          color: var(--text-tertiary);
+        }
+      }
+    }
+
+    .target-input-row {
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
 
-      .label {
+      .input-label {
+        font-size: 13px;
         color: var(--text-secondary);
-        font-size: var(--font-size-sm);
-        min-width: 80px;
+        min-width: 60px;
       }
+    }
 
-      .value {
-        color: var(--text-primary);
-        font-weight: var(--font-weight-semibold);
+    .progress-stats {
+      display: flex;
+      gap: 16px;
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border-radius: var(--border-radius-medium);
 
-        &.earned {
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+
+        .stat-label {
+          font-size: 11px;
+          color: var(--text-secondary);
+        }
+
+        .stat-value {
+          font-size: 16px;
+          font-weight: var(--font-weight-bold);
+          color: var(--text-primary);
+        }
+
+        &.completed .stat-value {
           color: #18bc5c;
         }
 
-        &.need-more {
+        &.remaining .stat-value {
           color: #e6a23c;
         }
+
+        &.time .stat-value {
+          color: var(--primary-color);
+          font-size: 14px;
+        }
+      }
+    }
+
+    // 消耗预估
+    .consumption-estimate {
+      background: var(--bg-tertiary);
+      border-radius: var(--border-radius-medium);
+      padding: 10px;
+
+      .estimate-title {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .estimate-content {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+
+        .estimate-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          .estimate-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+          }
+
+          .estimate-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+          }
+
+          .estimate-value {
+            font-size: 14px;
+            font-weight: var(--font-weight-bold);
+            color: var(--text-primary);
+          }
+        }
+      }
+    }
+
+    // 进度区域
+    .progress-section {
+      .progress-text {
+        display: block;
+        text-align: center;
+        margin-top: 6px;
+        color: var(--text-secondary);
+        font-size: 12px;
       }
     }
   }
 
-  .progress-info {
-    margin-top: 8px;
-
-    .progress-text {
-      display: block;
-      text-align: center;
-      margin-top: 4px;
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-    }
-  }
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-
-  .manual-actions,
-  .auto-actions {
+  // 操作按钮
+  .actions {
     display: flex;
     gap: 8px;
-    flex: 1;
+
+    > * {
+      flex: 1;
+    }
   }
 }
 </style>
