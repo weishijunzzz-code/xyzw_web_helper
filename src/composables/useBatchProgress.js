@@ -1,108 +1,129 @@
-import { ref, h, render } from 'vue';
+import { ref, h, render, reactive } from 'vue';
 import BatchProgress from '@/components/Common/BatchProgress.vue';
 
 /**
- * 批量任务进度管理
+ * 批量任务进度管理 - 修复版
+ * 使用全局单例模式确保进度状态正确更新
  */
+
+// 全局状态，确保只有一个进度实例
+const globalProgressState = reactive({
+  visible: false,
+  title: '批量处理中',
+  total: 0,
+  current: 0,
+  successCount: 0,
+  errorCount: 0,
+  currentItem: '',
+  startTime: 0,
+  errorList: [],
+});
+
+let container = null;
+let isRendered = false;
+
 export function useBatchProgress() {
-  const progressRef = ref(null);
-  const container = document.createElement('div');
-
-  const state = ref({
-    visible: false,
-    title: '批量处理中',
-    total: 0,
-    current: 0,
-    successCount: 0,
-    errorCount: 0,
-    currentItem: '',
-    startTime: 0,
-  });
-
   // 渲染进度组件
   const renderProgress = () => {
+    if (isRendered) return;
+    
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'batch-progress-container';
+    }
+
     const vnode = h(BatchProgress, {
-      visible: state.value.visible,
-      title: state.value.title,
-      total: state.value.total,
-      current: state.value.current,
-      successCount: state.value.successCount,
-      errorCount: state.value.errorCount,
-      currentItem: state.value.currentItem,
-      startTime: state.value.startTime,
+      visible: globalProgressState.visible,
+      title: globalProgressState.title,
+      total: globalProgressState.total,
+      current: globalProgressState.current,
+      successCount: globalProgressState.successCount,
+      errorCount: globalProgressState.errorCount,
+      currentItem: globalProgressState.currentItem,
+      startTime: globalProgressState.startTime,
+      errorList: globalProgressState.errorList,
       onCancel: handleCancel,
       onClose: handleClose,
     });
 
     render(vnode, container);
-    document.body.appendChild(container);
-
-    // 获取组件实例
-    progressRef.value = vnode.component?.exposed;
+    
+    if (!document.body.contains(container)) {
+      document.body.appendChild(container);
+    }
+    
+    isRendered = true;
   };
 
   // 开始批量任务
   const start = (options = {}) => {
-    state.value = {
-      visible: true,
-      title: options.title || '批量处理中',
-      total: options.total || 0,
-      current: 0,
-      successCount: 0,
-      errorCount: 0,
-      currentItem: '',
-      startTime: Date.now(),
-    };
+    // 重置所有状态
+    globalProgressState.visible = true;
+    globalProgressState.title = options.title || '批量处理中';
+    globalProgressState.total = options.total || 0;
+    globalProgressState.current = 0;
+    globalProgressState.successCount = 0;
+    globalProgressState.errorCount = 0;
+    globalProgressState.currentItem = '';
+    globalProgressState.startTime = Date.now();
+    globalProgressState.errorList = [];
 
     renderProgress();
   };
 
-  // 更新进度
+  // 更新进度 - 使用队列避免冲突
   const update = (itemName) => {
-    state.value.current++;
-    state.value.currentItem = itemName;
+    globalProgressState.current++;
+    globalProgressState.currentItem = itemName;
   };
 
   // 标记成功
   const success = () => {
-    state.value.successCount++;
+    globalProgressState.successCount++;
   };
 
   // 标记失败
   const fail = (itemName, errorMessage) => {
-    state.value.errorCount++;
-    progressRef.value?.addError(itemName, errorMessage);
+    globalProgressState.errorCount++;
+    globalProgressState.errorList.push({ name: itemName, message: errorMessage });
   };
 
   // 完成
   const complete = () => {
-    state.value.current = state.value.total;
+    globalProgressState.current = globalProgressState.total;
+    globalProgressState.currentItem = '';
   };
 
   // 关闭
   const close = () => {
-    state.value.visible = false;
+    globalProgressState.visible = false;
+    
+    // 延迟清理DOM
     setTimeout(() => {
-      render(null, container);
-      document.body.removeChild(container);
-      progressRef.value?.reset();
+      if (container && document.body.contains(container)) {
+        render(null, container);
+        document.body.removeChild(container);
+        container = null;
+        isRendered = false;
+      }
+      // 重置状态
+      globalProgressState.errorList = [];
     }, 300);
   };
 
   // 处理取消
+  let onCancelCallback = null;
+  let onCloseCallback = null;
+
   const handleCancel = () => {
     close();
     onCancelCallback?.();
   };
 
-  // 处理关闭
   const handleClose = () => {
     close();
     onCloseCallback?.();
   };
-
-  let onCancelCallback = null;
-  let onCloseCallback = null;
 
   const onCancel = (callback) => {
     onCancelCallback = callback;
@@ -113,7 +134,7 @@ export function useBatchProgress() {
   };
 
   return {
-    state,
+    state: globalProgressState,
     start,
     update,
     success,
