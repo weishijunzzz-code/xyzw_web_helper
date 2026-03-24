@@ -1,0 +1,255 @@
+/**
+ * 增强版设计系统 - Enhanced Design System
+ * 包含：图标规范、阴影层次、字体排版、圆角系统、深色模式优化
+ */
+
+:root {
+  /* ==================== 图标系统 ==================== */
+  --icon-size-xs: 12px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --icon-size-lg: 24px;
+  --icon-size-xl: 32px;
+  --icon-size-2xl: 48px;
+  
+  --icon-stroke-width: 1.5px;
+  --icon-stroke-width-bold: 2px;
+  
+  /* 图标颜色 */
+  --icon-color-default: var(--color-text-secondary);
+  --icon-color-primary: var(--color-primary-500);
+  --icon-color-success: var(--color-success-500);
+  --icon-color-warning: var(--color-warning-500);
+  --icon-color-error: var(--color-error-500);
+  --icon-color-disabled: var(--color-text-tertiary);
+  
+  /* ==================== 阴影层次系统 (Z-Depth) ==================== */
+  /* 基础阴影 */
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* 层级阴影 - 用于卡片层级 */
+  --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-elevation-2: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-elevation-3: 0 10px 20px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1);
+  --shadow-elevation-4: 0 15px 25px rgba(0, 0, 0, 0.15), 0 5px 10px rgba(0, 0, 0, 0.05);
+  --shadow-elevation-5: 0 20px 40px rgba(0, 0, 0, 0.2);
+  
+  /* 内阴影 */
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  --shadow-inner-lg: inset 0 4px 8px 0 rgba(0, 0, 0, 0.1);
+  
+  /* 发光阴影 */
+  --shadow-glow-primary: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 0 20px rgba(59, 130, 246, 0.3);
+  --shadow-glow-success: 0 0 0 3px rgba(34, 197, 94, 0.15), 0 0 20px rgba(34, 197, 94, 0.3);
+  --shadow-glow-warning: 0 0 0 3px rgba(234, 179, 8, 0.15), 0 0 20px rgba(234, 179, 8, 0.3);
+  --shadow-glow-error: 0 0 0 3px rgba(239, 68, 68, 0.15), 0 0 20px rgba(239, 68, 68, 0.3);
+  
+  /* ==================== 字体排版系统 (优化版) ==================== */
+  /* 字体家族 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --font-display: var(--font-sans);
+  
+  /* 字体大小 - 使用 1.125 比例尺 */
+  --text-2xs: 0.625rem;    /* 10px */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+  --text-6xl: 3.75rem;     /* 60px */
+  
+  /* 字重 */
+  --font-light: 300;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  
+  /* 行高 */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  
+  /* 字间距 */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+  
+  /* 字体样式组合 */
+  --text-display-large: var(--font-extrabold) var(--text-4xl)/var(--leading-tight) var(--font-display);
+  --text-display: var(--font-bold) var(--text-3xl)/var(--leading-tight) var(--font-display);
+  --text-heading-1: var(--font-bold) var(--text-2xl)/var(--leading-tight) var(--font-sans);
+  --text-heading-2: var(--font-semibold) var(--text-xl)/var(--leading-snug) var(--font-sans);
+  --text-heading-3: var(--font-semibold) var(--text-lg)/var(--leading-snug) var(--font-sans);
+  --text-body-large: var(--font-regular) var(--text-lg)/var(--leading-relaxed) var(--font-sans);
+  --text-body: var(--font-regular) var(--text-base)/var(--leading-normal) var(--font-sans);
+  --text-body-small: var(--font-regular) var(--text-sm)/var(--leading-normal) var(--font-sans);
+  --text-caption: var(--font-medium) var(--text-xs)/var(--leading-normal) var(--font-sans);
+  --text-label: var(--font-semibold) var(--text-xs)/var(--leading-none) var(--font-sans);
+  --text-button: var(--font-medium) var(--text-sm)/var(--leading-none) var(--font-sans);
+  
+  /* ==================== 圆角系统 (优化版) ==================== */
+  --radius-none: 0;
+  --radius-2xs: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
+  
+  /* 语义化圆角 */
+  --radius-button: var(--radius-md);
+  --radius-input: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --radius-card-lg: var(--radius-xl);
+  --radius-tag: var(--radius-full);
+  --radius-badge: var(--radius-sm);
+  --radius-avatar: var(--radius-full);
+  --radius-tooltip: var(--radius-md);
+  --radius-popover: var(--radius-lg);
+  --radius-modal: var(--radius-xl);
+  
+  /* ==================== 动画系统 (增强版) ==================== */
+  /* 持续时间 */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  --duration-slowest: 700ms;
+  
+  /* 缓动函数 */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  /* 页面过渡 */
+  --transition-page: all var(--duration-slow) var(--ease-out-expo);
+  --transition-fade: opacity var(--duration-normal) var(--ease-out);
+  --transition-transform: transform var(--duration-normal) var(--ease-out-back);
+  --transition-colors: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+  --transition-shadow: box-shadow var(--duration-normal) var(--ease-out);
+  --transition-all: all var(--duration-normal) var(--ease-out);
+}
+
+/* ==================== 深色模式优化 ==================== */
+.dark {
+  /* 背景色 - 降低饱和度，增加层次感 */
+  --color-bg-base: #0a0f1a;
+  --color-bg-elevated-1: #111827;
+  --color-bg-elevated-2: #1f2937;
+  --color-bg-elevated-3: #374151;
+  --color-bg-overlay: rgba(0, 0, 0, 0.75);
+  
+  /* 文字色 - 避免纯白，使用柔和的灰白 */
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #d1d5db;
+  --color-text-tertiary: #9ca3af;
+  --color-text-quaternary: #6b7280;
+  --color-text-inverse: #111827;
+  
+  /* 边框色 - 使用半透明白色 */
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+  --color-border-active: rgba(255, 255, 255, 0.2);
+  
+  /* 阴影 - 更柔和的阴影 */
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  
+  /* 发光效果 - 降低亮度 */
+  --shadow-glow-primary: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 0 30px rgba(59, 130, 246, 0.15);
+  --shadow-glow-success: 0 0 0 3px rgba(34, 197, 94, 0.2), 0 0 30px rgba(34, 197, 94, 0.15);
+  --shadow-glow-warning: 0 0 0 3px rgba(234, 179, 8, 0.2), 0 0 30px rgba(234, 179, 8, 0.15);
+  --shadow-glow-error: 0 0 0 3px rgba(239, 68, 68, 0.2), 0 0 30px rgba(239, 68, 68, 0.15);
+}
+
+/* ==================== 工具类 ==================== */
+
+/* 图标工具类 */
+.icon-xs { width: var(--icon-size-xs); height: var(--icon-size-xs); }
+.icon-sm { width: var(--icon-size-sm); height: var(--icon-size-sm); }
+.icon-md { width: var(--icon-size-md); height: var(--icon-size-md); }
+.icon-lg { width: var(--icon-size-lg); height: var(--icon-size-lg); }
+.icon-xl { width: var(--icon-size-xl); height: var(--icon-size-xl); }
+.icon-2xl { width: var(--icon-size-2xl); height: var(--icon-size-2xl); }
+
+/* 阴影工具类 */
+.shadow-elevation-1 { box-shadow: var(--shadow-elevation-1); }
+.shadow-elevation-2 { box-shadow: var(--shadow-elevation-2); }
+.shadow-elevation-3 { box-shadow: var(--shadow-elevation-3); }
+.shadow-elevation-4 { box-shadow: var(--shadow-elevation-4); }
+.shadow-elevation-5 { box-shadow: var(--shadow-elevation-5); }
+
+/* 字体工具类 */
+.text-display-large { font: var(--text-display-large); }
+.text-display { font: var(--text-display); }
+.text-heading-1 { font: var(--text-heading-1); }
+.text-heading-2 { font: var(--text-heading-2); }
+.text-heading-3 { font: var(--text-heading-3); }
+.text-body-large { font: var(--text-body-large); }
+.text-body { font: var(--text-body); }
+.text-body-small { font: var(--text-body-small); }
+.text-caption { font: var(--text-caption); }
+.text-label { font: var(--text-label); }
+.text-button { font: var(--text-button); }
+
+/* 渐变文字 */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-success {
+  background: linear-gradient(135deg, var(--color-success-500), var(--color-success-700));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass {
+  background: rgba(17, 24, 39, 0.7);
+}
+
+/* 发光效果 */
+.glow-primary { box-shadow: var(--shadow-glow-primary); }
+.glow-success { box-shadow: var(--shadow-glow-success); }
+.glow-warning { box-shadow: var(--shadow-glow-warning); }
+.glow-error { box-shadow: var(--shadow-glow-error); }
