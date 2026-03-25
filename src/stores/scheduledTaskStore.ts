@@ -201,11 +201,14 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
   };
 
   // 删除任务
-  const deleteTask = (id: string) => {
+  const deleteTask = async (id: string) => {
     const index = tasks.value.findIndex(t => t.id === id);
     if (index !== -1) {
       tasks.value.splice(index, 1);
-      saveTasks();
+      // 先从 IndexedDB 中删除该任务
+      await taskDB.delete(id);
+      // 然后保存当前任务列表
+      await saveTasks();
       return true;
     }
     return false;

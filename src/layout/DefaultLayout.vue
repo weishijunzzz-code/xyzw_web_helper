@@ -82,6 +82,9 @@
           <!-- 全局搜索 -->
           <GlobalSearch ref="globalSearchRef" />
 
+          <!-- 活动日历 -->
+          <ActivityCalendarDropdown />
+
           <!-- 主题设置按钮 -->
           <ThemeSettings />
 
@@ -339,6 +342,7 @@ import {
 import ThemeSettings from "@/components/Common/ThemeSettings.vue";
 import PageTransition from "@/components/DesignSystem/PageTransition.vue";
 import GlobalSearch from "@/components/Common/GlobalSearch.vue";
+import ActivityCalendarDropdown from "@/views/TaskScheduler/components/ActivityCalendarDropdown.vue";
 import { useMobile } from "@/composables/useMobile";
 import {
   Home,

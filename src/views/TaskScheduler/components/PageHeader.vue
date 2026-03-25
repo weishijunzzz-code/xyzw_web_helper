@@ -13,7 +13,7 @@
           @select-history="$emit('select-history', $event)"
           @execute-task="$emit('execute-task', $event)"
         />
-        
+
         <n-button-group>
           <n-button @click="$emit('refresh')">
             <template #icon>
@@ -28,26 +28,26 @@
             清空日志
           </n-button>
         </n-button-group>
-        
+
         <n-switch :value="autoRefresh" @update:value="$emit('update:auto-refresh', $event)" size="small">
           <template #checked>自动刷新</template>
           <template #unchecked>手动刷新</template>
         </n-switch>
-        
+
         <n-button type="primary" @click="$emit('add-task')">
           <template #icon>
             <n-icon :component="AddOutline" />
           </template>
           新增任务
         </n-button>
-        
+
         <n-button @click="$emit('show-history')">
           <template #icon>
             <n-icon :component="TimeOutline" />
           </template>
           执行历史
         </n-button>
-        
+
         <n-badge :value="notificationStore.unreadCount" :show="notificationStore.unreadCount > 0">
           <n-button @click="$emit('show-notifications')">
             <template #icon>
@@ -124,6 +124,7 @@ const showSearch = ref(false);
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 // 深色模式适配
@@ -138,19 +139,18 @@ const showSearch = ref(false);
   .page-header {
     padding: 16px 20px;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 8px;
   }
-  
+
   .page-title {
     font-size: 20px;
   }

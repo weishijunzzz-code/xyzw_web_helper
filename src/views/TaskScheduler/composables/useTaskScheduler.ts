@@ -321,8 +321,8 @@ export function useTaskScheduler(): UseTaskSchedulerReturn {
       content: `确定要删除任务 "${task.name}" 吗？`,
       positiveText: '确定',
       negativeText: '取消',
-      onPositiveClick: () => {
-        taskStore.deleteTask(task.id);
+      onPositiveClick: async () => {
+        await taskStore.deleteTask(task.id);
         message.success('任务已删除');
       }
     });

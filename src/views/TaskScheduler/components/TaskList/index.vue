@@ -63,7 +63,7 @@
     </draggable>
     
     <!-- 普通视图 -->
-    <component 
+    <component
       v-else
       :is="currentViewMode === 'card' ? CardView : ListView"
       :tasks="filteredTasks"
@@ -74,6 +74,7 @@
       @start="handleStart"
       @edit="handleEdit"
       @delete="handleDelete"
+      @add="handleAdd"
     />
     
     <!-- 分页 -->

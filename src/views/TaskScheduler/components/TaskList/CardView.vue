@@ -1,13 +1,33 @@
 <template>
   <div class="card-view">
-    <div v-if="tasks.length === 0" class="empty-state">
-      <n-empty description="暂无任务">
-        <template #icon>
-          <n-icon :component="CalendarOutline" />
-        </template>
-      </n-empty>
+    <!-- 加载状态 -->
+    <div v-if="loading" class="skeleton-grid">
+      <SkeletonCard 
+        v-for="i in 6" 
+        :key="i"
+        variant="compact"
+        :show-footer="true"
+        :footer-buttons="3"
+      />
     </div>
     
+    <!-- 空状态 -->
+    <EmptyState
+      v-else-if="tasks.length === 0"
+      title="暂无定时任务"
+      description="您还没有创建任何定时任务，点击按钮添加第一个任务"
+      action-text="添加任务"
+      @action="$emit('add')"
+    >
+      <template #icon>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </template>
+    </EmptyState>
+    
+    <!-- 任务列表 -->
     <div v-else class="task-cards-grid">
       <div 
         v-for="task in tasks" 
@@ -139,6 +159,8 @@ import {
   ChevronForwardOutline
 } from '@vicons/ionicons5';
 import TaskCountdown from './TaskCountdown.vue';
+import EmptyState from '../EmptyState.vue';
+import SkeletonCard from '../SkeletonCard.vue';
 
 const props = defineProps({
   tasks: {
@@ -155,7 +177,7 @@ const props = defineProps({
   }
 });
 
-defineEmits(['execute', 'pause', 'start', 'edit', 'delete']);
+defineEmits(['execute', 'pause', 'start', 'edit', 'delete', 'add']);
 
 const showSwipeHint = ref(true);
 let touchStartX = 0;
@@ -228,8 +250,15 @@ const getStatusText = (status) => {
   min-height: 200px;
 }
 
-.empty-state {
-  padding: 60px 0;
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .task-cards-grid {

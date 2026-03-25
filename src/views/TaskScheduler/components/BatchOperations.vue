@@ -271,10 +271,10 @@ const batchDelete = () => {
     content: `确定要删除选中的 ${selectedTasks.value.length} 个任务吗？此操作不可恢复！`,
     positiveText: '确定删除',
     negativeText: '取消',
-    onPositiveClick: () => {
-      selectedTasks.value.forEach(task => {
-        taskStore.deleteTask(task.id);
-      });
+    onPositiveClick: async () => {
+      for (const task of selectedTasks.value) {
+        await taskStore.deleteTask(task.id);
+      }
       message.success(`已删除 ${selectedTasks.value.length} 个任务`);
       clearSelection();
       emit('refresh');

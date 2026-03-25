@@ -22,7 +22,7 @@
     />
     
     <!-- 页面内容 -->
-    <div 
+    <div
       class="page-content"
       ref="pageContentRef"
       @touchstart="handleTouchStart"
