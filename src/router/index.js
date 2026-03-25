@@ -100,6 +100,15 @@ const my_routes = [
           requiresToken: true
         }
       },
+      {
+        path: 'task-scheduler',
+        name: 'TaskScheduler',
+        component: () => import('@/views/TaskScheduler/index.vue'),
+        meta: {
+          title: '定时任务监控',
+          requiresToken: true
+        }
+      },
       // 增加自动路由引用
       ...generatedRoutes,
     ]

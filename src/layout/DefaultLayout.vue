@@ -51,6 +51,16 @@
             <span>批量日常</span>
           </router-link>
           <router-link
+            to="/admin/task-scheduler"
+            class="nav-item"
+            active-class="active"
+          >
+            <n-icon>
+              <TimerOutline />
+            </n-icon>
+            <span>定时任务</span>
+          </router-link>
+          <router-link
             to="/admin/message-test"
             class="nav-item"
             active-class="active"
@@ -257,6 +267,16 @@
           <span>批量日常</span>
         </router-link>
         <router-link
+          to="/admin/task-scheduler"
+          class="drawer-item"
+          @click="isMobileMenuOpen = false"
+        >
+          <n-icon>
+            <TimerOutline />
+          </n-icon>
+          <span>定时任务</span>
+        </router-link>
+        <router-link
           to="/admin/message-test"
           class="drawer-item"
           @click="isMobileMenuOpen = false"
@@ -337,6 +357,7 @@ import {
   Search,
   Checkmark,
   Refresh,
+  TimerOutline,
 } from "@vicons/ionicons5";
 
 import { useRouter, useRoute } from 'vue-router'

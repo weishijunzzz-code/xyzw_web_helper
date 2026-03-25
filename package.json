@@ -20,6 +20,7 @@
     "@vueuse/core": "^13.9.0",
     "axios": "^1.12.2",
     "crypto-js": "^4.2.0",
+    "echarts": "^6.0.0",
     "event-emitter3": "^1.0.4",
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
@@ -28,8 +29,10 @@
     "p-queue": "^7.4.1",
     "pinia": "^2.3.1",
     "vue": "^3.5.22",
+    "vue-echarts": "^8.0.1",
     "vue-i18n": "^11.1.12",
     "vue-router": "^4.6.3",
+    "vuedraggable": "^4.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
