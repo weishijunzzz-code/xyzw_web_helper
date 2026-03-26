@@ -218,8 +218,8 @@
           </n-descriptions-item>
           <n-descriptions-item label="执行统计">
             总计 {{ selectedRecord.totalAccounts }} 个账号 |
-            <span style="color: #10b981">成功 {{ selectedRecord.successCount }}</span> |
-            <span v-if="selectedRecord.failedCount > 0" style="color: #ef4444">
+            <span style="color: var(--color-success-500, #10b981)">成功 {{ selectedRecord.successCount }}</span> |
+            <span v-if="selectedRecord.failedCount > 0" style="color: var(--color-error-500, #ef4444)">
               失败 {{ selectedRecord.failedCount }}
             </span>
           </n-descriptions-item>

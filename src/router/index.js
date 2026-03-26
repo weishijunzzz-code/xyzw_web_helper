@@ -3,13 +3,25 @@ import * as autoRoutes from "vue-router/auto-routes";
 import { useTokenStore } from '@/stores/tokenStore'
 import { isNowInLegionWarTime } from "@/utils/clubBattleUtils"
 
+// 安全的动态导入包装器，处理 chunk 加载失败
+const safeImport = (importFn) => {
+  return () => importFn().catch((error) => {
+    console.error('Chunk load error:', error)
+    // 如果是 chunk 加载错误，显示错误页面
+    if (error.message?.includes('Failed to fetch dynamically imported module')) {
+      return import('@/components/Error/ChunkLoadError.vue')
+    }
+    throw error
+  })
+}
+
 const generatedRoutes = autoRoutes.routes ?? [];
 
 const my_routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('@/views/Home.vue'),
+    component: safeImport(() => import('@/views/Home.vue')),
     meta: {
       title: '首页',
       requiresToken: false
@@ -18,7 +30,7 @@ const my_routes = [
   {
     path: '/tokens',
     name: 'TokenImport',
-    component: () => import('@/views/TokenImport/index.vue'),
+    component: safeImport(() => import('@/views/TokenImport/index.vue')),
     meta: {
       title: 'Token管理',
       requiresToken: false
@@ -35,12 +47,12 @@ const my_routes = [
   {
     name: 'DefaultLayout',
     path: '/admin',
-    component: () => import('@/layout/DefaultLayout.vue'),
+    component: safeImport(() => import('@/layout/DefaultLayout.vue')),
     children: [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
+        component: safeImport(() => import('@/views/Dashboard.vue')),
         meta: {
           title: '控制台',
           requiresToken: true
@@ -49,7 +61,7 @@ const my_routes = [
       {
         path: 'game-features',
         name: 'GameFeatures',
-        component: () => import('@/views/GameFeatures.vue'),
+        component: safeImport(() => import('@/views/GameFeatures.vue')),
         meta: {
           title: '游戏功能',
           requiresToken: true
@@ -58,7 +70,7 @@ const my_routes = [
       {
         path: 'message-test',
         name: 'MessageTest',
-        component: () => import('@/components/Test/MessageTester.vue'),
+        component: safeImport(() => import('@/components/Test/MessageTester.vue')),
         meta: {
           title: '消息测试',
           requiresToken: true
@@ -67,7 +79,7 @@ const my_routes = [
       {
         path: 'legion-war',
         name: 'LegionWar',
-        component: () => import('@/views/LegionWar.vue'),
+        component: safeImport(() => import('@/views/LegionWar.vue')),
         meta: {
           title: '实时盐场',
           requiresToken: true
@@ -76,7 +88,7 @@ const my_routes = [
       {
         path: 'profile',
         name: 'Profile',
-        component: () => import('@/views/Profile.vue'),
+        component: safeImport(() => import('@/views/Profile.vue')),
         meta: {
           title: '个人设置',
           requiresToken: true
@@ -85,7 +97,7 @@ const my_routes = [
       {
         path: 'daily-tasks',
         name: 'DailyTasks',
-        component: () => import('@/views/DailyTasks.vue'),
+        component: safeImport(() => import('@/views/DailyTasks.vue')),
         meta: {
           title: '日常任务',
           requiresToken: true
@@ -94,7 +106,7 @@ const my_routes = [
       {
         path: 'batch-daily-tasks',
         name: 'BatchDailyTasks',
-        component: () => import('@/views/BatchDailyTasks.vue'),
+        component: safeImport(() => import('@/views/BatchDailyTasks.vue')),
         meta: {
           title: '批量日常',
           requiresToken: true
@@ -103,7 +115,7 @@ const my_routes = [
       {
         path: 'task-scheduler',
         name: 'TaskScheduler',
-        component: () => import('@/views/TaskScheduler/index.vue'),
+        component: safeImport(() => import('@/views/TaskScheduler/index.vue')),
         meta: {
           title: '定时任务监控',
           requiresToken: true
@@ -116,7 +128,7 @@ const my_routes = [
   {
     path: '/websocket-test',
     name: 'WebSocketTest',
-    component: () => import('@/components/Test/WebSocketTester.vue'),
+    component: safeImport(() => import('@/components/Test/WebSocketTester.vue')),
     meta: {
       title: 'WebSocket测试',
       requiresToken: true
@@ -176,8 +188,7 @@ router.afterEach((to, from) => {
   }
 })
 
-// 热更新路由
-autoRoutes.handleHotUpdate?.(router);
+
 
 // 导航守卫
 router.beforeEach((to, from, next) => {

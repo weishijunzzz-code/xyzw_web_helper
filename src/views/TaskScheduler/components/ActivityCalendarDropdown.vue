@@ -84,6 +84,7 @@
               ]"
               @click="handleDateClick(month, day)"
             >
+              <span v-if="day.festivalName" class="festival-name">{{ day.festivalName }}</span>
               <span class="day-number">{{ day.date }}</span>
               <span v-if="day.badge" class="day-badge">{{ day.badge }}</span>
             </div>
@@ -133,8 +134,115 @@ const legendItems = [
   { type: 'activity', label: '活动周(周五)' },
   { type: 'salt', label: '盐场(周六)' },
   { type: 'peach', label: '蟠桃(周日,前3周)' },
-  { type: 'monthly', label: '月赛(最后周日)' }
+  { type: 'monthly', label: '月赛(最后周日)' },
+  { type: 'festival', label: '传统节日' }
 ];
+
+// 传统节日数据（阳历日期）
+const traditionalFestivals = {
+  // 固定日期的节日
+  '1-1': '元旦',
+  '2-14': '情人节',
+  '3-8': '妇女节',
+  '3-12': '植树节',
+  '4-1': '愚人节',
+  '5-1': '劳动节',
+  '5-4': '青年节',
+  '6-1': '儿童节',
+  '7-1': '建党节',
+  '8-1': '建军节',
+  '9-10': '教师节',
+  '10-1': '国庆节',
+  '10-24': '程序员节',
+  '11-11': '双十一',
+  '12-25': '圣诞节',
+};
+
+// 农历节日数据（2024-2030年的准确阳历日期）
+// 格式: year-month-date: 节日名称
+const lunarFestivalsByYear = {
+  // 2024年
+  2024: {
+    '2-10': '春节',
+    '2-24': '元宵节',
+    '6-10': '端午节',
+    '8-10': '七夕',
+    '9-17': '中秋节',
+    '10-11': '重阳节',
+  },
+  // 2025年
+  2025: {
+    '1-29': '春节',
+    '2-12': '元宵节',
+    '5-31': '端午节',
+    '8-29': '七夕',
+    '10-6': '中秋节',
+    '10-29': '重阳节',
+  },
+  // 2026年
+  2026: {
+    '2-17': '春节',
+    '3-3': '元宵节',
+    '6-19': '端午节',
+    '8-19': '七夕',
+    '9-25': '中秋节',
+    '10-18': '重阳节',
+  },
+  // 2027年
+  2027: {
+    '2-6': '春节',
+    '2-20': '元宵节',
+    '6-9': '端午节',
+    '8-8': '七夕',
+    '9-15': '中秋节',
+    '10-8': '重阳节',
+  },
+  // 2028年
+  2028: {
+    '1-26': '春节',
+    '2-9': '元宵节',
+    '5-28': '端午节',
+    '8-26': '七夕',
+    '10-3': '中秋节',
+    '10-26': '重阳节',
+  },
+  // 2029年
+  2029: {
+    '2-13': '春节',
+    '2-27': '元宵节',
+    '6-16': '端午节',
+    '8-15': '七夕',
+    '9-22': '中秋节',
+    '10-15': '重阳节',
+  },
+  // 2030年
+  2030: {
+    '2-3': '春节',
+    '2-17': '元宵节',
+    '6-5': '端午节',
+    '8-4': '七夕',
+    '10-12': '中秋节',
+    '10-5': '重阳节',
+  },
+};
+
+// 获取节日名称
+const getFestivalName = (year, month, date) => {
+  // 检查固定节日
+  const key = `${month}-${date}`;
+  if (traditionalFestivals[key]) {
+    return traditionalFestivals[key];
+  }
+
+  // 检查农历节日（使用预定义的年份数据）
+  const yearData = lunarFestivalsByYear[year];
+  if (yearData && yearData[key]) {
+    return yearData[key];
+  }
+
+  // 对于未定义的年份，不显示节日（避免错误显示）
+  return null;
+};
 
 const changeYear = (delta) => {
   currentYear.value += delta;
@@ -210,45 +318,56 @@ const getMonthDays = (month) => {
     const currentDate = new Date(currentYear.value, month - 1, date);
     const dayOfWeek = currentDate.getDay();
 
+    // 检查是否是节日
+    const festivalName = getFestivalName(currentYear.value, month, date);
+
     let type = 'normal';
     let badge = '';
     let tooltip = '';
     let activityName = '';
 
+    // 获取各活动类型的信息
+    let activityInfo = null;
     if (dayOfWeek >= 1 && dayOfWeek <= 3) {
       // 周一至周三 - 赛车日
-      type = 'racing';
-      badge = '赛车';
-      tooltip = '赛车日';
-      activityName = '赛车日';
+      activityInfo = { type: 'racing', badge: '赛车', tooltip: '赛车日', activityName: '赛车日' };
     } else if (dayOfWeek === 5) {
-      // 周五 - 活动周（基于周数轮换）
+      // 周五 - 活动周
       const activityWeek = getActivityWeekByDate(currentYear.value, month, date);
-      type = 'activity';
-      badge = `${activityWeek.shortName}/${activityWeek.aliasShort}`;
-      tooltip = `${activityWeek.name}(${activityWeek.alias})`;
-      activityName = `${activityWeek.shortName}/${activityWeek.aliasShort}`;
+      activityInfo = {
+        type: 'activity',
+        badge: `${activityWeek.shortName}/${activityWeek.aliasShort}`,
+        tooltip: `${activityWeek.name}(${activityWeek.alias})`,
+        activityName: `${activityWeek.shortName}/${activityWeek.aliasShort}`
+      };
     } else if (dayOfWeek === 6) {
       // 周六 - 盐场
-      type = 'salt';
-      badge = '盐场';
-      tooltip = '盐场';
-      activityName = '盐场';
+      activityInfo = { type: 'salt', badge: '盐场', tooltip: '盐场', activityName: '盐场' };
     } else if (dayOfWeek === 0) {
       // 周日
       if (isMonthlyRaceDay(currentYear.value, month, date)) {
-        // 第四周周日为月赛
-        type = 'monthly';
-        badge = '月赛';
-        tooltip = '月赛';
-        activityName = '月赛';
+        activityInfo = { type: 'monthly', badge: '月赛', tooltip: '月赛', activityName: '月赛' };
       } else if (isPeachDay(currentYear.value, month, date)) {
-        // 前三周周日为蟠桃
-        type = 'peach';
-        badge = '蟠桃';
-        tooltip = '蟠桃';
-        activityName = '蟠桃';
+        activityInfo = { type: 'peach', badge: '蟠桃', tooltip: '蟠桃', activityName: '蟠桃' };
       }
+    }
+
+    if (festivalName) {
+      // 节日优先显示
+      type = 'festival';
+      tooltip = festivalName;
+      activityName = festivalName;
+      // 如果当天也有活动，显示活动信息
+      if (activityInfo) {
+        badge = activityInfo.badge;
+      } else {
+        badge = festivalName.length > 2 ? festivalName.substring(0, 2) : festivalName;
+      }
+    } else if (activityInfo) {
+      type = activityInfo.type;
+      badge = activityInfo.badge;
+      tooltip = activityInfo.tooltip;
+      activityName = activityInfo.activityName;
     }
 
     const isToday = currentDate.toDateString() === today.toDateString();
@@ -265,7 +384,8 @@ const getMonthDays = (month) => {
       activityName,
       isToday,
       isSelected,
-      fullDate: currentDate
+      fullDate: currentDate,
+      festivalName: type === 'festival' ? festivalName : null
     });
   }
 
@@ -297,9 +417,29 @@ const selectedDateInfo = computed(() => {
   const weekDayText = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dayData.fullDate.getDay()];
 
   let description = '';
+
+  // 如果是节日，显示节日信息
+  if (dayData.festivalName) {
+    description = `传统节日：${dayData.festivalName}`;
+  }
+
+  // 如果有活动，追加活动信息
   if (dayData.type === 'activity') {
     const activityWeek = getActivityWeekByDate(year, month, date);
-    description = `本周活动：${activityWeek.name}，别名：${activityWeek.alias}`;
+    const activityDesc = `本周活动：${activityWeek.name}，别名：${activityWeek.alias}`;
+    description = description ? `${description} | ${activityDesc}` : activityDesc;
+  } else if (dayData.type === 'racing') {
+    const racingDesc = '赛车日（周一至周三）';
+    description = description ? `${description} | ${racingDesc}` : racingDesc;
+  } else if (dayData.type === 'salt') {
+    const saltDesc = '盐场（周六）';
+    description = description ? `${description} | ${saltDesc}` : saltDesc;
+  } else if (dayData.type === 'peach') {
+    const peachDesc = '蟠桃（周日，前三周）';
+    description = description ? `${description} | ${peachDesc}` : peachDesc;
+  } else if (dayData.type === 'monthly') {
+    const monthlyDesc = '月赛（每月第四周周日）';
+    description = description ? `${description} | ${monthlyDesc}` : monthlyDesc;
   }
 
   return {
@@ -376,9 +516,9 @@ const getCurrentActivityIcon = () => {
 }
 
 .activity-calendar-dropdown {
-  width: 800px;
-  max-width: 90vw;
-  max-height: 80vh;
+  width: 1400px;
+  max-width: 98vw;
+  max-height: 85vh;
   overflow-y: auto;
   background: var(--ts-bg-card);
   border-radius: 12px;
@@ -486,19 +626,15 @@ const getCurrentActivityIcon = () => {
 
 .months-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 
-  @media (max-width: 1024px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  @media (max-width: 768px) {
+  @media (max-width: 1100px) {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 700px) {
     grid-template-columns: 1fr;
   }
 }
@@ -555,7 +691,7 @@ const getCurrentActivityIcon = () => {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 12px;
   position: relative;
   cursor: pointer;
   transition: all 0.15s;
@@ -604,6 +740,16 @@ const getCurrentActivityIcon = () => {
     color: #6d28d9;
   }
 
+  &.festival {
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    color: #991b1b;
+    font-weight: 600;
+
+    .day-badge {
+      font-size: 10px;
+    }
+  }
+
   &.is-today {
     box-shadow: 0 0 0 2px var(--ts-primary);
     font-weight: 700;
@@ -615,12 +761,41 @@ const getCurrentActivityIcon = () => {
   }
 
   .day-badge {
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1;
-    margin-top: 1px;
+    margin-top: 2px;
     white-space: nowrap;
-    transform: scale(0.85);
+    transform: scale(0.9);
+  }
+
+  .festival-name {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    transform: scale(0.9);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // PC端字体更大
+  @media (min-width: 1024px) {
+    font-size: 13px;
+
+    .day-badge {
+      font-size: 12px;
+    }
+
+    .festival-name {
+      font-size: 11px;
+    }
+
+    &.festival .day-badge {
+      font-size: 11px;
+    }
   }
 }
 
@@ -649,6 +824,7 @@ const getCurrentActivityIcon = () => {
       &.salt { background: #0ea5e9; }
       &.peach { background: #ec4899; }
       &.monthly { background: #8b5cf6; }
+      &.festival { background: #ef4444; }
     }
   }
 }
@@ -679,6 +855,11 @@ const getCurrentActivityIcon = () => {
     &.monthly {
       background: rgba(139, 92, 246, 0.2);
       color: #c4b5fd;
+    }
+
+    &.festival {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
     }
   }
 }

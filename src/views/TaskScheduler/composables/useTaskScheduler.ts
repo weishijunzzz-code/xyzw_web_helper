@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted, Ref } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
 import { useMessage, useDialog } from 'naive-ui';
 import { useScheduledTaskStore } from '@/stores/scheduledTaskStore';
 import { useTaskHistoryStore } from '@/stores/taskHistoryStore';

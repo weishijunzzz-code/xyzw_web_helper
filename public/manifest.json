@@ -1,0 +1,104 @@
+{
+  "name": "XYZW Web Helper",
+  "short_name": "XYZW助手",
+  "description": "咸鱼游戏自动化web平台 - Token管理、WebSocket通信、游戏自动化",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/xiaoyugan.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "utilities", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "控制台界面"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "移动端界面"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "定时任务",
+      "short_name": "定时任务",
+      "description": "快速查看定时任务",
+      "url": "/admin/task-scheduler",
+      "icons": [{ "src": "/icons/xiaoyugan.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "批量日常",
+      "short_name": "批量日常",
+      "description": "快速执行批量任务",
+      "url": "/admin/batch-daily-tasks",
+      "icons": [{ "src": "/icons/xiaoyugan.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Token管理",
+      "short_name": "Token",
+      "description": "管理游戏Token",
+      "url": "/tokens",
+      "icons": [{ "src": "/icons/xiaoyugan.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

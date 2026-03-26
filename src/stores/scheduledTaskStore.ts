@@ -95,8 +95,10 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
       if (savedTasks && savedTasks.length > 0) {
         tasks.value = savedTasks;
         console.log(`[Store] 从 IndexedDB 加载了 ${savedTasks.length} 个任务`);
+        // 清除旧的 localStorage，防止数据不一致
+        localStorage.removeItem('scheduledTasks');
       } else {
-        // 如果 IndexedDB 没有数据，尝试从 localStorage 迁移
+        // 如果 IndexedDB 没有数据，尝试从 localStorage 迁移（仅一次）
         const saved = localStorage.getItem('scheduledTasks');
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -105,6 +107,8 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
             // 迁移到 IndexedDB
             await taskDB.saveAll(parsed);
             console.log(`[Store] 从 localStorage 迁移了 ${parsed.length} 个任务到 IndexedDB`);
+            // 迁移完成后清除 localStorage
+            localStorage.removeItem('scheduledTasks');
           }
         }
       }
@@ -204,11 +208,14 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
   const deleteTask = async (id: string) => {
     const index = tasks.value.findIndex(t => t.id === id);
     if (index !== -1) {
+      // 先从内存中移除
       tasks.value.splice(index, 1);
-      // 先从 IndexedDB 中删除该任务
+      // 然后从 IndexedDB 中删除该任务
       await taskDB.delete(id);
-      // 然后保存当前任务列表
-      await saveTasks();
+      // 更新 localStorage 备份（删除旧键，使用新键）
+      localStorage.setItem('scheduledTasks_backup', JSON.stringify(tasks.value));
+      // 同时清除旧的 localStorage 键，防止迁移时恢复
+      localStorage.removeItem('scheduledTasks');
       return true;
     }
     return false;

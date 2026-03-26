@@ -22,23 +22,23 @@
                 align-items: center;
                 gap: 12px;
                 padding: 8px 12px;
-                background-color: #f8f9fa;
+                background-color: var(--color-bg-secondary);
                 border-radius: 8px;
-                border: 1px solid #e9ecef;
+                border: 1px solid var(--color-border-default);
               "
             >
-              <div style="font-size: 14px; color: #495057">
+              <div style="font-size: 14px; color: var(--color-text-secondary)">
                 共 {{ scheduledTasks.length }} 个定时任务
               </div>
               <div
                 v-if="shortestCountdownTask"
-                style="font-size: 14px; font-weight: 500; color: #1677ff"
+                style="font-size: 14px; font-weight: 500; color: var(--color-primary-500)"
               >
                 即将执行：{{ shortestCountdownTask.task.name }} ({{
                   shortestCountdownTask.countdown.formatted
                 }})
               </div>
-              <div v-else style="font-size: 14px; color: #6c757d">
+              <div v-else style="font-size: 14px; color: var(--color-text-tertiary)">
                 暂无定时任务
               </div>
               <div style="display: flex; gap: 8px">
@@ -67,9 +67,9 @@
               align-items: center;
               gap: 12px;
               padding: 8px 12px;
-              background-color: #f8f9fa;
+              background-color: var(--color-bg-secondary);
               border-radius: 8px;
-              border: 1px solid #e9ecef;
+              border: 1px solid var(--color-border-default);
             "
           >
             <n-button
@@ -124,7 +124,7 @@
                     margin-bottom: 12px;
                   "
                 >
-                  <label style="font-weight: 500; color: #333">分组选择</label>
+                  <label style="font-weight: 500; color: var(--color-text-primary)">分组选择</label>
                   <n-button
                     size="small"
                     type="error"
@@ -177,7 +177,7 @@
                 </n-button>
                 <span
                   v-if="selectedGroups.length > 0"
-                  style="font-size: 12px; color: #86909c"
+                  style="font-size: 12px; color: var(--color-text-tertiary)"
                 >
                   已选择 {{ selectedGroups.length }} 个分组，包含
                   {{ selectedTokens.length }} 个账号
@@ -658,7 +658,7 @@
                     : "执行日志"
                 }}
                 <span
-                  style="margin-left: 12px; font-size: 12px; color: #86909c"
+                  style="margin-left: 12px; font-size: 12px; color: var(--color-text-tertiary)"
                 >
                   {{ logs.length }}/{{ batchSettings.maxLogEntries || 1000 }}
                 </span>
@@ -900,7 +900,7 @@
                 padding-bottom: 8px;
               "
             >
-              <div style="font-size: 12px; color: #86909c; margin-bottom: 8px">
+              <div style="font-size: 12px; color: var(--color-text-tertiary); margin-bottom: 8px">
                 快速选择分组：
               </div>
               <div style="display: flex; gap: 6px; flex-wrap: wrap">
@@ -928,7 +928,7 @@
                 </n-button>
                 <div
                   v-if="tokenGroups.length === 0"
-                  style="font-size: 12px; color: #ccc"
+                  style="font-size: 12px; color: var(--color-text-tertiary)"
                 >
                   暂无分组
                 </div>
@@ -1027,7 +1027,7 @@
                 <h4 style="margin: 0; margin-bottom: 8px">
                   {{ template.name }}
                 </h4>
-                <div style="font-size: 12px; color: #86909c">
+                <div style="font-size: 12px; color: var(--color-text-tertiary)">
                   创建时间: {{ new Date(template.createdAt).toLocaleString() }}
                   <span v-if="template.updatedAt"
                     >, 更新时间:
@@ -1050,7 +1050,7 @@
           </n-card>
           <div
             v-if="filteredTaskTemplates.length === 0"
-            style="text-align: center; padding: 24px; color: #86909c"
+            style="text-align: center; padding: 24px; color: var(--color-text-tertiary)"
           >
             暂无模板
           </div>
@@ -1084,7 +1084,7 @@
             <span>共 {{ filteredAccountTemplates.length }} 个账号</span>
           </div>
           <div style="display: flex; gap: 8px; align-items: center">
-            <label style="font-size: 12px; color: #86909c">按模板筛选:</label>
+            <label style="font-size: 12px; color: var(--color-text-tertiary)">按模板筛选:</label>
             <n-select
               v-model:value="selectedTemplateForFilter"
               :options="taskTemplates"
@@ -1133,7 +1133,7 @@
           </n-card>
           <div
             v-if="filteredAccountTemplates.length === 0"
-            style="text-align: center; padding: 24px; color: #86909c"
+            style="text-align: center; padding: 24px; color: var(--color-text-tertiary)"
           >
             暂无账号数据
           </div>
@@ -1198,10 +1198,10 @@
             <div
               class="recipient-info"
               style="
-                background: #f7f8fa;
+                background: var(--color-bg-secondary);
                 padding: 16px;
                 border-radius: 8px;
-                border: 1px solid #e5e7eb;
+                border: 1px solid var(--color-border-default);
                 display: flex;
                 align-items: flex-start;
                 gap: 16px;
@@ -1294,7 +1294,7 @@
                     margin-bottom: 12px;
                     font-size: 18px;
                     font-weight: bold;
-                    color: #1d2129;
+                    color: var(--color-text-primary);
                     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                   "
                 >
@@ -1313,7 +1313,7 @@
                       class="info-label"
                       style="
                         font-size: 12px;
-                        color: #86909c;
+                        color: var(--color-text-tertiary);
                         margin-bottom: 2px;
                       "
                     >
@@ -1321,7 +1321,7 @@
                     </div>
                     <div
                       class="info-value"
-                      style="font-size: 14px; font-weight: 500; color: #1d2129"
+                      style="font-size: 14px; font-weight: 500; color: var(--color-text-primary)"
                     >
                       {{ recipientInfo.roleId }}
                     </div>
@@ -1331,7 +1331,7 @@
                       class="info-label"
                       style="
                         font-size: 12px;
-                        color: #86909c;
+                        color: var(--color-text-tertiary);
                         margin-bottom: 2px;
                       "
                     >
@@ -1339,7 +1339,7 @@
                     </div>
                     <div
                       class="info-value"
-                      style="font-size: 14px; font-weight: 500; color: #1d2129"
+                      style="font-size: 14px; font-weight: 500; color: var(--color-text-primary)"
                     >
                       {{ recipientInfo.serverName }}
                     </div>
@@ -1349,7 +1349,7 @@
                       class="info-label"
                       style="
                         font-size: 12px;
-                        color: #86909c;
+                        color: var(--color-text-tertiary);
                         margin-bottom: 2px;
                       "
                     >
@@ -1357,7 +1357,7 @@
                     </div>
                     <div
                       class="info-value"
-                      style="font-size: 16px; font-weight: 600; color: #667eea"
+                      style="font-size: 16px; font-weight: 600; color: var(--color-primary-500)"
                     >
                       {{ recipientInfo.power }} {{ recipientInfo.powerUnit }}
                     </div>
@@ -1367,7 +1367,7 @@
                       class="info-label"
                       style="
                         font-size: 12px;
-                        color: #86909c;
+                        color: var(--color-text-tertiary);
                         margin-bottom: 2px;
                       "
                     >
@@ -1375,7 +1375,7 @@
                     </div>
                     <div
                       class="info-value"
-                      style="font-size: 14px; font-weight: 500; color: #1d2129"
+                      style="font-size: 14px; font-weight: 500; color: var(--color-text-primary)"
                     >
                       {{ recipientInfo.legionName || "无" }}
                     </div>
@@ -1385,7 +1385,7 @@
                       class="info-label"
                       style="
                         font-size: 12px;
-                        color: #86909c;
+                        color: var(--color-text-tertiary);
                         margin-bottom: 2px;
                       "
                     >
@@ -1393,7 +1393,7 @@
                     </div>
                     <div
                       class="info-value"
-                      style="font-size: 14px; font-weight: 500; color: #1d2129"
+                      style="font-size: 14px; font-weight: 500; color: var(--color-text-primary)"
                     >
                       {{ recipientInfo.legionId || "无" }}
                     </div>
@@ -1571,7 +1571,7 @@
           style="
             margin-bottom: 16px;
             padding: 12px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--color-border-default);
             border-radius: 8px;
           "
         >
@@ -1591,25 +1591,25 @@
             </n-switch>
           </div>
           <div style="margin-bottom: 4px">
-            <span style="color: #6b7280">运行类型：</span>
+            <span style="color: var(--color-text-tertiary)">运行类型：</span>
             <span>{{
               task.runType === "daily" ? "每天固定时间" : "Cron表达式"
             }}</span>
           </div>
           <div style="margin-bottom: 4px">
-            <span style="color: #6b7280">运行时间：</span>
+            <span style="color: var(--color-text-tertiary)">运行时间：</span>
             <span>{{
               task.runType === "daily" ? task.runTime : task.cronExpression
             }}</span>
           </div>
           <div style="margin-bottom: 4px">
-            <span style="color: #6b7280">下次执行：</span>
+            <span style="color: var(--color-text-tertiary)">下次执行：</span>
             <span
               :style="{
                 fontWeight: 'bold',
                 color: taskCountdowns[task.id]?.isNearExecution
                   ? '#ff4d4f'
-                  : '#1677ff',
+                  : 'var(--color-primary-500)',
               }"
             >
               {{
@@ -1620,11 +1620,11 @@
             </span>
           </div>
           <div style="margin-bottom: 4px">
-            <span style="color: #6b7280">选中账号：</span>
+            <span style="color: var(--color-text-tertiary)">选中账号：</span>
             <span>{{ task.selectedTokens.length }} 个</span>
           </div>
           <div style="margin-bottom: 8px">
-            <span style="color: #6b7280">选中任务：</span>
+            <span style="color: var(--color-text-tertiary)">选中任务：</span>
             <span>{{ task.selectedTasks.length }} 个</span>
           </div>
           <div style="display: flex; gap: 8px">
@@ -1645,7 +1645,7 @@
         </div>
         <div
           v-if="scheduledTasks.length === 0"
-          style="text-align: center; padding: 24px; color: #6b7280"
+          style="text-align: center; padding: 24px; color: var(--color-text-tertiary)"
         >
           暂无定时任务
         </div>
@@ -1743,7 +1743,7 @@
                   margin-bottom: 8px;
                 "
               >
-                <div style="font-size: 12px; color: #86909c">
+                <div style="font-size: 12px; color: var(--color-text-tertiary)">
                   快速选择分组：
                 </div>
                 <n-button
@@ -1757,7 +1757,7 @@
               </div>
               <div
                 v-if="tokenGroups.length === 0"
-                style="font-size: 12px; color: #ccc"
+                style="font-size: 12px; color: var(--color-text-tertiary)"
               >
                 暂无分组
               </div>
@@ -2570,10 +2570,10 @@
           <!-- 选择包含的账号 -->
           <div
             style="
-              background: #f9f9f9;
+              background: var(--color-bg-secondary);
               padding: 12px;
               border-radius: 8px;
-              border: 1px solid #eee;
+              border: 1px solid var(--color-border-light);
             "
           >
             <div
@@ -2613,7 +2613,7 @@
           style="
             max-height: 500px;
             overflow-y: auto;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--color-border-default);
             border-radius: 8px;
             padding: 12px;
           "
@@ -2623,10 +2623,10 @@
             :key="group.id"
             style="
               padding: 12px;
-              border: 1px solid #e5e7eb;
+              border: 1px solid var(--color-border-default);
               border-radius: 6px;
               margin-bottom: 12px;
-              background: #fafafa;
+              background: var(--color-bg-secondary);
             "
           >
             <div
@@ -2721,8 +2721,8 @@
                       :key="tokenId"
                       style="
                         padding: 2px 8px;
-                        background: white;
-                        border: 1px solid #ddd;
+                        background: var(--color-bg-primary);
+                        border: 1px solid var(--color-border-light);
                         border-radius: 4px;
                         font-size: 12px;
                         display: flex;
@@ -2788,7 +2788,7 @@
 
           <div
             v-if="tokenGroups.length === 0"
-            style="text-align: center; padding: 24px; color: #86909c"
+            style="text-align: center; padding: 24px; color: var(--color-text-tertiary)"
           >
             暂无分组，请创建一个新分组
           </div>
@@ -4401,7 +4401,7 @@ const verifyTaskDependencies = async (task) => {
 
   // Verify task functions exist
   for (const taskName of task.selectedTasks) {
-    const taskFunction = eval(taskName);
+    const taskFunction = taskFunctionMap[taskName];
     if (typeof taskFunction !== "function") {
       addLog({
         time: new Date().toLocaleTimeString(),
@@ -4567,7 +4567,7 @@ const executeScheduledTask = async (task) => {
       });
 
       // Call the task function dynamically
-      const taskFunction = eval(taskName);
+      const taskFunction = taskFunctionMap[taskName];
       if (typeof taskFunction === "function") {
         // For batch operations, pass isScheduledTask = true
         // 具体的batch任务函数内部会使用ensureConnection管理并行连接
@@ -5766,6 +5766,55 @@ const {
 const tasksLegacy = createTasksLegacy(createTaskDeps());
 const { batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
 
+// 任务函数映射表（替代 eval 的安全方案）
+const taskFunctionMap = {
+  // HangUp tasks
+  claimHangUpRewards,
+  batchAddHangUpTime,
+  batchStudy,
+  batchclubsign,
+  batchWarGuessCheer,
+  // Bottle tasks
+  resetBottles,
+  batchlingguanzi,
+  // Tower tasks
+  climbTower,
+  climbWeirdTower,
+  batchClaimFreeEnergy,
+  skinChallenge,
+  batchUseItems,
+  batchMergeItems,
+  // Car tasks
+  batchSmartSendCar,
+  batchClaimCars,
+  // Item tasks
+  batchOpenBox,
+  batchOpenBoxByPoints,
+  batchClaimBoxPointReward,
+  batchFish,
+  batchRecruit,
+  batchClaimStarRewards,
+  batchClaimPeachTasks,
+  batchGenieSweep,
+  // Dungeon tasks
+  batchbaoku13,
+  batchbaoku45,
+  batchmengjing,
+  batchBuyDreamItems,
+  // Arena tasks
+  batcharenafight,
+  batchTopUpFish,
+  batchTopUpArena,
+  // Store tasks
+  legion_storebuygoods,
+  legionStoreBuySkinCoins,
+  store_purchase,
+  collection_claimfreereward,
+  // Legacy tasks
+  batchLegacyClaim,
+  batchLegacyGiftSendEnhanced,
+};
+
 const startBatch = async () => {
   if (selectedTokens.value.length === 0) return;
 
@@ -6024,7 +6073,7 @@ const stopBatch = () => {
 .log-container {
   flex: 1;
   overflow-y: auto;
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
   padding: 10px;
   border-radius: 4px;
   margin-top: 10px;
@@ -6038,23 +6087,23 @@ const stopBatch = () => {
 }
 
 .log-item.error {
-  color: #d03050;
+  color: var(--color-error-500, #d03050);
 }
 
 .log-item.success {
-  color: #18a058;
+  color: var(--color-success-500, #18a058);
 }
 
 .log-item.warning {
-  color: #f0a020;
+  color: var(--color-warning-500, #f0a020);
 }
 
 .log-item.info {
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .time {
-  color: #999;
+  color: var(--color-text-tertiary);
   margin-right: 8px;
 }
 
@@ -6080,7 +6129,7 @@ const stopBatch = () => {
 
 .setting-label {
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .setting-switches {
@@ -6094,7 +6143,7 @@ const stopBatch = () => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .switch-row:last-child {
@@ -6103,7 +6152,7 @@ const stopBatch = () => {
 
 .switch-label {
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 /* Responsive Design */
@@ -6228,9 +6277,9 @@ const stopBatch = () => {
   /* Token分组管理样式 */
   .group-selection-section {
     padding: 12px;
-    background-color: #f5f7fa;
+    background-color: var(--color-bg-secondary);
     border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border-default);
   }
 
   .group-tag {

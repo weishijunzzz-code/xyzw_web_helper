@@ -289,12 +289,17 @@
           </n-icon>
           <span>消息测试</span>
         </router-link>
-          <router-link to="/admin/legion-war" class="nav-item" active-class="active"  v-if="isNowInLegionWarTime()" >
-            <n-icon>
-              <LockOpen />
-            </n-icon>
-            <span>实时盐场</span>
-          </router-link>
+        <router-link 
+          to="/admin/legion-war" 
+          class="drawer-item" 
+          v-if="isNowInLegionWarTime()"
+          @click="isMobileMenuOpen = false"
+        >
+          <n-icon>
+            <LockOpen />
+          </n-icon>
+          <span>实时盐场</span>
+        </router-link>
         <router-link
           to="/admin/profile"
           class="drawer-item"
@@ -307,6 +312,9 @@
         </router-link>
       </div>
     </n-drawer>
+    <!-- 面包屑导航 -->
+    <BreadcrumbNav v-if="!isMobile" />
+    
     <div class="main" :class="{ 'has-bottom-nav': isMobile }">
       <router-view v-slot="{ Component, route }">
         <PageTransition :name="route.meta.transition || 'fade-slide'">
@@ -343,6 +351,7 @@ import ThemeSettings from "@/components/Common/ThemeSettings.vue";
 import PageTransition from "@/components/DesignSystem/PageTransition.vue";
 import GlobalSearch from "@/components/Common/GlobalSearch.vue";
 import ActivityCalendarDropdown from "@/views/TaskScheduler/components/ActivityCalendarDropdown.vue";
+import BreadcrumbNav from "@/components/Common/BreadcrumbNav.vue";
 import { useMobile } from "@/composables/useMobile";
 import {
   Home,
@@ -451,34 +460,47 @@ const refreshTokens = () => {
   // 这里可以触发重新获取Token状态
 };
 
-// 底部导航项
-const bottomNavItems = computed(() => [
-  {
-    path: '/admin/dashboard',
-    icon: Home,
-    label: '首页'
-  },
-  {
-    path: '/admin/game-features',
-    icon: Apps,
-    label: '功能'
-  },
-  {
-    path: '/tokens',
-    icon: Person,
-    label: 'Token'
-  },
-  {
-    path: '/admin/batch-daily-tasks',
-    icon: Layers,
-    label: '批量'
-  },
-  {
-    path: '/admin/message-test',
-    icon: Mail,
-    label: '消息'
+// 底部导航项 - 优化移动端导航结构
+const bottomNavItems = computed(() => {
+  const items = [
+    {
+      path: '/admin/dashboard',
+      icon: Home,
+      label: '首页'
+    },
+    {
+      path: '/admin/game-features',
+      icon: Apps,
+      label: '功能'
+    },
+    {
+      path: '/tokens',
+      icon: Person,
+      label: 'Token'
+    },
+    {
+      path: '/admin/task-scheduler',
+      icon: TimerOutline,
+      label: '定时'
+    },
+    {
+      path: '/admin/batch-daily-tasks',
+      icon: Layers,
+      label: '批量'
+    }
+  ];
+  
+  // 盐场时间显示实时盐场入口
+  if (isNowInLegionWarTime()) {
+    items.splice(4, 0, {
+      path: '/admin/legion-war',
+      icon: LockOpen,
+      label: '盐场'
+    });
   }
-]);
+  
+  return items;
+});
 
 // 检查当前路由是否激活
 const isActiveRoute = (path) => {

@@ -40,6 +40,11 @@ interface TaskSchedulerDB extends DBSchema {
 
 let db: IDBPDatabase<TaskSchedulerDB> | null = null;
 
+// 清除数据库缓存（用于强制刷新）
+export function clearDBCache(): void {
+  db = null;
+}
+
 // 初始化数据库
 export async function initDB(): Promise<IDBPDatabase<TaskSchedulerDB>> {
   if (db) return db;
@@ -92,19 +97,19 @@ export const taskDB = {
     const db = await initDB();
     return db.getAll('tasks');
   },
-  
+
   // 根据ID获取任务
   async getById(id: string): Promise<ScheduledTask | undefined> {
     const db = await initDB();
     return db.get('tasks', id);
   },
-  
+
   // 保存任务
   async save(task: ScheduledTask): Promise<void> {
     const db = await initDB();
     await db.put('tasks', task);
   },
-  
+
   // 批量保存任务
   async saveAll(tasks: ScheduledTask[]): Promise<void> {
     const db = await initDB();
@@ -112,19 +117,21 @@ export const taskDB = {
     await Promise.all(tasks.map(task => tx.store.put(task)));
     await tx.done;
   },
-  
+
   // 删除任务
   async delete(id: string): Promise<void> {
     const db = await initDB();
     await db.delete('tasks', id);
+    // 强制刷新数据库连接，确保下次读取是最新数据
+    clearDBCache();
   },
-  
+
   // 根据状态查询
   async getByStatus(status: string): Promise<ScheduledTask[]> {
     const db = await initDB();
     return db.getAllFromIndex('tasks', 'by-status', status);
   },
-  
+
   // 清空所有任务
   async clear(): Promise<void> {
     const db = await initDB();
