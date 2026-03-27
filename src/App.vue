@@ -16,7 +16,7 @@
                 @complete="showSuccess = false"
               />
               <CommandPalette ref="commandPaletteRef" />
-              <DebugPanel v-if="showDebugPanel" />
+              <DebugPanel v-if="isNativePlatform" />
             </div>
           </n-dialog-provider>
         </n-notification-provider>
@@ -59,15 +59,6 @@ const openCommandPalette = () => {
 // 提供给全局使用
 provide('showSuccessAnimation', showSuccessAnimation);
 provide('openCommandPalette', openCommandPalette);
-
-// 调试面板显示控制 - 可以通过环境变量或本地存储控制
-const showDebugPanel = computed(() => {
-  // 检查环境变量或本地存储
-  const debugEnabled = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true' || 
-                       localStorage.getItem('enableDebugPanel') === 'true'
-  // 只在原生平台且开启调试时显示
-  return isNativePlatform() && debugEnabled
-})
 
 // Naive UI 主题
 const naiveTheme = computed(() => {

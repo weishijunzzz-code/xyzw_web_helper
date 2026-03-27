@@ -1,9 +1,12 @@
 <template>
+  <!-- 调试面板 -->
   <div v-if="showDebug" class="debug-panel">
     <div class="debug-header">
       <span>调试日志</span>
-      <n-button text size="tiny" @click="clearLogs">清空</n-button>
-      <n-button text size="tiny" @click="showDebug = false">关闭</n-button>
+      <div class="debug-actions">
+        <n-button text size="tiny" @click="clearLogs">清空</n-button>
+        <n-button text size="tiny" @click="showDebug = false">关闭</n-button>
+      </div>
     </div>
     <div class="debug-content">
       <div v-for="(log, index) in logs" :key="index" class="debug-line">
@@ -13,8 +16,10 @@
       </div>
     </div>
   </div>
+
+  <!-- 调试按钮 -->
   <n-button
-    v-else
+    v-else-if="debugEnabled"
     class="debug-toggle"
     size="small"
     type="default"
@@ -22,10 +27,39 @@
   >
     调试
   </n-button>
+
+  <!-- 设置按钮 - 始终显示在左下角 -->
+  <n-button
+    class="settings-toggle"
+    size="small"
+    type="primary"
+    @click="showSettings = true"
+  >
+    设置
+  </n-button>
+
+  <!-- 设置面板 -->
+  <n-modal
+    v-model:show="showSettings"
+    title="调试设置"
+    preset="card"
+    style="width: 300px"
+    :mask-closable="true"
+  >
+    <div class="settings-content">
+      <div class="setting-item">
+        <span>启用调试按钮</span>
+        <n-switch v-model:value="debugEnabled" @update:value="toggleDebug" />
+      </div>
+      <div class="setting-tip">
+        开启后会在页面右下角显示调试按钮
+      </div>
+    </div>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 interface LogItem {
   time: string
@@ -34,10 +68,25 @@ interface LogItem {
 }
 
 const showDebug = ref(false)
+const showSettings = ref(false)
 const logs = ref<LogItem[]>([])
+const debugEnabled = ref(false)
+
+// 从 localStorage 读取调试开关状态
+const loadDebugState = () => {
+  debugEnabled.value = localStorage.getItem('enableDebugPanel') === 'true'
+}
+
+// 切换调试开关
+const toggleDebug = (value: boolean) => {
+  localStorage.setItem('enableDebugPanel', value.toString())
+  debugEnabled.value = value
+}
 
 // 捕获 console 日志
 onMounted(() => {
+  loadDebugState()
+
   const originalLog = console.log
   const originalError = console.error
   const originalWarn = console.warn
@@ -97,6 +146,11 @@ const clearLogs = () => {
   font-size: 14px;
 }
 
+.debug-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .debug-content {
   flex: 1;
   overflow-y: auto;
@@ -147,5 +201,30 @@ const clearLogs = () => {
   right: 10px;
   z-index: 9999;
   opacity: 0.7;
+}
+
+.settings-toggle {
+  position: fixed;
+  bottom: 20px;
+  left: 10px;
+  z-index: 9998;
+  opacity: 0.8;
+}
+
+.settings-content {
+  padding: 16px 0;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.setting-tip {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
 }
 </style>
