@@ -356,11 +356,11 @@ const currentActivity = computed(() => {
 
 .months-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
   margin-bottom: 20px;
-  max-width: 100%;
-  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .month-card {
@@ -606,6 +606,9 @@ const currentActivity = computed(() => {
   .activity-calendar-section {
     margin-bottom: 16px;
     border-radius: 12px;
+    width: 100%;
+    max-width: 100vw;
+    overflow: hidden;
   }
 
   .calendar-header {
@@ -629,16 +632,21 @@ const currentActivity = computed(() => {
   }
 
   .months-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 12px;
+    width: 100%;
   }
 
   .calendar-body {
     padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .month-card {
-    padding: 10px;
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
 
     .month-title {
       font-size: 13px;
@@ -647,20 +655,29 @@ const currentActivity = computed(() => {
   }
 
   .week-grid {
+    width: 100%;
+
     .week-header {
+      gap: 1px;
+
       .week-day {
         font-size: 10px;
-        padding: 2px;
+        padding: 2px 1px;
       }
+    }
+
+    .days-grid {
+      gap: 1px;
     }
   }
 
   .day-cell {
-    font-size: 10px;
-    border-radius: 4px;
+    font-size: 9px;
+    border-radius: 3px;
+    min-height: 28px;
 
     .day-badge {
-      font-size: 8px;
+      font-size: 7px;
       margin-top: 0;
     }
   }
