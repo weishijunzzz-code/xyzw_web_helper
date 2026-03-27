@@ -28,9 +28,7 @@ jobs:
 
       - name: Deploy to Capgo
         run: |
-          npx capgo upload --channel production
-        env:
-          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+          npx capgo upload --channel production --apikey ${{ secrets.CAPGO_TOKEN }}
 
       - name: Notify success
         run: |
