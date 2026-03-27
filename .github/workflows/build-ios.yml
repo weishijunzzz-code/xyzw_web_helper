@@ -83,6 +83,9 @@ jobs:
             xcodebuild -project App.xcodeproj -list
           fi
           
+          # Create build output directory
+          mkdir -p ./build/Products
+          
           # Try workspace first, then xcodeproj
           if [ -f "App.xcworkspace" ]; then
             echo "=== Building with workspace ==="
@@ -91,6 +94,8 @@ jobs:
               -destination 'platform=iOS Simulator,name=iPhone 15' \
               -configuration Debug \
               -derivedDataPath ./build \
+              -resultBundlePath ./build/result.bundle \
+              CONFIGURATION_BUILD_DIR=./build/Products \
               build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log
           else
             echo "=== Building with xcodeproj ==="
@@ -99,6 +104,8 @@ jobs:
               -destination 'platform=iOS Simulator,name=iPhone 15' \
               -configuration Debug \
               -derivedDataPath ./build \
+              -resultBundlePath ./build/result.bundle \
+              CONFIGURATION_BUILD_DIR=./build/Products \
               build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log
           fi
         continue-on-error: false
