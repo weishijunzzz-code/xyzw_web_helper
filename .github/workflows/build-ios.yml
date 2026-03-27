@@ -90,7 +90,7 @@ jobs:
               -scheme App \
               -destination 'platform=iOS Simulator,name=iPhone 15' \
               -configuration Debug \
-              -verbose \
+              -derivedDataPath ./build \
               build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log
           else
             echo "=== Building with xcodeproj ==="
@@ -98,7 +98,7 @@ jobs:
               -scheme App \
               -destination 'platform=iOS Simulator,name=iPhone 15' \
               -configuration Debug \
-              -verbose \
+              -derivedDataPath ./build \
               build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log
           fi
         continue-on-error: false
@@ -111,19 +111,19 @@ jobs:
             echo "=== Build Log ==="
             tail -n 200 build.log
           fi
-          echo "=== Derived Data ==="
-          ls -la ~/Library/Developer/Xcode/DerivedData/ 2>/dev/null || echo "No DerivedData found"
 
       - name: Check build output
         run: |
+          echo "=== Build directory ==="
           ls -la ios/App/build/ || echo "Build directory not found"
-          find ios/App -name "*.app" -type d || echo "No .app found"
+          echo "=== Find .app files ==="
+          find ios/App/build -name "*.app" -type d 2>/dev/null || echo "No .app found in build"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: |
-            ios/App/build/
-            ios/App/**/*.app
+            ios/App/build/Build/Products/
+            ios/App/build/**/*.app
         if: always()
