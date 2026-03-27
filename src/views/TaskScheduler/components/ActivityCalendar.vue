@@ -359,6 +359,8 @@ const currentActivity = computed(() => {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   margin-bottom: 20px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .month-card {
@@ -601,25 +603,96 @@ const currentActivity = computed(() => {
 
 // 响应式
 @media (max-width: 768px) {
+  .activity-calendar-section {
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+
+  .calendar-header {
+    padding: 12px 16px;
+
+    .header-left {
+      gap: 8px;
+
+      .calendar-icon {
+        font-size: 18px;
+      }
+
+      .title {
+        font-size: 14px;
+      }
+
+      .current-activity {
+        font-size: 12px;
+      }
+    }
+  }
+
   .months-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
-  
+
   .calendar-body {
     padding: 12px;
   }
-  
-  .day-cell {
-    font-size: 11px;
-    
-    .day-badge {
-      font-size: 8px;
+
+  .month-card {
+    padding: 10px;
+
+    .month-title {
+      font-size: 13px;
+      margin-bottom: 6px;
     }
   }
-  
-  .legend-items {
-    flex-direction: column;
-    gap: 8px;
+
+  .week-grid {
+    .week-header {
+      .week-day {
+        font-size: 10px;
+        padding: 2px;
+      }
+    }
+  }
+
+  .day-cell {
+    font-size: 10px;
+    border-radius: 4px;
+
+    .day-badge {
+      font-size: 8px;
+      margin-top: 0;
+    }
+  }
+
+  .calendar-legend {
+    padding: 12px;
+
+    .legend-title {
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .legend-items {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .legend-item {
+      font-size: 12px;
+
+      .legend-sub {
+        font-size: 10px;
+      }
+    }
+  }
+
+  .year-selector {
+    margin-bottom: 16px;
+
+    .year-text {
+      font-size: 16px;
+    }
   }
 }
 </style>
