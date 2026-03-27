@@ -57,6 +57,7 @@
     "axios": "^1.12.2",
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
+    "dayjs": "^1.11.13",
     "echarts": "^6.0.0",
     "event-emitter3": "^1.0.4",
     "html2canvas": "^1.4.1",

@@ -141,7 +141,7 @@ export default defineConfig(async () => {
              // 将 UI 组件库分割到单独的 chunk
              'ui': ['naive-ui', '@arco-design/web-vue'],
              // 将工具库分割到单独的 chunk
-             'utils': ['dayjs', 'lodash-es'],
+             'utils': ['dayjs'],
              // 将图表库分割到单独的 chunk
              'charts': ['echarts'],
              // 将日期处理库分割到单独的 chunk
