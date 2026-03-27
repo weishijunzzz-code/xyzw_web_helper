@@ -31,6 +31,10 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    CapacitorUpdater: {
+      autoUpdate: true,
+      updateUrl: 'https://api.capgo.app/updates',
+    },
   },
   android: {
     buildOptions: {

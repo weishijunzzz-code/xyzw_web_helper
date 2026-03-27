@@ -30,6 +30,7 @@ import { computed, onMounted, onUnmounted, ref, provide } from "vue";
 import { darkTheme } from "naive-ui";
 import { useTheme } from "@/composables/useTheme";
 import { initCapacitor, isNativePlatform } from "@/utils/capacitor";
+import { initUpdateChecker } from "@/utils/updateChecker";
 import GlobalLoading from "@/components/Common/GlobalLoading.vue";
 import DebugPanel from "@/components/DebugPanel.vue";
 import ErrorBoundary from "@/components/Common/ErrorBoundary.vue";
@@ -304,9 +305,12 @@ onMounted(() => {
   setupSystemThemeListener();
   window.addEventListener("theme-change", handleThemeChange);
   updateReactiveState();
-  
+
   // 初始化 Capacitor（仅在原生应用中生效）
   initCapacitor();
+
+  // 初始化热更新检查（仅在原生应用中生效）
+  initUpdateChecker();
 });
 
 onUnmounted(() => {
