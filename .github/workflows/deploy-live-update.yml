@@ -33,7 +33,7 @@ jobs:
       - name: Deploy to Capgo
         run: |
           echo "API Key length: ${#CAPGO_TOKEN}"
-          capgo upload --channel=production --apikey=${{ secrets.CAPGO_TOKEN }}
+          npx @capgo/cli bundle upload --channel=production --apikey=${{ secrets.CAPGO_TOKEN }}
         env:
           CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
 
