@@ -19,19 +19,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - name: Check Node.js version
         run: node --version
 
-      - name: Install dependencies
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Clean install dependencies
         run: |
-          npm install --legacy-peer-deps
+          rm -rf node_modules package-lock.json
+          pnpm install
         continue-on-error: false
 
       - name: Build web assets
         run: |
-          npm run build
+          pnpm run build
         continue-on-error: false
 
       - name: Check if iOS project exists
@@ -46,12 +51,12 @@ jobs:
       - name: Add iOS platform if not exists
         run: |
           if [ ! -d "ios/App" ]; then
-            npx cap add ios
+            pnpm exec cap add ios
           fi
 
       - name: Sync iOS project
         run: |
-          npx cap sync ios
+          pnpm exec cap sync ios
         continue-on-error: false
 
       - name: List iOS project files

@@ -8,7 +8,6 @@ import { Toast } from '@capacitor/toast'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { Network } from '@capacitor/network'
 import { Device } from '@capacitor/device'
-import { Http } from '@capacitor-community/http'
 
 // 检查是否在原生应用中运行
 export const isNativePlatform = () => Capacitor.isNativePlatform()
