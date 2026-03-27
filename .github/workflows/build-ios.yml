@@ -2,7 +2,7 @@ name: Build iOS App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, test ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -21,17 +21,31 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Check Node.js version
+        run: node --version
+
       - name: Install dependencies
         run: |
           npm install --legacy-peer-deps
+        continue-on-error: false
 
       - name: Build web assets
         run: |
           npm run build
+        continue-on-error: false
+
+      - name: Check iOS project exists
+        run: |
+          ls -la ios/App/
 
       - name: Sync iOS project
         run: |
           npx cap sync ios
+        continue-on-error: false
+
+      - name: List iOS project files
+        run: |
+          ls -la ios/App/
 
       - name: Build iOS App (Simulator)
         run: |
@@ -40,7 +54,8 @@ jobs:
             -scheme App \
             -destination 'platform=iOS Simulator,name=iPhone 15' \
             -configuration Debug \
-            build
+            build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+        continue-on-error: false
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -49,3 +64,4 @@ jobs:
           path: |
             ios/App/build/
           retention-days: 7
+        if: always()
