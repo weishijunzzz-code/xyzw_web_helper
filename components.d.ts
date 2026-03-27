@@ -48,6 +48,7 @@ declare module 'vue' {
     DailyTaskCard: typeof import('./src/components/Daily/DailyTaskCard.vue')['default']
     DailyTaskStatus: typeof import('./src/components/Daily/DailyTaskStatus.vue')['default']
     DataChart: typeof import('./src/components/Common/DataChart.vue')['default']
+    DebugPanel: typeof import('./src/components/DebugPanel.vue')['default']
     DreamHelperCard: typeof import('./src/components/cards/DreamHelperCard.vue')['default']
     EmptyState: typeof import('./src/components/Common/EmptyState.vue')['default']
     EmptyStateIllustration: typeof import('./src/components/Common/EmptyStateIllustration.vue')['default']

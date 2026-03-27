@@ -1,6 +1,8 @@
 import axios from "axios";
 import { MD5, lib, enc } from "crypto-js";
 import { g_utils } from "@/utils/bonProtocol";
+import { nativeHttp, isNativePlatform } from "./capacitor";
+import BinaryHttp from "./binaryHttp";
 
 export const getTokenId = (token: string | ArrayBuffer | Uint8Array) => {
   const binHash = MD5(lib.WordArray.create(token)).toString(enc.Hex);
@@ -99,21 +101,54 @@ export const scheduleAuthUserRequest = <T>(
 
 export const transformToken = async (arrayBuffer: ArrayBuffer) => {
   return authUserRateLimiter.schedule(async () => {
-    const res = await axios.post(
-      "https://xxz-xyzw.hortorgames.com/login/authuser",
-      arrayBuffer,
-      {
-        params: {
-          _seq: 1,
-        },
-        headers: {
-          "Content-Type": "application/octet-stream",
-          referrerPolicy: "no-referrer",
-        },
+    const url = "https://xxz-xyzw.hortorgames.com/login/authuser?_seq=1";
+    const headers = {
+      "Content-Type": "application/octet-stream",
+      "Referer": "https://xxz-xyzw.hortorgames.com/",
+    };
+
+    let responseData: ArrayBuffer;
+
+    if (isNativePlatform()) {
+      // 移动端使用自定义插件发送请求
+      console.log("[transformToken] Mobile request using BinaryHttp plugin, length=" + arrayBuffer.byteLength);
+      
+      // 将 ArrayBuffer 转换为 base64
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binaryString = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        binaryString += String.fromCharCode(uint8Array[i]);
+      }
+      const base64Data = btoa(binaryString);
+      
+      const response = await BinaryHttp.post({
+        url,
+        data: base64Data,
+        headers,
+      });
+      
+      if (response.status !== 200) {
+        throw new Error("HTTP " + response.status);
+      }
+      
+      // 将 base64 响应解码为 ArrayBuffer
+      const responseBinaryString = atob(response.data);
+      const responseUint8Array = new Uint8Array(responseBinaryString.length);
+      for (let i = 0; i < responseBinaryString.length; i++) {
+        responseUint8Array[i] = responseBinaryString.charCodeAt(i);
+      }
+      responseData = responseUint8Array.buffer;
+    } else {
+      // 网页端使用 axios
+      const res = await axios.post(url, arrayBuffer, {
+        headers,
         responseType: "arraybuffer",
-      },
-    );
-    const msg = g_utils.parse(res.data);
+        timeout: 30000,
+      });
+      responseData = res.data;
+    }
+
+    const msg = g_utils.parse(responseData);
     const data = msg.getData();
     const currentTime = Date.now();
     const sessId = currentTime * 100 + Math.floor(Math.random() * 100);
@@ -129,29 +164,102 @@ export const transformToken = async (arrayBuffer: ArrayBuffer) => {
 };
 
 export const getServerList = async (arrayBuffer: ArrayBuffer) => {
-  // 如果是data URL格式，提取base64部分
-  const res = await axios.post(
-    "https://xxz-xyzw.hortorgames.com/login/serverlist",
-    arrayBuffer,
-    {
-      params: {
-        _seq: 3,
-      },
-      headers: {
-        "Content-Type": "application/octet-stream",
-        referrerPolicy: "no-referrer",
-      },
+  const url = "https://xxz-xyzw.hortorgames.com/login/serverlist?_seq=3";
+  const headers = {
+    "Content-Type": "application/octet-stream",
+    "Referer": "https://xxz-xyzw.hortorgames.com/",
+  };
+
+  let responseData: ArrayBuffer;
+
+  if (isNativePlatform()) {
+    // 移动端使用自定义插件发送请求
+    console.log("[getServerList] Mobile request using BinaryHttp plugin, length=" + arrayBuffer.byteLength);
+    
+    try {
+      // 将 ArrayBuffer 转换为 base64
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binaryString = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        binaryString += String.fromCharCode(uint8Array[i]);
+      }
+      const base64Data = btoa(binaryString);
+      
+      const response = await BinaryHttp.post({
+        url,
+        data: base64Data,
+        headers,
+      });
+      
+      console.log("[getServerList] BinaryHttp status=" + response.status);
+      
+      if (response.status !== 200) {
+        throw new Error("HTTP " + response.status);
+      }
+      
+      // 将 base64 响应解码为 ArrayBuffer
+      const responseBinaryString = atob(response.data);
+      const responseUint8Array = new Uint8Array(responseBinaryString.length);
+      for (let i = 0; i < responseBinaryString.length; i++) {
+        responseUint8Array[i] = responseBinaryString.charCodeAt(i);
+      }
+      responseData = responseUint8Array.buffer;
+      
+      console.log("[getServerList] BinaryHttp response length:", responseData.byteLength);
+      
+      // 检查数据前10个字节
+      if (responseData && responseData.byteLength > 0) {
+        const u8 = new Uint8Array(responseData);
+        const bytes = Array.from(u8.slice(0, 10));
+        console.log("[getServerList] Bytes=" + JSON.stringify(bytes));
+        console.log("[getServerList] Chars=" + String.fromCharCode(u8[0], u8[1]));
+      }
+    } catch (httpError: any) {
+      console.error("[getServerList] BinaryHttp failed: " + httpError.message);
+      throw new Error("HTTP: " + httpError.message);
+    }
+  } else {
+    // 网页端使用 axios
+    console.log("[getServerList] Using axios for web");
+    const res = await axios.post(url, arrayBuffer, {
+      headers,
       responseType: "arraybuffer",
-    },
-  );
-  // console.log("res:", res);
+      timeout: 30000,
+    });
+    responseData = res.data;
+    console.log("[getServerList] Axios response length:", responseData.byteLength);
+    const u8 = new Uint8Array(responseData);
+    console.log("[getServerList] Axios response first 10 bytes:", Array.from(u8.slice(0, 10)));
+  }
 
-  const msg = g_utils.parse(res.data);
-  // console.log("解析结果:", msg);
-
-  const data = msg.getData();
-  console.log("数据内容:", data);
-  return JSON.stringify({
-    ...data.roles,
-  });
+  try {
+    console.log("[getServerList] Parsing response data...");
+    console.log("[getServerList] Creating Uint8Array from response...");
+    const u8Response = new Uint8Array(responseData);
+    console.log("[getServerList] Uint8Array length:", u8Response.length);
+    console.log("[getServerList] First 4 bytes:", u8Response[0], u8Response[1], u8Response[2], u8Response[3]);
+    
+    // 检查是否是 'px' 加密格式
+    if (u8Response.length > 4 && u8Response[0] === 112 && u8Response[1] === 120) {
+      console.log("[getServerList] Detected 'px' encryption format");
+    } else {
+      console.log("[getServerList] Unknown encryption format, expected 'px' (112, 120)");
+    }
+    
+    const msg = g_utils.parse(responseData);
+    console.log("[getServerList] Parsed msg:", msg);
+    console.log("[getServerList] msg._raw:", msg._raw);
+    console.log("[getServerList] msg.body:", msg.body);
+    
+    const data = msg.getData();
+    console.log("[getServerList] 数据内容:", data);
+    return JSON.stringify({
+      ...data.roles,
+    });
+  } catch (parseError: any) {
+    console.error("[getServerList] 解析响应数据失败:", parseError);
+    console.error("[getServerList] 解析错误详情:", parseError.message);
+    console.error("[getServerList] 解析错误堆栈:", parseError.stack);
+    throw new Error(`解析服务器列表失败: ${parseError.message}`);
+  }
 };

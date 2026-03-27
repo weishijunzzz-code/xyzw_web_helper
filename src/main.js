@@ -11,6 +11,7 @@ import "./assets/styles/page-transitions.scss";
 import "./assets/styles/button-effects.scss";
 import "./assets/styles/global.scss";
 import "./assets/styles/mobile.scss";
+import "./styles/mobile-fix.scss";
 import "./assets/styles/task-scheduler-theme.scss";
 
 // 加载游戏加密模块（用于微信扫码导入功能）

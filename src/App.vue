@@ -16,6 +16,7 @@
                 @complete="showSuccess = false"
               />
               <CommandPalette ref="commandPaletteRef" />
+              <DebugPanel v-if="isNativePlatform" />
             </div>
           </n-dialog-provider>
         </n-notification-provider>
@@ -28,7 +29,9 @@
 import { computed, onMounted, onUnmounted, ref, provide } from "vue";
 import { darkTheme } from "naive-ui";
 import { useTheme } from "@/composables/useTheme";
+import { initCapacitor, isNativePlatform } from "@/utils/capacitor";
 import GlobalLoading from "@/components/Common/GlobalLoading.vue";
+import DebugPanel from "@/components/DebugPanel.vue";
 import ErrorBoundary from "@/components/Common/ErrorBoundary.vue";
 import BackToTop from "@/components/Common/BackToTop.vue";
 import SuccessAnimation from "@/components/Common/SuccessAnimation.vue";
@@ -301,6 +304,9 @@ onMounted(() => {
   setupSystemThemeListener();
   window.addEventListener("theme-change", handleThemeChange);
   updateReactiveState();
+  
+  // 初始化 Capacitor（仅在原生应用中生效）
+  initCapacitor();
 });
 
 onUnmounted(() => {

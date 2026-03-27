@@ -17,4 +17,5 @@
   "editor.tabSize": 2,
   "editor.detectIndentation": false,
   "i18n-ally.sourceLanguage": "zh-CN",
+  "java.configuration.updateBuildConfiguration": "interactive",
 }
