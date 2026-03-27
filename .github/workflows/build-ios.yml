@@ -114,16 +114,21 @@ jobs:
 
       - name: Check build output
         run: |
-          echo "=== Build directory ==="
-          ls -la ios/App/build/ || echo "Build directory not found"
+          echo "=== Build directory structure ==="
+          ls -la ios/App/build/ 2>/dev/null || echo "Build directory not found"
+          echo "=== Full build directory tree ==="
+          find ios/App/build -type d 2>/dev/null | head -30 || echo "No build directory"
           echo "=== Find .app files ==="
-          find ios/App/build -name "*.app" -type d 2>/dev/null || echo "No .app found in build"
+          find ios/App -name "*.app" -type d 2>/dev/null || echo "No .app found"
+          echo "=== Current directory ==="
+          pwd
+          ls -la
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: |
-            ios/App/build/Build/Products/
-            ios/App/build/**/*.app
+            ios/App/build/
+            ios/App/**/*.app
         if: always()
