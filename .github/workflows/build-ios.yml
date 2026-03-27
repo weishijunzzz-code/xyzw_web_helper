@@ -34,9 +34,20 @@ jobs:
           npm run build
         continue-on-error: false
 
-      - name: Check iOS project exists
+      - name: Check if iOS project exists
         run: |
-          ls -la ios/App/
+          if [ -d "ios/App" ]; then
+            echo "iOS project exists"
+            ls -la ios/App/
+          else
+            echo "iOS project does not exist, will create it"
+          fi
+
+      - name: Add iOS platform if not exists
+        run: |
+          if [ ! -d "ios/App" ]; then
+            npx cap add ios
+          fi
 
       - name: Sync iOS project
         run: |
@@ -47,14 +58,32 @@ jobs:
         run: |
           ls -la ios/App/
 
+      - name: Check if workspace exists
+        run: |
+          if [ -f "ios/App/App.xcworkspace" ]; then
+            echo "Workspace exists"
+          else
+            echo "Workspace does not exist, checking for xcodeproj"
+            find ios/App -name "*.xcworkspace" -o -name "*.xcodeproj"
+          fi
+
       - name: Build iOS App (Simulator)
         run: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace \
-            -scheme App \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
-            -configuration Debug \
-            build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          # Try workspace first, then xcodeproj
+          if [ -f "App.xcworkspace" ]; then
+            xcodebuild -workspace App.xcworkspace \
+              -scheme App \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
+              -configuration Debug \
+              build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          else
+            xcodebuild -project App.xcodeproj \
+              -scheme App \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
+              -configuration Debug \
+              build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          fi
         continue-on-error: false
 
       - name: Check build output
