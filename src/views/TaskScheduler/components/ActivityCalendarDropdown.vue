@@ -516,13 +516,14 @@ const getCurrentActivityIcon = () => {
 }
 
 .activity-calendar-dropdown {
-  width: 1400px;
+  width: 100%;
   max-width: 98vw;
   max-height: 85vh;
   overflow-y: auto;
   background: var(--ts-bg-card);
   border-radius: 12px;
   padding: 16px;
+  box-sizing: border-box;
 }
 
 .dropdown-header {
@@ -629,6 +630,7 @@ const getCurrentActivityIcon = () => {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 16px;
+  width: 100%;
 
   @media (max-width: 1100px) {
     grid-template-columns: repeat(2, 1fr);
@@ -636,6 +638,7 @@ const getCurrentActivityIcon = () => {
 
   @media (max-width: 700px) {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 
@@ -645,6 +648,7 @@ const getCurrentActivityIcon = () => {
   padding: 10px;
   border: 2px solid transparent;
   transition: all 0.2s;
+  min-width: 0;
 
   &.is-current {
     border-color: var(--ts-primary);
@@ -682,6 +686,20 @@ const getCurrentActivityIcon = () => {
     margin-top: 6px;
     text-align: center;
   }
+
+  @media (max-width: 700px) {
+    padding: 8px;
+
+    .month-title {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .week-header span {
+      font-size: 8px;
+      padding: 1px;
+    }
+  }
 }
 
 .day-cell {
@@ -695,6 +713,7 @@ const getCurrentActivityIcon = () => {
   position: relative;
   cursor: pointer;
   transition: all 0.15s;
+  min-height: 28px;
 
   &:not(.empty):hover {
     transform: scale(1.15);
@@ -795,6 +814,28 @@ const getCurrentActivityIcon = () => {
 
     &.festival .day-badge {
       font-size: 11px;
+    }
+  }
+
+  // 移动端适配
+  @media (max-width: 700px) {
+    font-size: 10px;
+    min-height: 24px;
+    border-radius: 3px;
+
+    .day-badge {
+      font-size: 9px;
+      transform: scale(0.85);
+      margin-top: 1px;
+    }
+
+    .festival-name {
+      font-size: 8px;
+      transform: scale(0.85);
+    }
+
+    &.festival .day-badge {
+      font-size: 8px;
     }
   }
 }
