@@ -26,10 +26,14 @@ jobs:
         run: |
           npm run build
 
+      - name: Install Capgo CLI
+        run: |
+          npm install -g @capgo/cli
+
       - name: Deploy to Capgo
         run: |
           echo "API Key length: ${#CAPGO_TOKEN}"
-          npx capgo upload --channel production --apikey ${{ secrets.CAPGO_TOKEN }}
+          capgo upload --channel=production --apikey=${{ secrets.CAPGO_TOKEN }}
         env:
           CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
 
