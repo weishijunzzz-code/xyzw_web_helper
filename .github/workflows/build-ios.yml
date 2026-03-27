@@ -1,0 +1,51 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm install --legacy-peer-deps
+        
+    - name: Build web assets
+      run: |
+        npm run build
+        
+    - name: Sync iOS project
+      run: |
+        npx cap sync ios
+        
+    - name: Build iOS App (Simulator)
+      run: |
+        cd ios/App
+        xcodebuild -workspace App.xcworkspace \
+          -scheme App \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
+          -configuration Debug \
+          build
+          
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-build
+        path: |
+          ios/App/build/
+        retention-days: 7
