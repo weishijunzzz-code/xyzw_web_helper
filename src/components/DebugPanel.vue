@@ -28,14 +28,14 @@
     调试
   </n-button>
 
-  <!-- 设置按钮 - 始终显示在左下角 -->
+  <!-- 设置按钮 - 始终显示在右上角 -->
   <n-button
     class="settings-toggle"
     size="small"
     type="primary"
     @click="showSettings = true"
   >
-    设置
+    调试设置
   </n-button>
 
   <!-- 设置面板 -->
@@ -205,8 +205,8 @@ const clearLogs = () => {
 
 .settings-toggle {
   position: fixed;
-  bottom: 20px;
-  left: 10px;
+  top: 80px;
+  right: 10px;
   z-index: 9998;
   opacity: 0.8;
 }
