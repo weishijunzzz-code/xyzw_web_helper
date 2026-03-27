@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Check Node.js version
@@ -57,11 +57,16 @@ jobs:
             build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
         continue-on-error: false
 
+      - name: Check build output
+        run: |
+          ls -la ios/App/build/ || echo "Build directory not found"
+          find ios/App -name "*.app" -type d || echo "No .app found"
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: |
             ios/App/build/
-          retention-days: 7
+            ios/App/**/*.app
         if: always()
