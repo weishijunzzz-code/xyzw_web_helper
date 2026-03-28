@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 interface LogItem {
   time: string
@@ -50,9 +50,36 @@ const loadDebugState = () => {
   console.log('[DebugPanel] Debug enabled:', debugEnabled.value)
 }
 
+// 监听 localStorage 变化
+const handleStorageChange = (e: StorageEvent) => {
+  if (e.key === 'enableDebugPanel') {
+    console.log('[DebugPanel] Storage changed:', e.newValue)
+    debugEnabled.value = e.newValue === 'true'
+  }
+}
+
 // 捕获 console 日志
 onMounted(() => {
   loadDebugState()
+  
+  // 监听 storage 事件
+  window.addEventListener('storage', handleStorageChange)
+  
+  // 每秒检查一次 localStorage（用于同一页面内的变化）
+  const interval = setInterval(() => {
+    const value = localStorage.getItem('enableDebugPanel')
+    const newValue = value === 'true'
+    if (newValue !== debugEnabled.value) {
+      console.log('[DebugPanel] Interval check changed:', newValue)
+      debugEnabled.value = newValue
+    }
+  }, 1000)
+  
+  // 清理函数
+  onUnmounted(() => {
+    window.removeEventListener('storage', handleStorageChange)
+    clearInterval(interval)
+  })
 
   const originalLog = console.log
   const originalError = console.error
