@@ -546,8 +546,24 @@ const getCurrentActivityIcon = () => {
     width: 100% !important;
     max-width: 100% !important;
     max-height: 80vh;
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 8px;
+    padding: 8px;
+    overflow-x: hidden;
+  }
+
+  .dropdown-header {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+
+    .header-title {
+      font-size: 14px;
+    }
+  }
+
+  .current-activity-banner {
+    padding: 8px 12px;
+    font-size: 12px;
+    margin-bottom: 8px;
   }
 }
 
@@ -713,16 +729,24 @@ const getCurrentActivityIcon = () => {
   }
 
   @media (max-width: 700px) {
-    padding: 8px;
+    padding: 6px;
 
     .month-title {
-      font-size: 12px;
-      margin-bottom: 4px;
+      font-size: 11px;
+      margin-bottom: 3px;
     }
 
-    .week-header span {
-      font-size: 8px;
-      padding: 1px;
+    .week-header {
+      gap: 0;
+
+      span {
+        font-size: 7px;
+        padding: 0;
+      }
+    }
+
+    .days-grid {
+      gap: 0;
     }
   }
 }
@@ -739,6 +763,8 @@ const getCurrentActivityIcon = () => {
   cursor: pointer;
   transition: all 0.15s;
   min-height: 28px;
+  min-width: 0;
+  overflow: hidden;
 
   &:not(.empty):hover {
     transform: scale(1.15);
@@ -844,23 +870,30 @@ const getCurrentActivityIcon = () => {
 
   // 移动端适配
   @media (max-width: 700px) {
-    font-size: 10px;
-    min-height: 24px;
-    border-radius: 3px;
+    font-size: 9px;
+    min-height: 20px;
+    border-radius: 2px;
+    padding: 1px;
 
     .day-badge {
-      font-size: 9px;
-      transform: scale(0.85);
-      margin-top: 1px;
+      font-size: 8px;
+      transform: scale(0.75);
+      margin-top: 0;
+      line-height: 1;
     }
 
     .festival-name {
-      font-size: 8px;
-      transform: scale(0.85);
+      font-size: 7px;
+      transform: scale(0.75);
+      margin-bottom: 0;
     }
 
     &.festival .day-badge {
-      font-size: 8px;
+      font-size: 7px;
+    }
+
+    .day-number {
+      font-size: 9px;
     }
   }
 }
