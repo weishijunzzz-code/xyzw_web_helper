@@ -16,7 +16,7 @@
                 @complete="showSuccess = false"
               />
               <CommandPalette ref="commandPaletteRef" />
-              <DebugPanel v-if="isNativePlatform" />
+              <DebugPanel v-if="isNativePlatform()" />
             </div>
           </n-dialog-provider>
         </n-notification-provider>
