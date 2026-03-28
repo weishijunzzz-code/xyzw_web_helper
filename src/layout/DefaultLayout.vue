@@ -310,6 +310,23 @@
           </n-icon>
           <span>个人设置</span>
         </router-link>
+        <!-- 调试设置 - 仅在原生应用显示 -->
+        <div
+          v-if="isNativePlatform"
+          class="drawer-item debug-settings-item"
+          @click="openDebugSettings"
+        >
+          <n-icon>
+            <BugOutline />
+          </n-icon>
+          <span>调试设置</span>
+          <n-switch
+            :value="debugEnabled"
+            size="small"
+            @update:value="toggleDebug"
+            @click.stop
+          />
+        </div>
       </div>
     </n-drawer>
     <!-- 面包屑导航 -->
@@ -371,7 +388,9 @@ import {
   Checkmark,
   Refresh,
   TimerOutline,
+  BugOutline,
 } from "@vicons/ionicons5";
+import { isNativePlatform } from "@/utils/capacitor";
 
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
@@ -524,6 +543,30 @@ const handleUserAction = async (key) => {
       break;
   }
 };
+
+// 调试设置
+const debugEnabled = ref(false);
+
+// 从 localStorage 读取调试状态
+const loadDebugState = () => {
+  debugEnabled.value = localStorage.getItem('enableDebugPanel') === 'true';
+};
+
+// 切换调试开关
+const toggleDebug = (value) => {
+  localStorage.setItem('enableDebugPanel', value.toString());
+  debugEnabled.value = value;
+  message.success(value ? '调试按钮已开启' : '调试按钮已关闭');
+};
+
+// 打开调试设置（点击菜单项时）
+const openDebugSettings = () => {
+  // 切换开关状态
+  toggleDebug(!debugEnabled.value);
+};
+
+// 初始化
+loadDebugState();
 </script>
 
 <style scoped lang="scss">
@@ -868,6 +911,20 @@ const handleUserAction = async (key) => {
 .drawer-item.router-link-active {
   background: var(--primary-color-light);
   color: var(--primary-color);
+}
+
+// 调试设置项样式
+.drawer-item.debug-settings-item {
+  cursor: pointer;
+  justify-content: space-between;
+
+  &:hover {
+    background: var(--bg-secondary);
+  }
+
+  .n-switch {
+    margin-left: auto;
+  }
 }
 
 /* 禁用样式：灰化、鼠标禁止、无hover效果 */
