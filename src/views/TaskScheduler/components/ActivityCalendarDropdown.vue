@@ -526,6 +526,31 @@ const getCurrentActivityIcon = () => {
   box-sizing: border-box;
 }
 
+// 移动端全屏显示
+@media (max-width: 768px) {
+  :deep(.n-popover) {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 95vw !important;
+    max-width: 95vw !important;
+  }
+
+  :deep(.n-popover-shared__popover) {
+    width: 95vw !important;
+    max-width: 95vw !important;
+  }
+
+  .activity-calendar-dropdown {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 80vh;
+    border-radius: 12px;
+    padding: 12px;
+  }
+}
+
 .dropdown-header {
   display: flex;
   justify-content: space-between;
