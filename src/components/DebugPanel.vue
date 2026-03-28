@@ -44,7 +44,10 @@ const debugEnabled = ref(false)
 
 // 从 localStorage 读取调试开关状态
 const loadDebugState = () => {
-  debugEnabled.value = localStorage.getItem('enableDebugPanel') === 'true'
+  const value = localStorage.getItem('enableDebugPanel')
+  console.log('[DebugPanel] Loading debug state:', value)
+  debugEnabled.value = value === 'true'
+  console.log('[DebugPanel] Debug enabled:', debugEnabled.value)
 }
 
 // 捕获 console 日志
@@ -161,9 +164,9 @@ const clearLogs = () => {
 
 .debug-toggle {
   position: fixed;
-  bottom: 80px;
+  bottom: 100px;
   right: 10px;
   z-index: 9999;
-  opacity: 0.7;
+  opacity: 0.9;
 }
 </style>
