@@ -4,6 +4,7 @@
     placement="bottom-end"
     :show-arrow="true"
     style="padding: 0"
+    class="activity-calendar-popover"
   >
     <template #trigger>
       <n-button class="activity-calendar-btn">
@@ -960,6 +961,29 @@ const getCurrentActivityIcon = () => {
       background: rgba(239, 68, 68, 0.2);
       color: #fca5a5;
     }
+  }
+}
+
+// 全局样式 - 修改 popover 宽度
+:global(.activity-calendar-popover) {
+  max-width: 98vw !important;
+  width: auto !important;
+}
+
+:global(.activity-calendar-popover .n-popover__content) {
+  max-width: 98vw !important;
+  width: auto !important;
+}
+
+@media (max-width: 768px) {
+  :global(.activity-calendar-popover) {
+    max-width: 95vw !important;
+    width: 95vw !important;
+  }
+
+  :global(.activity-calendar-popover .n-popover__content) {
+    max-width: 95vw !important;
+    width: 95vw !important;
   }
 }
 </style>
