@@ -1,28 +1,30 @@
 <template>
-  <n-popover
-    trigger="click"
-    placement="bottom-end"
-    :show-arrow="true"
-    style="padding: 0"
-    class="activity-calendar-popover"
-  >
-    <template #trigger>
-      <n-button class="activity-calendar-btn">
-        <template #icon>
-          <n-icon :component="CalendarOutline" />
-        </template>
-        <span class="btn-text">活动日历</span>
-        <n-tag
-          size="tiny"
-          :type="getCurrentActivityType()"
-          class="activity-badge"
-          round
-        >
-          {{ getCurrentActivityShort() }}
-        </n-tag>
-      </n-button>
+  <n-button class="activity-calendar-btn" @click="showModal = true">
+    <template #icon>
+      <n-icon :component="CalendarOutline" />
     </template>
+    <span class="btn-text">活动日历</span>
+    <n-tag
+      size="tiny"
+      :type="getCurrentActivityType()"
+      class="activity-badge"
+      round
+    >
+      {{ getCurrentActivityShort() }}
+    </n-tag>
+  </n-button>
 
+  <n-modal
+    v-model:show="showModal"
+    :mask-closable="true"
+    :closable="true"
+    preset="card"
+    class="activity-calendar-modal"
+    :class="{ 'is-mobile': isMobile }"
+    :style="modalStyle"
+    title=""
+    :bordered="false"
+  >
     <div class="activity-calendar-dropdown">
       <!-- 头部 -->
       <div class="dropdown-header">
@@ -101,11 +103,11 @@
         </div>
       </div>
     </div>
-  </n-popover>
+  </n-modal>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import {
   CalendarOutline,
   ChevronBackOutline,
@@ -121,6 +123,39 @@ const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const today = new Date();
 const selectedDate = ref(null);
+const showModal = ref(false);
+
+// 检测是否为移动端
+const isMobile = ref(false);
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768;
+};
+
+// Modal 样式
+const modalStyle = computed(() => {
+  if (isMobile.value) {
+    return {
+      width: 'calc(100vw - 24px)',
+      maxWidth: 'calc(100vw - 24px)',
+      maxHeight: 'calc(100vh - 100px)',
+      margin: '50px auto'
+    };
+  }
+  return {
+    width: '90vw',
+    maxWidth: '1200px',
+    maxHeight: '90vh'
+  };
+});
+
+onMounted(() => {
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile);
+});
 
 const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -527,78 +562,36 @@ const getCurrentActivityIcon = () => {
   box-sizing: border-box;
 }
 
-// 移动端全屏显示
-@media (max-width: 768px) {
-  :deep(.n-popover) {
-    position: fixed !important;
-    top: 10px !important;
-    left: 10px !important;
-    right: 10px !important;
-    bottom: 10px !important;
-    transform: none !important;
-    width: auto !important;
-    max-width: none !important;
-    height: auto !important;
-    max-height: none !important;
-  }
-
-  :deep(.n-popover-shared__popover) {
-    width: auto !important;
-    max-width: none !important;
-    height: 100% !important;
-    max-height: 100% !important;
-  }
-
-  :deep(.n-popover__content) {
-    height: 100% !important;
-    max-height: 100% !important;
+// Modal 样式优化
+.activity-calendar-modal {
+  :deep(.n-card) {
     display: flex;
     flex-direction: column;
   }
 
-  .activity-calendar-dropdown {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    border-radius: 8px;
-    padding: 8px;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .months-grid {
+  :deep(.n-card__content) {
     flex: 1;
-    overflow-y: auto;
-    max-height: calc(100vh - 200px);
+    overflow: auto;
+    padding: 0;
   }
 
-  .dropdown-header {
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-
-    .header-title {
-      font-size: 14px;
+  &.is-mobile {
+    :deep(.n-card) {
+      border-radius: 12px;
+      max-height: none;
     }
-  }
 
-  .current-activity-banner {
-    padding: 8px 12px;
-    font-size: 12px;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-  }
+    :deep(.n-card__content) {
+      padding: 0;
+      overflow: visible;
+    }
 
-  .selected-date-info {
-    flex-shrink: 0;
-  }
-
-  .legend {
-    flex-shrink: 0;
-    padding-top: 8px;
-    margin-top: auto;
+    .activity-calendar-dropdown {
+      padding: 16px;
+      overflow-x: hidden;
+      box-sizing: border-box;
+      background: var(--ts-bg-card);
+    }
   }
 }
 
@@ -998,26 +991,4 @@ const getCurrentActivityIcon = () => {
   }
 }
 
-// 全局样式 - 修改 popover 宽度
-:global(.activity-calendar-popover) {
-  max-width: 98vw !important;
-  width: auto !important;
-}
-
-:global(.activity-calendar-popover .n-popover__content) {
-  max-width: 98vw !important;
-  width: auto !important;
-}
-
-@media (max-width: 768px) {
-  :global(.activity-calendar-popover) {
-    max-width: 95vw !important;
-    width: 95vw !important;
-  }
-
-  :global(.activity-calendar-popover .n-popover__content) {
-    max-width: 95vw !important;
-    width: 95vw !important;
-  }
-}
 </style>
