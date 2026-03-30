@@ -531,30 +531,53 @@ const getCurrentActivityIcon = () => {
 @media (max-width: 768px) {
   :deep(.n-popover) {
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: 95vw !important;
-    max-width: 95vw !important;
+    top: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   :deep(.n-popover-shared__popover) {
-    width: 95vw !important;
-    max-width: 95vw !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  :deep(.n-popover__content) {
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex;
+    flex-direction: column;
   }
 
   .activity-calendar-dropdown {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 80vh;
+    height: 100% !important;
+    max-height: 100% !important;
     border-radius: 8px;
     padding: 8px;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .months-grid {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
   }
 
   .dropdown-header {
     padding-bottom: 8px;
     margin-bottom: 8px;
+    flex-shrink: 0;
 
     .header-title {
       font-size: 14px;
@@ -565,6 +588,17 @@ const getCurrentActivityIcon = () => {
     padding: 8px 12px;
     font-size: 12px;
     margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .selected-date-info {
+    flex-shrink: 0;
+  }
+
+  .legend {
+    flex-shrink: 0;
+    padding-top: 8px;
+    margin-top: auto;
   }
 }
 
