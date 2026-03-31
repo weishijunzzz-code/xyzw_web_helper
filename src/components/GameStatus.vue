@@ -750,7 +750,6 @@ onUnmounted(() => {
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
   width: 100%;
-  max-width: 100%;
   box-sizing: border-box;
 
   // 在大屏幕上限制最大列数以确保卡片有足够宽度
@@ -776,7 +775,6 @@ onUnmounted(() => {
     padding: var(--spacing-sm);
     gap: var(--spacing-md);
     min-width: 0;
-    overflow-x: hidden; // 防止内容溢出
   }
 }
 

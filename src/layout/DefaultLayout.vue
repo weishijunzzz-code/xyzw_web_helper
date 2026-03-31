@@ -573,9 +573,7 @@ loadDebugState();
 // 根容器
 .default-layout {
   width: 100%;
-  max-width: 100vw;
   box-sizing: border-box;
-  overflow-x: hidden;
 }
 
 // 导航栏 - 使用新的设计令牌
@@ -601,11 +599,9 @@ loadDebugState();
   background: var(--color-bg-primary);
   min-height: calc(100vh - 64px);
   width: 100%;
-  max-width: 100%;
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }

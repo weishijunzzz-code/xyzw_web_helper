@@ -607,8 +607,9 @@ const currentActivity = computed(() => {
     margin-bottom: 16px;
     border-radius: 12px;
     width: 100%;
-    max-width: 100vw;
-    overflow: hidden;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .calendar-header {
