@@ -989,7 +989,7 @@ loadDebugState();
   line-height: 1.2;
 }
 
-// 移动端适配
+// 移动端适配 - 合并到上面的媒体查询中
 @media (max-width: 768px) {
   .mobile-bottom-nav {
     display: flex;
@@ -997,31 +997,6 @@ loadDebugState();
   
   .main.has-bottom-nav {
     padding-bottom: 56px; // 为底部导航栏留出空间
-  }
-  
-  .nav-item span {
-    display: none;
-  }
-
-  .nav-menu {
-    display: none;
-  }
-
-  .nav-item {
-    padding: var(--spacing-sm);
-    flex: 0 0 auto;
-  }
-
-  .nav-container {
-    height: 56px;
-  }
-
-  .brand-logo {
-    display: none;
-  }
-
-  .brand-toggle {
-    display: inline-flex;
   }
 }
 </style>
