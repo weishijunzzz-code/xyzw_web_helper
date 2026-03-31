@@ -98,7 +98,11 @@ declare module 'vue' {
     TopRankListPageCard: typeof import('./src/components/cards/TopRankListPageCard.vue')['default']
     TouchFeedback: typeof import('./src/components/DesignSystem/TouchFeedback.vue')['default']
     TowerStatus: typeof import('./src/components/Tower/TowerStatus.vue')['default']
+    UniButton: typeof import('./src/components/DesignSystem/UniButton.vue')['default']
+    UniCard: typeof import('./src/components/DesignSystem/UniCard.vue')['default']
+    UniInput: typeof import('./src/components/DesignSystem/UniInput.vue')['default']
     Unlimitedlineup: typeof import('./src/components/cards/Unlimitedlineup.vue')['default']
+    VirtualScroll: typeof import('./src/components/Common/VirtualScroll.vue')['default']
     WebSocketTester: typeof import('./src/components/Test/WebSocketTester.vue')['default']
     WeirdTowerStatus: typeof import('./src/components/Tower/WeirdTowerStatus.vue')['default']
   }
