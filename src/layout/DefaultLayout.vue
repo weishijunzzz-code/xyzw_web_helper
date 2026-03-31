@@ -577,13 +577,22 @@ loadDebugState();
   padding: 0 var(--space-6);
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
+  z-index: 100;
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .dark .dashboard-nav {
   background: rgba(15, 23, 42, 0.9);
+}
+
+// 主内容区域
+.main {
+  position: relative;
+  z-index: 1;
+  background: var(--color-bg-primary);
+  min-height: calc(100vh - 64px);
+  overflow-x: hidden;
 }
 
 .nav-container {

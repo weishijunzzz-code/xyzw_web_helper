@@ -762,30 +762,41 @@ onUnmounted(() => {
   margin: 0 var(--spacing-sm) var(--spacing-md) var(--spacing-sm);
   grid-column: 1 / -1;
   border-bottom: 1px solid var(--border-light);
-  overflow: auto;
+  position: relative;
+  overflow: hidden;
   
   // 移动端优化
   @media (max-width: 768px) {
     margin: 0 0 var(--spacing-sm) 0;
+    overflow: visible;
     
     :deep(.n-tabs-nav) {
       overflow-x: auto;
+      overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; // Firefox
-      -ms-overflow-style: none; // IE
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      position: relative;
       
       &::-webkit-scrollbar {
-        display: none; // Chrome/Safari
+        display: none;
       }
     }
     
     :deep(.n-tabs-tab) {
       padding: 8px 12px;
       font-size: 13px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     
     :deep(.n-tabs-tab__label) {
       font-size: 13px;
+    }
+    
+    :deep(.n-tabs-nav__prefix),
+    :deep(.n-tabs-nav__suffix) {
+      flex-shrink: 0;
     }
   }
 }
