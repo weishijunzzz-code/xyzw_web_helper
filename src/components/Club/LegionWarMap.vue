@@ -626,16 +626,32 @@ const drawCanvasContent = () => {
   }
 };
 const resizeAndRedraw = () => {
-  if (!legionWarMapDom.value) return;
+  if (!legionWarMapDom.value) {
+    console.warn('[LegionWarMap] Canvas元素不存在');
+    return;
+  }
   const canvas = legionWarMapDom.value;
   const container = canvas.parentElement;
+
+  if (!container) {
+    console.warn('[LegionWarMap] Canvas父容器不存在');
+    return;
+  }
+
+  // 获取容器尺寸，使用多种方式确保获取到有效值
+  const w = container.clientWidth || container.offsetWidth || 0;
+  const h = container.clientHeight || container.offsetHeight || 0;
+
+  // 如果尺寸为0，延迟重试
+  if (w === 0 || h === 0) {
+    console.warn('[LegionWarMap] 容器尺寸为0，延迟重试');
+    setTimeout(resizeAndRedraw, 100);
+    return;
+  }
 
   // 移除之前添加的 style 尺寸设置
   canvas.style.width = "100%";
   canvas.style.height = "100%";
-
-  const w = container.clientWidth;
-  const h = container.clientHeight;
 
   // 设置 Canvas 物理像素大小
   canvas.width = w * dpr;
@@ -698,11 +714,28 @@ const refreshData = () => {
 
 const initializeCanvas = async () => {
   await nextTick();
+  
+  // 重试机制，确保DOM可用
+  let retries = 0;
+  const maxRetries = 10;
+  
+  while (!legionWarMapDom.value && retries < maxRetries) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    retries++;
+  }
+  
   const canvas = legionWarMapDom.value;
-  if (!canvas) return false;
+  if (!canvas) {
+    console.error('[LegionWarMap] Canvas元素未找到，重试' + maxRetries + '次后放弃');
+    return false;
+  }
 
   const context = canvas.getContext("2d");
-  if (!context) return false;
+  if (!context) {
+    console.error('[LegionWarMap] 无法获取Canvas 2D上下文');
+    return false;
+  }
+  
   ctx = context;
 
   if (!resizeHandler) {
@@ -710,19 +743,36 @@ const initializeCanvas = async () => {
     window.addEventListener("resize", resizeHandler);
   }
 
-  resizeAndRedraw();
+  // 延迟执行resizeAndRedraw，确保容器已渲染
+  setTimeout(() => {
+    resizeAndRedraw();
+  }, 50);
+  
   return true;
 };
 
 // 生命周期钩子
 onMounted(async () => {
-  await initializeCanvas();
+  console.log('[LegionWarMap] 组件挂载开始');
+  
+  const canvasReady = await initializeCanvas();
+  console.log('[LegionWarMap] Canvas初始化结果:', canvasReady);
+  
+  if (!canvasReady) {
+    console.warn('[LegionWarMap] Canvas初始化失败，跳过自动连接');
+    return;
+  }
 
-  try {
-    legionWarStore.connect().catch((e) => {
-      console.error("Auto connect failed", e);
-    });
-  } catch (e) {}
+  // 延迟自动连接，确保Canvas已准备好
+  setTimeout(() => {
+    try {
+      legionWarStore.connect().catch((e) => {
+        console.error("[LegionWarMap] Auto connect failed", e);
+      });
+    } catch (e) {
+      console.error("[LegionWarMap] Connect error:", e);
+    }
+  }, 100);
 });
 
 watch(isAccessible, async (accessible) => {

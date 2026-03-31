@@ -59,12 +59,13 @@ export const useLegionWarStore = defineStore("legionWar", () => {
     }
 
     connecting.value = true;
+    console.log('[legionWarStore] 开始连接战场...');
+    
     try {
       const tokenId = tokenStore.selectedToken.id;
 
       // 1. 获取战场信息
-      // 如果已经有 battlefieldId 且 token 没变，是否需要重新获取？
-      // 为了安全起见，每次连接前重新获取 sid 和 battlefieldId
+      console.log('[legionWarStore] 获取战场信息...');
       const getbattlefield = await tokenStore.sendMessageWithPromise(
         tokenId,
         "legion_getbattlefield",
@@ -73,9 +74,10 @@ export const useLegionWarStore = defineStore("legionWar", () => {
       );
 
       if (!getbattlefield || !getbattlefield.info) {
-        throw new Error("无法获取战场信息");
+        throw new Error("无法获取战场信息，可能不在开放时间内");
       }
 
+      console.log('[legionWarStore] 获取战场信息成功:', getbattlefield.info.battlefieldId);
       battlefieldId.value = getbattlefield.info.battlefieldId;
 
       // 2. 构建 WS URL
@@ -108,9 +110,11 @@ export const useLegionWarStore = defineStore("legionWar", () => {
         const cmd = msg?.cmd || "unknown";
         // 1. war_getbattlefieldinfo: 完整的战场快照
         if (cmd.includes("war_getbattlefieldinfo")) {
+          console.log('[legionWarStore] 收到战场数据');
           // 更新数据
           const extracted = extractValidData(msg.rawData);
           if (extracted) {
+            console.log('[legionWarStore] 数据解析成功，俱乐部数:', Object.keys(extracted.legionInfo).length);
             validData.value = extracted;
             lastUpdateTime.value = getCurrentTimeByFormat("HH:mm:ss");
 
@@ -121,6 +125,8 @@ export const useLegionWarStore = defineStore("legionWar", () => {
                 fetchLegionDetail(legion.id);
               }
             });
+          } else {
+            console.warn('[legionWarStore] 数据解析失败');
           }
         }
       });
@@ -144,10 +150,19 @@ export const useLegionWarStore = defineStore("legionWar", () => {
 
       legionWarWebSocket.init();
     } catch (error) {
-      console.error("连接失败:", error);
+      console.error("[legionWarStore] 连接失败:", error);
       connecting.value = false;
       subscriberCount.value--; // 连接失败，回滚计数
-      throw error;
+      
+      // 提供更具体的错误信息
+      let errorMessage = error.message || "连接失败";
+      if (error.message?.includes("timeout")) {
+        errorMessage = "连接超时，请检查网络或Token是否有效";
+      } else if (error.message?.includes("battlefield")) {
+        errorMessage = "无法获取战场信息，可能不在盐场开放时间内";
+      }
+      
+      throw new Error(errorMessage);
     }
   };
 
