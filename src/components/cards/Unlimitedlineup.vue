@@ -162,6 +162,14 @@
                     expandedLineup === lineup ? "▼" : "▶"
                   }}</span>
                   <span class="lineup-name">{{ lineup.name }}</span>
+                  <span
+                    v-if="
+                      lineup.weaponId !== undefined && lineup.weaponId !== null
+                    "
+                    class="lineup-weapon-tag"
+                  >
+                    {{ weapon[lineup.weaponId] || lineup.weaponId }}
+                  </span>
                   <span class="lineup-time">{{
                     formatTime(lineup.savedAt)
                   }}</span>
@@ -169,6 +177,16 @@
                 <div class="lineup-quick-actions">
                   <n-button size="tiny" @click.stop="renameLineup(index)">
                     重命名
+                  </n-button>
+                  <n-button
+                    size="tiny"
+                    @click.stop="showTechModal(lineup)"
+                    :disabled="
+                      !lineup.legionResearch ||
+                      Object.keys(lineup.legionResearch).length === 0
+                    "
+                  >
+                    科技
                   </n-button>
                   <n-button
                     type="error"
@@ -202,12 +220,6 @@
                     <span class="hero-name">{{
                       getHeroName(hero.heroId) || `武将${hero.heroId}`
                     }}</span>
-                    <span
-                      class="hero-artifact"
-                      v-if="hero.attachmentUid && hero.attachmentUid !== -1"
-                    >
-                      (装备:{{ hero.attachmentUid }})
-                    </span>
                   </div>
                 </div>
               </div>
@@ -220,6 +232,41 @@
             </div>
           </div>
         </div>
+      </n-modal>
+
+      <n-modal
+        v-model:show="techModalVisible"
+        preset="card"
+        title="俱乐部科技"
+        style="width: 700px; max-width: 90vw"
+        :bordered="false"
+      >
+        <div v-if="selectedTechData" class="tech-modal-content">
+          <div
+            v-for="type in [1, 2, 3, 4, 5, 6]"
+            :key="type"
+            class="tech-type-section"
+          >
+            <div class="tech-type-header">
+              {{ LEGION_TECH_TYPE_NAME[type] }}
+            </div>
+            <div class="tech-items">
+              <div
+                v-for="techId in LEGION_TECH_TYPE_MAP[type]"
+                :key="techId"
+                class="tech-item"
+              >
+                <span class="tech-name">{{ LEGION_TECH_NAME[techId] }}</span>
+                <span class="tech-level">
+                  {{ selectedTechData[techId] || 0 }}/{{
+                    LEGION_TECH_MAX_LEVEL[techId]
+                  }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="no-tech-data">暂无科技数据</div>
       </n-modal>
 
       <n-modal
@@ -402,7 +449,16 @@ import { ref, computed, onMounted, watch, h } from "vue";
 import { useMessage, useDialog, NInput } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
-import { HERO_DICT, FishMap } from "@/utils/HeroList.js";
+import {
+  HERO_DICT,
+  FishMap,
+  LEGION_TECH_MAX_LEVEL,
+  LEGION_TECH_TYPE_MAP,
+  LEGION_TECH_TYPE_NAME,
+  LEGION_TECH_NAME,
+  getTechType,
+  weapon,
+} from "@/utils/HeroList.js";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
@@ -443,11 +499,99 @@ const selectedCountry = ref("全部");
 const savedLineupsModalVisible = ref(false);
 const selectedTeamTab = ref(1);
 const expandedLineup = ref(null);
+const techModalVisible = ref(false);
+const selectedTechData = ref(null);
 
 const draggedHeroId = ref(null);
 const dragOverPosition = ref(null);
 
 const STORAGE_KEY = "saved_lineups";
+
+const syncLegionResearch = async (tokenId, targetResearch, delay) => {
+  if (!targetResearch || Object.keys(targetResearch).length === 0) {
+    return { success: true, message: "无科技数据需要同步" };
+  }
+
+  const roleInfo = await tokenStore.sendMessageWithPromise(
+    tokenId,
+    "role_getroleinfo",
+    {},
+  );
+  const role = roleInfo?.role || roleInfo;
+  const currentResearch = role?.legionResearch || {};
+
+  const typesToReset = new Set();
+
+  for (const type of [1, 2, 3, 4, 5, 6]) {
+    const techIds = LEGION_TECH_TYPE_MAP[type];
+    for (const techId of techIds) {
+      const currentLevel = currentResearch[techId] || 0;
+      const targetLevel = targetResearch[techId] || 0;
+      if (currentLevel !== targetLevel) {
+        typesToReset.add(type);
+        break;
+      }
+    }
+  }
+
+  if (typesToReset.size === 0) {
+    return { success: true, message: "科技配置已匹配，无需调整" };
+  }
+
+  const errors = [];
+
+  for (const type of typesToReset) {
+    try {
+      await tokenStore.sendMessageWithPromise(tokenId, "legion_resetresearch", {
+        advanced: false,
+        type: type,
+      });
+      await delay(500);
+    } catch (err) {}
+  }
+
+  const sortedTypes = [...typesToReset].sort((a, b) => a - b);
+
+  for (const type of sortedTypes) {
+    const techIds = LEGION_TECH_TYPE_MAP[type];
+    for (const techId of techIds) {
+      const targetLevel = targetResearch[techId] || 0;
+      if (targetLevel > 0) {
+        const maxLevel = LEGION_TECH_MAX_LEVEL[techId] || 20;
+        const isMax = targetLevel >= maxLevel;
+        if (isMax) {
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "legion_research",
+              {
+                isMax: true,
+                researchId: techId,
+              },
+            );
+            await delay(500);
+          } catch (err) {}
+        } else {
+          for (let i = 0; i < targetLevel; i++) {
+            try {
+              await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "legion_research",
+                {
+                  isMax: false,
+                  researchId: techId,
+                },
+              );
+              await delay(500);
+            } catch (err) {}
+          }
+        }
+      }
+    }
+  }
+
+  return { success: true, message: "科技配置已同步" };
+};
 
 const partMap = {
   1: "武器",
@@ -1031,32 +1175,79 @@ const refreshTeamInfo = async () => {
   }
 };
 
-const saveCurrentLineup = () => {
+const saveCurrentLineup = async () => {
   if (editingHeroes.value.length === 0) {
     message.warning("当前阵容为空，无法保存");
     return;
   }
 
-  const lineupName = `阵容${currentTeamId.value} - ${new Date().toLocaleTimeString()}`;
+  const token = tokenStore.selectedToken;
+  if (!token) {
+    message.warning("请先选择Token");
+    return;
+  }
 
-  const heroesData = editingHeroes.value.map((hero) => {
-    return {
-      position: hero.position,
-      heroId: hero.heroId,
-      attachmentUid: hero.attachmentUid || null,
-    };
-  });
+  const tokenId = token.id;
+  const status = tokenStore.getWebSocketStatus(tokenId);
+  if (status !== "connected") {
+    message.error("WebSocket未连接，无法保存阵容");
+    return;
+  }
 
-  savedLineups.value.unshift({
-    name: lineupName,
-    heroes: heroesData,
-    teamId: currentTeamId.value,
-    savedAt: Date.now(),
-    applying: false,
-  });
+  loading.value = true;
 
-  saveLineupsToStorage();
-  message.success(`阵容已保存: ${lineupName}`);
+  try {
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+    );
+
+    const role = roleInfo?.role || roleInfo;
+    const legionResearch = role?.legionResearch || {};
+
+    const presetTeamResult = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "presetteam_getinfo",
+      {},
+    );
+
+    const presetInfo =
+      presetTeamResult?.presetTeamInfo?.presetTeamInfo ||
+      presetTeamResult?.presetTeamInfo ||
+      {};
+    const teamData =
+      presetInfo[currentTeamId.value] ||
+      presetInfo[String(currentTeamId.value)];
+    const weaponId = teamData?.weapon?.weaponId || null;
+
+    const lineupName = `阵容${currentTeamId.value} - ${new Date().toLocaleTimeString()}`;
+
+    const heroesData = editingHeroes.value.map((hero) => {
+      return {
+        position: hero.position,
+        heroId: hero.heroId,
+        attachmentUid: hero.attachmentUid || null,
+      };
+    });
+
+    savedLineups.value.unshift({
+      name: lineupName,
+      heroes: heroesData,
+      teamId: currentTeamId.value,
+      savedAt: Date.now(),
+      applying: false,
+      legionResearch: legionResearch,
+      weaponId: weaponId,
+    });
+
+    saveLineupsToStorage();
+    message.success(`阵容已保存: ${lineupName}`);
+  } catch (error) {
+    message.error(`保存阵容失败: ${error.message}`);
+  } finally {
+    loading.value = false;
+  }
 };
 
 const applyLineup = async (lineup) => {
@@ -1331,6 +1522,55 @@ const applyLineup = async (lineup) => {
       message.success(`阵容 "${lineup.name}" 已应用`);
     }
 
+    if (
+      lineup.legionResearch &&
+      Object.keys(lineup.legionResearch).length > 0
+    ) {
+      const syncResult = await syncLegionResearch(
+        tokenId,
+        lineup.legionResearch,
+        delay,
+      );
+      if (syncResult.success) {
+        if (syncResult.message !== "科技配置已匹配，无需调整") {
+          message.success(syncResult.message);
+        }
+      } else {
+      }
+    }
+
+    if (lineup.weaponId !== undefined && lineup.weaponId !== null) {
+      const currentPresetTeam = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "presetteam_getinfo",
+        {},
+      );
+      const currentPresetInfo =
+        currentPresetTeam?.presetTeamInfo?.presetTeamInfo ||
+        currentPresetTeam?.presetTeamInfo ||
+        {};
+      const currentTeamData =
+        currentPresetInfo[currentTeamId.value] ||
+        currentPresetInfo[String(currentTeamId.value)];
+      const currentWeaponId = currentTeamData?.weapon?.weaponId || null;
+
+      if (currentWeaponId !== lineup.weaponId) {
+        try {
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "lordweapon_changedefaultweapon",
+            {
+              weaponId: lineup.weaponId,
+            },
+          );
+          await delay(500);
+          message.success(
+            `玩具已切换为: ${weapon[lineup.weaponId] || lineup.weaponId}`,
+          );
+        } catch (err) {}
+      }
+    }
+
     lastRefreshTime = 0;
     await refreshTeamInfo();
   } catch (error) {
@@ -1339,6 +1579,11 @@ const applyLineup = async (lineup) => {
     lineup.applying = false;
     state.value.isRunning = false;
   }
+};
+
+const showTechModal = (lineup) => {
+  selectedTechData.value = lineup.legionResearch || null;
+  techModalVisible.value = true;
 };
 
 const renameLineup = (index) => {
@@ -2035,6 +2280,15 @@ onMounted(() => {
   color: var(--text-tertiary);
 }
 
+.lineup-weapon-tag {
+  font-size: var(--font-size-xs);
+  color: var(--primary-color);
+  background: rgba(var(--primary-color-rgb, 0, 122, 255), 0.1);
+  padding: 1px 6px;
+  border-radius: var(--border-radius-small);
+  margin-left: var(--spacing-xs);
+}
+
 .lineup-quick-actions {
   display: flex;
   gap: var(--spacing-xs);
@@ -2081,6 +2335,55 @@ onMounted(() => {
   padding: 1px 4px;
   border-radius: var(--border-radius-small);
   margin-left: 4px;
+}
+
+.tech-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.tech-type-section {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.tech-type-header {
+  background: var(--bg-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.tech-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+}
+
+.tech-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-primary);
+  font-size: var(--font-size-sm);
+}
+
+.tech-name {
+  color: var(--text-secondary);
+}
+
+.tech-level {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.no-tech-data {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: var(--spacing-lg);
 }
 
 .lineup-actions {

@@ -198,6 +198,8 @@ export function registerDefaultCommands(reg) {
     .register("legion_refuseapply")
     .register("legion_agree")
     .register("legion_ignore")
+    .register("legion_research")
+    .register("legion_resetresearch")
 
     .register("legion_getinfobyid")
     .register("legion_getarearank")
@@ -283,6 +285,7 @@ export function registerDefaultCommands(reg) {
     .register("hero_gobackbattle")
     .register("artifact_load")
     .register("artifact_unload")
+    .register("lordweapon_changedefaultweapon")
 
     // 武将升级相关
     .register("hero_heroupgradelevel") //武将升级
@@ -1083,6 +1086,8 @@ export class XyzwWebSocketClient {
       league_getgroupopponentresp: "league_getgroupopponent",
       legion_signupresp: "legion_signup",
       legion_payloadsignupresp: "legion_payloadsignup",
+      legion_researchresp: "legion_research",
+      legion_resetresearchresp: "legion_resetresearch",
       // 咸王宝库
       matchteam_getroleteaminforesp: "matchteam_getroleteaminfo",
       bosstower_getinforesp: "bosstower_getinfo",
@@ -1129,6 +1134,7 @@ export class XyzwWebSocketClient {
         "role_commitpassword",
         "hero_gointobattle",
         "hero_gobackbattle",
+        "lordweapon_changedefaultweapon",
       ],
       syncrewardresp: [
         "system_buygold",
