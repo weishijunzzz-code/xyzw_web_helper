@@ -281,6 +281,8 @@ export function registerDefaultCommands(reg) {
     .register("hero_exchange")
     .register("hero_gointobattle")
     .register("hero_gobackbattle")
+    .register("artifact_load")
+    .register("artifact_unload")
 
     // 武将升级相关
     .register("hero_heroupgradelevel") //武将升级
@@ -1164,6 +1166,11 @@ export class XyzwWebSocketClient {
             : packet.decodedBody !== undefined
               ? packet.decodedBody
               : packet.body;
+
+        // 附加原始命令名到响应对象
+        if (responseBody && typeof responseBody === "object") {
+          responseBody._originalCmd = promiseData.originalCmd;
+        }
 
         if (packet.code === 0 || packet.code === undefined) {
           promiseData.resolve(responseBody || packet);

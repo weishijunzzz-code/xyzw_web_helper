@@ -100,6 +100,9 @@
                 <div class="hero-name">
                   {{ getHeroName(hero.heroId) || `武将${hero.heroId}` }}
                 </div>
+                <div class="hero-fish" v-if="getFishInfo(hero.artifactId)">
+                  {{ getFishInfo(hero.artifactId).name }}
+                </div>
               </div>
               <n-button
                 class="exchange-btn"
@@ -164,6 +167,16 @@
                   }}</span>
                 </div>
                 <div class="lineup-quick-actions">
+                  <n-button size="tiny" @click.stop="renameLineup(index)">
+                    重命名
+                  </n-button>
+                  <n-button
+                    type="error"
+                    size="tiny"
+                    @click.stop="deleteLineup(index)"
+                  >
+                    删除
+                  </n-button>
                   <n-button
                     type="primary"
                     size="tiny"
@@ -191,23 +204,11 @@
                     }}</span>
                     <span
                       class="hero-artifact"
-                      v-if="hero.artifactId && hero.artifactId !== -1"
+                      v-if="hero.attachmentUid && hero.attachmentUid !== -1"
                     >
-                      (装备:{{ hero.artifactId }})
+                      (装备:{{ hero.attachmentUid }})
                     </span>
                   </div>
-                </div>
-                <div class="lineup-actions">
-                  <n-button size="small" @click="renameLineup(index)">
-                    重命名
-                  </n-button>
-                  <n-button
-                    type="error"
-                    size="small"
-                    @click="deleteLineup(index)"
-                  >
-                    删除
-                  </n-button>
                 </div>
               </div>
             </div>
@@ -401,7 +402,7 @@ import { ref, computed, onMounted, watch, h } from "vue";
 import { useMessage, useDialog, NInput } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
-import { HERO_DICT } from "@/utils/HeroList.js";
+import { HERO_DICT, FishMap } from "@/utils/HeroList.js";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
@@ -417,6 +418,10 @@ const savedLineups = ref([]);
 const allHeroesData = ref({});
 const roleHeroesData = ref({});
 const editingTeamHeroes = ref({});
+const artifactBooks = ref({});
+const pearlMap = ref({});
+let lastRefreshTime = 0;
+const REFRESH_DEBOUNCE = 3000;
 
 const state = ref({
   isRunning: false,
@@ -495,6 +500,30 @@ const getHeroQuality = (heroId) => {
   return "其他";
 };
 
+const getFishInfo = (artifactId) => {
+  if (!artifactId || artifactId === -1) return null;
+
+  for (const [fishId, book] of Object.entries(artifactBooks.value)) {
+    if (book.artifactId === artifactId) {
+      const fishData = FishMap[fishId];
+      if (fishData) {
+        return {
+          fishId: Number(fishId),
+          name: fishData.name,
+          artifactId: book.artifactId,
+          star: book.claimedStar || 0,
+        };
+      }
+    }
+  }
+  return null;
+};
+
+const getFishNameByArtifactId = (artifactId) => {
+  const fishInfo = getFishInfo(artifactId);
+  return fishInfo ? fishInfo.name : null;
+};
+
 const allHeroList = computed(() => {
   const heroes = Object.entries(roleHeroesData.value).map(([id, hero]) => {
     const heroInfo = HERO_DICT[hero.heroId] || {};
@@ -505,6 +534,7 @@ const allHeroList = computed(() => {
       avatar: heroInfo.avatar || null,
       quality: getHeroQuality(Number(hero.heroId)),
       artifactId: hero.artifactId || null,
+      attachmentUid: hero.attachmentUid || null,
       heroData: hero,
     };
   });
@@ -552,6 +582,7 @@ const currentTeamHeroes = computed(() => {
       position: hero?.battleTeamSlot ?? Number(key),
       heroId: hero?.heroId || hero?.id,
       artifactId: hero?.artifactId || null,
+      attachmentUid: hero?.attachmentUid || null,
     }))
     .filter((h) => h.heroId)
     .sort((a, b) => a.position - b.position);
@@ -565,6 +596,7 @@ const editingHeroes = computed(() => {
         position: Number(pos),
         heroId: hero?.heroId,
         artifactId: hero?.artifactId || null,
+        attachmentUid: hero?.attachmentUid || null,
       }))
       .filter((h) => h.heroId);
   }
@@ -753,6 +785,7 @@ const confirmHeroAction = () => {
       editingTeamHeroes.value[h.position] = {
         heroId: h.heroId,
         artifactId: h.artifactId || null,
+        attachmentUid: h.attachmentUid || null,
       };
     });
   }
@@ -764,6 +797,7 @@ const confirmHeroAction = () => {
     editingTeamHeroes.value[slot] = {
       heroId: exchangeTargetHeroId.value,
       artifactId: targetHeroData?.artifactId || null,
+      attachmentUid: targetHeroData?.attachmentUid || null,
     };
     message.success(
       `${getHeroName(exchangeTargetHeroId.value)} 已上阵到位置 ${slot + 1}`,
@@ -774,9 +808,11 @@ const confirmHeroAction = () => {
       return;
     }
     const originalArtifactId = exchangeHero.value.artifactId;
+    const originalAttachmentUid = exchangeHero.value.attachmentUid;
     editingTeamHeroes.value[exchangeHero.value.position] = {
       heroId: exchangeTargetHeroId.value,
       artifactId: originalArtifactId,
+      attachmentUid: originalAttachmentUid,
     };
     message.success(
       `已将 ${getHeroName(exchangeHero.value.heroId)} 更换为 ${getHeroName(exchangeTargetHeroId.value)}`,
@@ -792,6 +828,7 @@ const removeHero = (hero) => {
       editingTeamHeroes.value[h.position] = {
         heroId: h.heroId,
         artifactId: h.artifactId || null,
+        attachmentUid: h.attachmentUid || null,
       };
     });
   }
@@ -839,6 +876,7 @@ const onDrop = (event, targetHero) => {
       editingTeamHeroes.value[h.position] = {
         heroId: h.heroId,
         artifactId: h.artifactId || null,
+        attachmentUid: h.attachmentUid || null,
       };
     });
   }
@@ -889,6 +927,12 @@ const saveLineupsToStorage = () => {
 };
 
 const refreshTeamInfo = async () => {
+  const now = Date.now();
+  if (now - lastRefreshTime < REFRESH_DEBOUNCE) {
+    return;
+  }
+  lastRefreshTime = now;
+
   const token = tokenStore.selectedToken;
   if (!token) {
     message.warning("请先选择Token");
@@ -925,23 +969,32 @@ const refreshTeamInfo = async () => {
         teamId: otherTeamId,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       await tokenStore.sendMessageWithPromise(tokenId, "presetteam_saveteam", {
         teamId: targetTeamId,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    const [presetTeamResult, roleInfo] = await Promise.all([
-      tokenStore.sendMessageWithPromise(tokenId, "presetteam_getinfo", {}),
-      tokenStore.sendMessageWithPromise(tokenId, "role_getroleinfo", {}),
-    ]);
+    const presetTeamResult = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "presetteam_getinfo",
+      {},
+    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+    );
 
     const role = roleInfo?.role || roleInfo;
     roleHeroesData.value = role?.heroes || {};
     allHeroesData.value = role?.heroes || {};
+    artifactBooks.value = role?.artifactBooks || {};
+    pearlMap.value = role?.pearlMap || {};
 
     presetTeamData.value = presetTeamResult?.presetTeamInfo;
 
@@ -986,9 +1039,17 @@ const saveCurrentLineup = () => {
 
   const lineupName = `阵容${currentTeamId.value} - ${new Date().toLocaleTimeString()}`;
 
+  const heroesData = editingHeroes.value.map((hero) => {
+    return {
+      position: hero.position,
+      heroId: hero.heroId,
+      attachmentUid: hero.attachmentUid || null,
+    };
+  });
+
   savedLineups.value.unshift({
     name: lineupName,
-    heroes: [...editingHeroes.value],
+    heroes: heroesData,
     teamId: currentTeamId.value,
     savedAt: Date.now(),
     applying: false,
@@ -1030,22 +1091,39 @@ const applyLineup = async (lineup) => {
         position: hero?.battleTeamSlot ?? Number(key),
         heroId: hero?.heroId || hero?.id,
         artifactId: hero?.artifactId || null,
+        attachmentUid: hero?.attachmentUid || null,
       }))
       .filter((h) => h.heroId)
       .sort((a, b) => a.position - b.position);
   };
 
-  const fetchLatestData = async () => {
-    const [roleInfo, presetTeam] = await Promise.all([
-      tokenStore.sendMessageWithPromise(tokenId, "role_getroleinfo", {}),
-      tokenStore.sendMessageWithPromise(tokenId, "presetteam_getinfo", {}),
-    ]);
+  const fetchLatestData = async (teamId = null) => {
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+    );
+    await delay(COMMAND_DELAY);
+    const presetTeam = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "presetteam_getinfo",
+      {},
+    );
     const heroes = roleInfo?.role?.heroes || roleInfo?.heroes || {};
+    const pearlMapData = roleInfo?.role?.pearlMap || roleInfo?.pearlMap || {};
+    const artifactBooksData =
+      roleInfo?.role?.artifactBooks || roleInfo?.artifactBooks || {};
     roleHeroesData.value = heroes;
+    const targetTeamId = teamId || currentTeamId.value;
     const team =
-      presetTeam?.presetTeamInfo?.[currentTeamId.value] ||
-      presetTeam?.presetTeamInfo?.[String(currentTeamId.value)];
-    return { heroes, teamInfo: team?.teamInfo || {} };
+      presetTeam?.presetTeamInfo?.presetTeamInfo?.[targetTeamId] ||
+      presetTeam?.presetTeamInfo?.presetTeamInfo?.[String(targetTeamId)];
+    return {
+      heroes,
+      teamInfo: team?.teamInfo || {},
+      pearlMap: pearlMapData,
+      artifactBooks: artifactBooksData,
+    };
   };
 
   const isIgnorableError = (err) => {
@@ -1054,6 +1132,7 @@ const applyLineup = async (lineup) => {
   };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const COMMAND_DELAY = 500;
 
   try {
     const targetHeroes = [...lineup.heroes];
@@ -1061,48 +1140,68 @@ const applyLineup = async (lineup) => {
     let { heroes, teamInfo } = await fetchLatestData();
     let currentHeroes = getTeamHeroes(teamInfo);
 
-    for (const hero of currentHeroes) {
-      const targetHero = targetHeroes.find((h) => h.heroId === hero.heroId);
-      if (!targetHero) {
-        try {
-          await tokenStore.sendMessageWithPromise(
-            tokenId,
-            "hero_gobackbattle",
-            {
-              slot: hero.position,
-            },
-          );
-          await delay(300);
-        } catch (err) {
-          if (!isIgnorableError(err)) {
-            errors.push(`${getHeroName(hero.heroId)}下阵失败: ${err.message}`);
-          }
-        }
+    const attachmentToHero = {};
+    for (const [id, hero] of Object.entries(heroes)) {
+      if (hero.attachmentUid && hero.attachmentUid !== -1) {
+        attachmentToHero[hero.attachmentUid] = Number(id);
       }
     }
 
-    const data1 = await fetchLatestData();
-    heroes = data1.heroes;
-    currentHeroes = getTeamHeroes(data1.teamInfo);
+    const currentHeroIds = new Set(currentHeroes.map((h) => h.heroId));
+    const targetHeroIds = new Set(targetHeroes.map((h) => h.heroId));
 
     for (const targetHero of targetHeroes) {
-      if (!targetHero.artifactId) continue;
+      if (!targetHero.attachmentUid || targetHero.attachmentUid === -1)
+        continue;
 
-      let heroWithArtifact = null;
-      for (const [id, hero] of Object.entries(heroes)) {
-        if (hero.artifactId === targetHero.artifactId) {
-          heroWithArtifact = Number(id);
-          break;
+      const currentHolderId = attachmentToHero[targetHero.attachmentUid];
+
+      if (currentHolderId && currentHolderId !== targetHero.heroId) {
+        const holderInTeam = currentHeroIds.has(currentHolderId);
+        const targetInTeam = currentHeroIds.has(targetHero.heroId);
+
+        if (!holderInTeam && !targetInTeam) {
+          const emptySlot = currentHeroes.length < 5 ? currentHeroes.length : 0;
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "hero_gointobattle",
+              {
+                heroId: currentHolderId,
+                slot: emptySlot,
+              },
+            );
+            await delay(COMMAND_DELAY);
+          } catch (err) {
+            if (!isIgnorableError(err)) {
+              errors.push(`上阵装备持有者失败: ${err.message}`);
+            }
+            continue;
+          }
+
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "hero_gointobattle",
+              {
+                heroId: targetHero.heroId,
+                slot: emptySlot + 1,
+              },
+            );
+            await delay(COMMAND_DELAY);
+          } catch (err) {
+            if (!isIgnorableError(err)) {
+              errors.push(`上阵目标英雄失败: ${err.message}`);
+            }
+          }
         }
-      }
 
-      if (heroWithArtifact && heroWithArtifact !== targetHero.heroId) {
         try {
           await tokenStore.sendMessageWithPromise(tokenId, "hero_exchange", {
-            heroId: heroWithArtifact,
+            heroId: currentHolderId,
             targetHeroId: targetHero.heroId,
           });
-          await delay(300);
+          await delay(COMMAND_DELAY);
         } catch (err) {
           if (!isIgnorableError(err)) {
             errors.push(
@@ -1113,7 +1212,42 @@ const applyLineup = async (lineup) => {
       }
     }
 
+    await delay(COMMAND_DELAY);
+    const data1 = await fetchLatestData();
+    heroes = data1.heroes;
+    for (const [id, hero] of Object.entries(heroes)) {
+      if (hero.attachmentUid && hero.attachmentUid !== -1) {
+        attachmentToHero[hero.attachmentUid] = Number(id);
+      }
+    }
+    currentHeroes = getTeamHeroes(data1.teamInfo);
+    currentHeroIds.clear();
+    currentHeroes.forEach((h) => currentHeroIds.add(h.heroId));
+
+    for (const hero of currentHeroes) {
+      if (!targetHeroIds.has(hero.heroId)) {
+        if (currentHeroes.length <= 1) break;
+        try {
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "hero_gobackbattle",
+            {
+              slot: hero.position,
+            },
+          );
+          await delay(COMMAND_DELAY);
+          currentHeroes = currentHeroes.filter((h) => h.heroId !== hero.heroId);
+        } catch (err) {
+          if (!isIgnorableError(err)) {
+            errors.push(`${getHeroName(hero.heroId)}下阵失败: ${err.message}`);
+          }
+        }
+      }
+    }
+
+    await delay(COMMAND_DELAY);
     const data2 = await fetchLatestData();
+    await delay(COMMAND_DELAY);
     currentHeroes = getTeamHeroes(data2.teamInfo);
 
     const needPositionFix = targetHeroes.some((targetHero) => {
@@ -1150,7 +1284,7 @@ const applyLineup = async (lineup) => {
               slot: hero.position,
             },
           );
-          await delay(300);
+          await delay(COMMAND_DELAY);
         } catch (err) {
           if (!isIgnorableError(err)) {
             errors.push(`${getHeroName(hero.heroId)}下阵失败: ${err.message}`);
@@ -1180,7 +1314,7 @@ const applyLineup = async (lineup) => {
               slot: targetHero.position,
             },
           );
-          await delay(300);
+          await delay(COMMAND_DELAY);
         } catch (err) {
           if (!isIgnorableError(err)) {
             errors.push(
@@ -1197,6 +1331,7 @@ const applyLineup = async (lineup) => {
       message.success(`阵容 "${lineup.name}" 已应用`);
     }
 
+    lastRefreshTime = 0;
     await refreshTeamInfo();
   } catch (error) {
     message.error(`应用阵容失败: ${error.message}`);
@@ -1269,7 +1404,7 @@ const switchTeam = async (teamId) => {
       teamId,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     currentTeamId.value = teamId;
     message.success(`已切换到阵容 ${teamId}`);
@@ -1454,6 +1589,16 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
+}
+
+.hero-fish {
+  font-size: var(--font-size-xs);
+  color: var(--primary-color);
+  background: rgba(var(--primary-color-rgb), 0.1);
+  padding: 1px 4px;
+  border-radius: var(--border-radius-small);
+  display: inline-block;
+  align-self: flex-start;
 }
 
 .hero-artifact {
@@ -1927,6 +2072,15 @@ onMounted(() => {
 .hero-artifact {
   color: var(--primary-color);
   font-size: var(--font-size-xs);
+}
+
+.hero-fish-tag {
+  color: var(--success-color);
+  font-size: var(--font-size-xs);
+  background: rgba(var(--success-color-rgb, 0, 128, 0), 0.1);
+  padding: 1px 4px;
+  border-radius: var(--border-radius-small);
+  margin-left: 4px;
 }
 
 .lineup-actions {

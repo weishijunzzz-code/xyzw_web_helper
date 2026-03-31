@@ -243,6 +243,8 @@ const FishMap = {
   1118: { name: "璇玑" },
 };
 
+export { FishMap };
+
 //洗练颜色
 const color = {
   1: { color: "白色", value: "white" },
