@@ -570,6 +570,14 @@ loadDebugState();
 </script>
 
 <style scoped lang="scss">
+// 根容器
+.default-layout {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
 // 导航栏 - 使用新的设计令牌
 .dashboard-nav {
   background: var(--color-bg-primary);
@@ -592,7 +600,15 @@ loadDebugState();
   z-index: 1;
   background: var(--color-bg-primary);
   min-height: calc(100vh - 64px);
-  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .nav-container {
@@ -866,6 +882,18 @@ loadDebugState();
 }
 
 @media (max-width: 768px) {
+  .dashboard-nav {
+    padding: 0 var(--spacing-sm);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .nav-container {
+    height: 56px;
+    width: 100%;
+    padding: 0;
+  }
+
   .nav-item span {
     display: none;
   }
@@ -879,10 +907,6 @@ loadDebugState();
     flex: 0 0 auto;
   }
 
-  .nav-container {
-    height: 56px;
-  }
-
   .brand-logo {
     display: none;
   }
@@ -890,11 +914,11 @@ loadDebugState();
   .brand-toggle {
     display: inline-flex;
   }
-  
+
   .token-selector .token-trigger .token-name {
     max-width: 80px;
   }
-  
+
   .token-dropdown-panel {
     width: 260px;
   }

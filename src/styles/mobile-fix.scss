@@ -8,23 +8,27 @@
 
   body {
     min-width: auto !important;
-    overflow-x: hidden !important;
-    width: 100vw !important;
+    // 不设置固定宽度，允许内容溢出和滑动
   }
 
-  // 强制所有容器使用全宽
+  // 强制所有容器使用全宽，但允许内容溢出
   .container,
   .page-container,
   .dashboard-container,
   .token-import-page,
   .task-scheduler-page,
   .token-manage-page,
-  .default-layout,
-  #app {
+  .default-layout {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  // #app 不限制宽度，允许滑动
+  #app {
+    min-width: 100% !important;
     box-sizing: border-box !important;
   }
 
@@ -463,10 +467,5 @@
   }
 }
 
-// 强制修复 viewport 问题
-@viewport {
-  width: device-width;
-  initial-scale: 1;
-  maximum-scale: 1;
-  user-scalable: no;
-}
+// 注意：不要在这里设置 viewport，由 index.html 控制
+// 网页端需要允许缩放和滑动

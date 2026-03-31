@@ -71,3 +71,17 @@ applyTheme();
 
 // 挂载应用
 app.mount("#app");
+
+// 检测是否是 Capacitor (APK) 环境
+const isCapacitor = () => {
+  return typeof (window).Capacitor !== 'undefined' && (window).Capacitor.isNativePlatform();
+};
+
+// 如果是 Capacitor 环境，添加类名到 body
+// 使用 nextTick 确保 DOM 已准备好
+import { nextTick } from 'vue';
+nextTick(() => {
+  if (isCapacitor()) {
+    document.body.classList.add('capacitor-app');
+  }
+});

@@ -749,6 +749,9 @@ onUnmounted(() => {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   // 在大屏幕上限制最大列数以确保卡片有足够宽度
   @media (min-width: 1400px) {
@@ -769,9 +772,11 @@ onUnmounted(() => {
   }
 
   @media (max-width: 768px) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
     padding: var(--spacing-sm);
     gap: var(--spacing-md);
+    min-width: 0;
+    overflow-x: hidden; // 防止内容溢出
   }
 }
 
@@ -820,7 +825,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--border-light);
   position: relative;
   overflow: hidden;
-  
+
   // 移动端优化
   @media (max-width: 768px) {
     margin: 0 0 var(--spacing-sm) 0;
@@ -871,6 +876,7 @@ onUnmounted(() => {
   @media (max-width: 768px) {
     height: calc(100vh - 180px);
     min-height: 500px;
+    overflow-x: auto;
   }
 }
 
