@@ -32,6 +32,7 @@ declare module 'vue-router/auto-routes' {
     '/NotFound': RouteRecordInfo<'/NotFound', '/NotFound', Record<never, never>, Record<never, never>>,
     '/Profile': RouteRecordInfo<'/Profile', '/Profile', Record<never, never>, Record<never, never>>,
     '/Register': RouteRecordInfo<'/Register', '/Register', Record<never, never>, Record<never, never>>,
+    '/TaskScheduler/': RouteRecordInfo<'/TaskScheduler/', '/TaskScheduler', Record<never, never>, Record<never, never>>,
     '/TokenImport/': RouteRecordInfo<'/TokenImport/', '/TokenImport', Record<never, never>, Record<never, never>>,
     '/TokenImport/bin': RouteRecordInfo<'/TokenImport/bin', '/TokenImport/bin', Record<never, never>, Record<never, never>>,
     '/TokenImport/gameLogin': RouteRecordInfo<'/TokenImport/gameLogin', '/TokenImport/gameLogin', Record<never, never>, Record<never, never>>,
@@ -41,5 +42,6 @@ declare module 'vue-router/auto-routes' {
     '/TokenImport/url': RouteRecordInfo<'/TokenImport/url', '/TokenImport/url', Record<never, never>, Record<never, never>>,
     '/TokenImport/wechatTokenToBin': RouteRecordInfo<'/TokenImport/wechatTokenToBin', '/TokenImport/wechatTokenToBin', Record<never, never>, Record<never, never>>,
     '/TokenImport/wxqrcode': RouteRecordInfo<'/TokenImport/wxqrcode', '/TokenImport/wxqrcode', Record<never, never>, Record<never, never>>,
+    '/TokenImport/wxqrcode-mobile': RouteRecordInfo<'/TokenImport/wxqrcode-mobile', '/TokenImport/wxqrcode-mobile', Record<never, never>, Record<never, never>>,
   }
 }

@@ -1780,6 +1780,57 @@ onUnmounted(() => {
 
     :deep(.n-radio-button) {
       flex-shrink: 0;
+      white-space: nowrap;
+      min-width: fit-content;
+    }
+  }
+}
+
+// 移动端适配
+@media screen and (max-width: 768px) {
+  .token-import-page .container {
+    padding: 8px;
+  }
+
+  .token-import-modal {
+    .arco-modal {
+      width: 95vw !important;
+      max-width: 95vw !important;
+      margin: 0 auto !important;
+    }
+
+    .arco-modal-content {
+      padding: 12px !important;
+    }
+
+    .import-method-scroll {
+      margin: 12px -12px !important;
+      padding: 0 12px !important;
+      width: calc(100% + 24px) !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
+    .import-method-tabs {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      width: max-content !important;
+
+      :deep(.n-radio-button) {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        min-width: fit-content !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+      }
+    }
+
+    .n-form {
+      padding: 0 !important;
+    }
+
+    .n-form-item {
+      margin-bottom: 12px !important;
     }
   }
 }

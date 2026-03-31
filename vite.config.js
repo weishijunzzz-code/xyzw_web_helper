@@ -135,9 +135,38 @@ export default defineConfig(async () => {
       // 确保生成 _worker.js
       rollupOptions: {
         output: {
-          manualChunks: undefined,
+          manualChunks: {
+             // 将路由相关的代码分割到单独的 chunk
+             'router': ['vue-router'],
+             // 将 UI 组件库分割到单独的 chunk
+             'ui': ['naive-ui', '@arco-design/web-vue'],
+             // 将工具库分割到单独的 chunk
+             'utils': ['dayjs'],
+             // 将图表库分割到单独的 chunk
+             'charts': ['echarts'],
+             // 将日期处理库分割到单独的 chunk
+             'date-fns': ['date-fns'],
+             // 将拖拽库分割到单独的 chunk
+             'dnd': ['vuedraggable'],
+           },
+          // 确保 chunk 文件名包含 content hash，避免缓存问题
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (/\.(png|jpe?g|gif|svg|webp|ico)$/i.test(assetInfo.name)) {
+              return 'assets/images/[name]-[hash][extname]';
+            }
+            if (/\.(woff2?|eot|ttf|otf)$/i.test(assetInfo.name)) {
+              return 'assets/fonts/[name]-[hash][extname]';
+            }
+            return 'assets/[name]-[hash][extname]';
+          },
         },
       },
+      // 增加 chunk 大小警告限制
+      chunkSizeWarningLimit: 1500,
     },
     resolve: {
       alias: {

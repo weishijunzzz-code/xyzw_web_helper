@@ -1,0 +1,141 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, master, test ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check Node.js version
+        run: node --version
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Clean install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          pnpm install
+        continue-on-error: false
+
+      - name: Build web assets
+        run: |
+          pnpm run build
+        continue-on-error: false
+
+      - name: Check if iOS project exists
+        run: |
+          if [ -d "ios/App" ]; then
+            echo "iOS project exists"
+            ls -la ios/App/
+          else
+            echo "iOS project does not exist, will create it"
+          fi
+
+      - name: Add iOS platform if not exists
+        run: |
+          if [ ! -d "ios/App" ]; then
+            pnpm exec cap add ios
+          fi
+
+      - name: Sync iOS project
+        run: |
+          pnpm exec cap sync ios
+        continue-on-error: false
+
+      - name: List iOS project files
+        run: |
+          ls -la ios/App/
+
+      - name: Check if workspace exists
+        run: |
+          if [ -f "ios/App/App.xcworkspace" ]; then
+            echo "Workspace exists"
+          else
+            echo "Workspace does not exist, checking for xcodeproj"
+            find ios/App -name "*.xcworkspace" -o -name "*.xcodeproj"
+          fi
+
+      - name: Build iOS App (Simulator)
+        run: |
+          cd ios/App
+          # List available schemes first
+          echo "=== Available schemes ==="
+          if [ -f "App.xcworkspace" ]; then
+            xcodebuild -workspace App.xcworkspace -list
+          else
+            xcodebuild -project App.xcodeproj -list
+          fi
+          
+          # Create build output directory
+          mkdir -p ./build/Products
+          
+          # Try workspace first, then xcodeproj
+          if [ -f "App.xcworkspace" ]; then
+            echo "=== Building with workspace ==="
+            xcodebuild -workspace App.xcworkspace \
+              -scheme App \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
+              -configuration Debug \
+              -derivedDataPath ./build \
+              -resultBundlePath ./build/result.bundle \
+              CONFIGURATION_BUILD_DIR=./build/Products \
+              build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log
+          else
+            echo "=== Building with xcodeproj ==="
+            xcodebuild -project App.xcodeproj \
+              -scheme App \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
+              -configuration Debug \
+              -derivedDataPath ./build \
+              -resultBundlePath ./build/result.bundle \
+              CONFIGURATION_BUILD_DIR=./build/Products \
+              build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log
+          fi
+        continue-on-error: false
+
+      - name: Show build log on failure
+        if: failure()
+        run: |
+          cd ios/App
+          if [ -f "build.log" ]; then
+            echo "=== Build Log ==="
+            tail -n 200 build.log
+          fi
+
+      - name: Check build output
+        run: |
+          echo "=== Build directory structure ==="
+          ls -la ios/App/build/ 2>/dev/null || echo "Build directory not found"
+          echo "=== Full build directory tree ==="
+          find ios/App/build -type d 2>/dev/null | head -30 || echo "No build directory"
+          echo "=== Find .app files ==="
+          find ios/App -name "*.app" -type d 2>/dev/null || echo "No .app found"
+          echo "=== Current directory ==="
+          pwd
+          ls -la
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: |
+            ios/App/build/
+            ios/App/**/*.app
+        if: always()

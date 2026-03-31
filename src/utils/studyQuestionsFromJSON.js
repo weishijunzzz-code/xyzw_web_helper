@@ -3,6 +3,8 @@
  * 用于一键答题功能，从公共目录读取题目数据
  */
 
+import { isNativePlatform } from "./capacitor";
+
 let questionsData = null;
 let isLoading = false;
 
@@ -13,40 +15,67 @@ const queryPromise = (async () => {
     ? import.meta.env.BASE_URL
     : "/";
 
+  // 检测是否在原生平台（APK）
+  const native = isNativePlatform();
+  console.log('studyQuestionsFromJSON: isNativePlatform =', native);
+
+  // 在 Capacitor 中，静态资源通过 https://localhost/ 访问
+  // 需要确保路径正确
   const candidates = [
+    // APK 环境优先尝试的路径
+    ...(native ? [
+      `https://localhost/answer.json`,
+      `${base.replace(/\/$/, "")}/answer.json`,
+    ] : []),
+    // 通用路径
     `${base.replace(/\/$/, "")}/answer.json`,
     `/answer.json`,
     `answer.json`,
+    `./answer.json`,
+    // 其他可能的路径
+    `assets/answer.json`,
+    `public/answer.json`,
   ];
 
   isLoading = true;
   for (let i = 0; i < candidates.length; i++) {
     const url = candidates[i];
+    console.log(`studyQuestionsFromJSON: trying ${url}`);
     try {
       const response = await fetch(url);
+      console.log(`studyQuestionsFromJSON: ${url} response status =`, response.status);
+
       if (!response.ok) {
-        // try next
+        console.warn(`studyQuestionsFromJSON: ${url} returned status ${response.status}`);
         continue;
       }
 
       const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        // If server returned HTML (like a 404 page), skip
-        try {
-          const text = await response.text();
-          console.warn(`studyQuestionsFromJSON: ${url} returned non-JSON response (length ${text.length})`);
-        } catch (e) {
-          // ignore
-        }
+      console.log(`studyQuestionsFromJSON: ${url} content-type =`, contentType);
+
+      // 获取文本内容
+      const text = await response.text();
+      console.log(`studyQuestionsFromJSON: ${url} response length =`, text.length);
+
+      // 检查是否是 JSON
+      if (!contentType.includes("application/json") && !text.trim().startsWith("[")) {
+        console.warn(`studyQuestionsFromJSON: ${url} returned non-JSON response (length ${text.length})`);
+        console.warn(`studyQuestionsFromJSON: first 100 chars:`, text.substring(0, 100));
         continue;
       }
 
-      const data = await response.json();
-      isLoading = false;
-      return data;
+      try {
+        const data = JSON.parse(text);
+        console.log(`studyQuestionsFromJSON: successfully loaded ${data.length} questions from ${url}`);
+        isLoading = false;
+        return data;
+      } catch (parseError) {
+        console.error(`studyQuestionsFromJSON: failed to parse JSON from ${url}:`, parseError);
+        continue;
+      }
     } catch (error) {
       // try next candidate
-      console.warn(`studyQuestionsFromJSON: failed to fetch ${url}:`, error);
+      console.warn(`studyQuestionsFromJSON: failed to fetch ${url}:`, error.message);
       continue;
     }
   }

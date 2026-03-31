@@ -1,0 +1,42 @@
+name: Deploy Live Update
+
+on:
+  push:
+    branches: [ main, master, test ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Build web assets
+        run: |
+          npm run build
+
+      - name: Install Capgo CLI
+        run: |
+          npm install -g @capgo/cli
+
+      - name: Deploy to Capgo
+        run: |
+          echo "API Key length: ${#CAPGO_TOKEN}"
+          npx @capgo/cli bundle upload --channel=production --apikey=${{ secrets.CAPGO_TOKEN }}
+        env:
+          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+
+      - name: Notify success
+        run: |
+          echo "Live update deployed successfully!"

@@ -51,6 +51,16 @@
             <span>批量日常</span>
           </router-link>
           <router-link
+            to="/admin/task-scheduler"
+            class="nav-item"
+            active-class="active"
+          >
+            <n-icon>
+              <TimerOutline />
+            </n-icon>
+            <span>定时任务</span>
+          </router-link>
+          <router-link
             to="/admin/message-test"
             class="nav-item"
             active-class="active"
@@ -71,6 +81,9 @@
         <div class="nav-user">
           <!-- 全局搜索 -->
           <GlobalSearch ref="globalSearchRef" />
+
+          <!-- 活动日历 -->
+          <ActivityCalendarDropdown />
 
           <!-- 主题设置按钮 -->
           <ThemeSettings />
@@ -257,6 +270,16 @@
           <span>批量日常</span>
         </router-link>
         <router-link
+          to="/admin/task-scheduler"
+          class="drawer-item"
+          @click="isMobileMenuOpen = false"
+        >
+          <n-icon>
+            <TimerOutline />
+          </n-icon>
+          <span>定时任务</span>
+        </router-link>
+        <router-link
           to="/admin/message-test"
           class="drawer-item"
           @click="isMobileMenuOpen = false"
@@ -266,12 +289,17 @@
           </n-icon>
           <span>消息测试</span>
         </router-link>
-          <router-link to="/admin/legion-war" class="nav-item" active-class="active"  v-if="isNowInLegionWarTime()" >
-            <n-icon>
-              <LockOpen />
-            </n-icon>
-            <span>实时盐场</span>
-          </router-link>
+        <router-link 
+          to="/admin/legion-war" 
+          class="drawer-item" 
+          v-if="isNowInLegionWarTime()"
+          @click="isMobileMenuOpen = false"
+        >
+          <n-icon>
+            <LockOpen />
+          </n-icon>
+          <span>实时盐场</span>
+        </router-link>
         <router-link
           to="/admin/profile"
           class="drawer-item"
@@ -282,8 +310,28 @@
           </n-icon>
           <span>个人设置</span>
         </router-link>
+        <!-- 调试设置 - 仅在原生应用显示 -->
+        <div
+          v-if="isNativePlatform"
+          class="drawer-item debug-settings-item"
+          @click="openDebugSettings"
+        >
+          <n-icon>
+            <BugOutline />
+          </n-icon>
+          <span>调试设置</span>
+          <n-switch
+            :value="debugEnabled"
+            size="small"
+            @update:value="toggleDebug"
+            @click.stop
+          />
+        </div>
       </div>
     </n-drawer>
+    <!-- 面包屑导航 -->
+    <BreadcrumbNav v-if="!isMobile" />
+    
     <div class="main" :class="{ 'has-bottom-nav': isMobile }">
       <router-view v-slot="{ Component, route }">
         <PageTransition :name="route.meta.transition || 'fade-slide'">
@@ -319,6 +367,8 @@ import {
 import ThemeSettings from "@/components/Common/ThemeSettings.vue";
 import PageTransition from "@/components/DesignSystem/PageTransition.vue";
 import GlobalSearch from "@/components/Common/GlobalSearch.vue";
+import ActivityCalendarDropdown from "@/views/TaskScheduler/components/ActivityCalendarDropdown.vue";
+import BreadcrumbNav from "@/components/Common/BreadcrumbNav.vue";
 import { useMobile } from "@/composables/useMobile";
 import {
   Home,
@@ -337,7 +387,10 @@ import {
   Search,
   Checkmark,
   Refresh,
+  TimerOutline,
+  BugOutline,
 } from "@vicons/ionicons5";
+import { isNativePlatform } from "@/utils/capacitor";
 
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
@@ -426,34 +479,47 @@ const refreshTokens = () => {
   // 这里可以触发重新获取Token状态
 };
 
-// 底部导航项
-const bottomNavItems = computed(() => [
-  {
-    path: '/admin/dashboard',
-    icon: Home,
-    label: '首页'
-  },
-  {
-    path: '/admin/game-features',
-    icon: Apps,
-    label: '功能'
-  },
-  {
-    path: '/tokens',
-    icon: Person,
-    label: 'Token'
-  },
-  {
-    path: '/admin/batch-daily-tasks',
-    icon: Layers,
-    label: '批量'
-  },
-  {
-    path: '/admin/message-test',
-    icon: Mail,
-    label: '消息'
+// 底部导航项 - 优化移动端导航结构
+const bottomNavItems = computed(() => {
+  const items = [
+    {
+      path: '/admin/dashboard',
+      icon: Home,
+      label: '首页'
+    },
+    {
+      path: '/admin/game-features',
+      icon: Apps,
+      label: '功能'
+    },
+    {
+      path: '/tokens',
+      icon: Person,
+      label: 'Token'
+    },
+    {
+      path: '/admin/task-scheduler',
+      icon: TimerOutline,
+      label: '定时'
+    },
+    {
+      path: '/admin/batch-daily-tasks',
+      icon: Layers,
+      label: '批量'
+    }
+  ];
+  
+  // 盐场时间显示实时盐场入口
+  if (isNowInLegionWarTime()) {
+    items.splice(4, 0, {
+      path: '/admin/legion-war',
+      icon: LockOpen,
+      label: '盐场'
+    });
   }
-]);
+  
+  return items;
+});
 
 // 检查当前路由是否激活
 const isActiveRoute = (path) => {
@@ -477,6 +543,30 @@ const handleUserAction = async (key) => {
       break;
   }
 };
+
+// 调试设置
+const debugEnabled = ref(false);
+
+// 从 localStorage 读取调试状态
+const loadDebugState = () => {
+  debugEnabled.value = localStorage.getItem('enableDebugPanel') === 'true';
+};
+
+// 切换调试开关
+const toggleDebug = (value) => {
+  localStorage.setItem('enableDebugPanel', value.toString());
+  debugEnabled.value = value;
+  message.success(value ? '调试按钮已开启' : '调试按钮已关闭');
+};
+
+// 打开调试设置（点击菜单项时）
+const openDebugSettings = () => {
+  // 切换开关状态
+  toggleDebug(!debugEnabled.value);
+};
+
+// 初始化
+loadDebugState();
 </script>
 
 <style scoped lang="scss">
@@ -487,13 +577,22 @@ const handleUserAction = async (key) => {
   padding: 0 var(--space-6);
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
+  z-index: 100;
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .dark .dashboard-nav {
   background: rgba(15, 23, 42, 0.9);
+}
+
+// 主内容区域
+.main {
+  position: relative;
+  z-index: 1;
+  background: var(--color-bg-primary);
+  min-height: calc(100vh - 64px);
+  overflow-x: hidden;
 }
 
 .nav-container {
@@ -821,6 +920,20 @@ const handleUserAction = async (key) => {
 .drawer-item.router-link-active {
   background: var(--primary-color-light);
   color: var(--primary-color);
+}
+
+// 调试设置项样式
+.drawer-item.debug-settings-item {
+  cursor: pointer;
+  justify-content: space-between;
+
+  &:hover {
+    background: var(--bg-secondary);
+  }
+
+  .n-switch {
+    margin-left: auto;
+  }
 }
 
 /* 禁用样式：灰化、鼠标禁止、无hover效果 */

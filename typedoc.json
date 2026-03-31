@@ -1,0 +1,61 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/main.js", "src/App.vue"],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "name": "XYZW Web Helper 文档",
+  "includeVersion": true,
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "hideGenerator": false,
+  "theme": "default",
+  "highlightTheme": "light-plus",
+  "readme": "README.md",
+  "tsconfig": "./tsconfig.json",
+  "plugin": ["typedoc-plugin-vue"],
+  "treatWarningsAsErrors": false,
+  "intentionallyNotExported": [],
+  "validation": {
+    "notExported": false,
+    "invalidLink": false
+  },
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "categorizeByGroup": true,
+  "defaultCategory": "其他",
+  "categoryOrder": [
+    "组件",
+    "组合式函数",
+    "Store",
+    "工具函数",
+    "其他"
+  ],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Accessor",
+    "Method",
+    "Parameter",
+    "TypeParameter",
+    "TypeLiteral",
+    "CallSignature",
+    "ConstructorSignature",
+    "IndexSignature",
+    "GetSignature",
+    "SetSignature"
+  ]
+}

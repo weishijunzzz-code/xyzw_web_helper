@@ -1,0 +1,472 @@
+// 全局移动端适配修复 - 强制覆盖桌面端样式
+
+// 移动端基础设置
+@media screen and (max-width: 768px) {
+  html {
+    font-size: 14px !important;
+  }
+
+  body {
+    min-width: auto !important;
+    overflow-x: hidden !important;
+    width: 100vw !important;
+  }
+
+  // 强制所有容器使用全宽
+  .container,
+  .page-container,
+  .dashboard-container,
+  .token-import-page,
+  .task-scheduler-page,
+  .token-manage-page,
+  .default-layout,
+  #app {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  // 修复主内容区域
+  .main,
+  .main-content,
+  .dashboard-content,
+  .page-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  // 修复卡片和面板
+  .n-card,
+  .arco-card,
+  .panel,
+  .section-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 12px 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  // 修复网格布局
+  .grid,
+  .cards-grid,
+  .tokens-grid,
+  .dashboard-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  // 修复 flex 布局
+  .flex-row,
+  .header-actions,
+  .action-buttons {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  // 修复模态框和弹窗
+  .n-modal,
+  .arco-modal,
+  .n-dialog,
+  .token-import-modal .arco-modal {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 0 auto !important;
+    left: 2.5vw !important;
+    right: 2.5vw !important;
+  }
+
+  .n-modal-container,
+  .arco-modal-container,
+  .token-import-modal .arco-modal-container {
+    padding: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  // 修复 Token 导入模态框内容
+  .token-import-modal {
+    .arco-modal {
+      width: 95vw !important;
+      max-width: 95vw !important;
+      margin: 0 auto !important;
+    }
+
+    .arco-modal-content {
+      padding: 12px !important;
+      max-height: 80vh !important;
+      overflow-y: auto !important;
+    }
+
+    .card-header {
+      margin: -12px -12px 12px -12px !important;
+      padding: 12px !important;
+      width: calc(100% + 24px) !important;
+    }
+
+    .import-method-scroll {
+      margin: 0 !important;
+      padding: 4px 0 !important;
+      width: 100% !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      scrollbar-width: thin !important;
+      -ms-overflow-style: none !important;
+      
+      &::-webkit-scrollbar {
+        height: 3px !important;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: var(--border-color) !important;
+        border-radius: 2px !important;
+      }
+    }
+
+    .import-method-tabs {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      width: max-content !important;
+      min-width: max-content !important;
+      gap: 4px !important;
+
+      .n-radio-button {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        min-width: auto !important;
+      }
+    }
+
+    .n-form {
+      padding: 0 !important;
+    }
+
+    .n-form-item {
+      margin-bottom: 8px !important;
+    }
+  }
+
+  // 修复抽屉
+  .n-drawer {
+    width: 85vw !important;
+  }
+
+  // 修复表单
+  .n-form {
+    width: 100% !important;
+  }
+
+  .n-form-item {
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  .n-input,
+  .n-select,
+  .n-input-number {
+    width: 100% !important;
+  }
+
+  // 修复按钮组
+  .button-group,
+  .action-group {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+
+    .n-button {
+      flex: 1 1 auto !important;
+      min-width: 80px !important;
+    }
+  }
+
+  // 修复表格
+  .n-data-table,
+  .table-container {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+
+    table {
+      min-width: 100% !important;
+    }
+  }
+
+  // 修复标签页
+  .n-tabs {
+    width: 100% !important;
+
+    .n-tabs-nav {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
+    .n-tabs-tab {
+      flex-shrink: 0 !important;
+      padding: 8px 12px !important;
+    }
+  }
+
+  // 修复导航栏
+  .dashboard-nav {
+    padding: 0 12px !important;
+
+    .nav-container {
+      height: 56px !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+    }
+
+    .nav-menu {
+      display: none !important;
+    }
+
+    .nav-user {
+      gap: 8px !important;
+
+      .token-selector {
+        max-width: 120px !important;
+
+        .token-name {
+          display: none !important;
+        }
+      }
+    }
+  }
+
+  // 修复底部导航
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border-color) !important;
+    z-index: 1000 !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding-bottom: env(safe-area-inset-bottom, 0) !important;
+  }
+
+  // 修复页面头部
+  .page-header,
+  .section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 12px 0 !important;
+
+    h1, h2 {
+      font-size: 18px !important;
+    }
+
+    .header-actions {
+      width: 100% !important;
+      justify-content: flex-start !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+  }
+
+  // 修复导入方式选择器
+  .import-method-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 8px !important;
+    padding: 4px !important;
+
+    .n-radio-button {
+      flex-shrink: 0 !important;
+      padding: 8px 16px !important;
+      font-size: 13px !important;
+    }
+  }
+
+  // 修复二维码页面
+  .wx-qrcode-import {
+    padding: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+
+    .qrcode-container {
+      padding: 16px 0 !important;
+      width: 100% !important;
+    }
+
+    .qr-placeholder,
+    .qr-image-wrapper {
+      width: 180px !important;
+      height: 180px !important;
+      margin: 0 auto !important;
+    }
+
+    .form-actions {
+      margin-top: 16px !important;
+      width: 100% !important;
+
+      .n-button {
+        width: 100% !important;
+      }
+    }
+  }
+
+  // 修复 Token 卡片
+  .token-card {
+    padding: 12px !important;
+
+    .token-header {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+
+    .token-actions {
+      width: 100% !important;
+      justify-content: flex-end !important;
+    }
+  }
+
+  // 修复列表项
+  .list-item,
+  .token-item {
+    padding: 12px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+
+    .item-actions {
+      width: 100% !important;
+      justify-content: flex-end !important;
+    }
+  }
+
+  // 修复滚动
+  body,
+  html {
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  // 修复下拉菜单
+  .n-dropdown-menu,
+  .n-select-menu {
+    max-width: 90vw !important;
+  }
+
+  // 修复提示
+  .n-message,
+  .n-notification {
+    max-width: 90vw !important;
+    word-break: break-all !important;
+  }
+
+  // 修复侧边栏文字显示问题
+  .sidebar,
+  .side-menu,
+  .nav-sidebar {
+    display: none !important;
+  }
+
+  // 修复页面标题区域
+  .page-title-section,
+  .section-title-area {
+    padding: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  // 修复批量任务页面
+  .batch-tasks-page,
+  .batch-daily-tasks {
+    padding: 8px !important;
+
+    .task-header {
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    .task-actions {
+      width: 100% !important;
+      justify-content: flex-start !important;
+      flex-wrap: wrap !important;
+    }
+  }
+}
+
+// 修复安全区域（刘海屏）
+@supports (padding-top: env(safe-area-inset-top)) {
+  @media screen and (max-width: 768px) {
+    .dashboard-nav {
+      padding-top: env(safe-area-inset-top) !important;
+    }
+
+    .mobile-bottom-nav {
+      padding-bottom: env(safe-area-inset-bottom) !important;
+    }
+
+    .main,
+    .main-content,
+    .page-content {
+      padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+}
+
+// 微信扫码页面移动端样式
+.wx-qrcode-import-mobile {
+  @media screen and (max-width: 768px) {
+    .mobile-header {
+      padding: 12px 16px !important;
+    }
+
+    .mobile-content {
+      padding: 12px !important;
+    }
+
+    .qrcode-section {
+      padding: 20px 0 !important;
+    }
+
+    .qr-placeholder,
+    .qr-image-wrapper {
+      width: 160px !important;
+      height: 160px !important;
+    }
+
+    .flow-info {
+      padding: 12px !important;
+    }
+
+    .role-item,
+    .selected-item {
+      padding: 10px !important;
+    }
+
+    .mobile-footer {
+      padding: 12px !important;
+      padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+  }
+}
+
+// 强制修复 viewport 问题
+@viewport {
+  width: device-width;
+  initial-scale: 1;
+  maximum-scale: 1;
+  user-scalable: no;
+}

@@ -132,6 +132,8 @@ import {
   type CombUser,
 } from "@/utils/tokenToBin";
 import { validateBinFile, formatBinInfo } from "@/utils/binValidator";
+import { nativeHttp, isNativePlatform } from "@/utils/capacitor";
+import { apiGet, apiPost, getApiUrl, getApiHeaders } from "@/utils/apiConfig";
 const tokenStore = useTokenStore();
 const { storeArrayBuffer } = useIndexedDB();
 
@@ -478,33 +480,54 @@ const generateQRCode = async () => {
 };
 
 /**
+ * 获取 API 基础 URL
+ * 在网页端使用相对路径，在移动端使用完整 URL
+ * @deprecated 请使用 apiConfig.ts 中的 getApiUrl 函数
+ */
+const getApiBaseUrl = () => {
+  // 检测是否在 Capacitor 环境中
+  if (isNativePlatform()) {
+    // 移动端使用微信官方 API
+    return 'https://open.weixin.qq.com';
+  }
+  // 网页端使用相对路径（通过代理）
+  return '';
+};
+
+/**
  * 尝试获取微信二维码
  */
 const tryGetWeixinQR = async () => {
   try {
-    const qrPageUrl =
-      "/api/weixin/connect/app/qrconnect" +
+    console.log("开始获取微信二维码...");
+    console.log("是否在原生平台:", isNativePlatform());
+
+    // 使用 apiConfig 构建 URL
+    const path = "/api/weixin/connect/app/qrconnect" +
       "?appid=wxfb0d5667e5cb1c44" +
       "&bundleid=com.hortor.games.xyzw" +
       "&scope=snsapi_base,snsapi_userinfo,snsapi_friend,snsapi_message" +
       "&state=weixin";
 
-    const response = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("GET", qrPageUrl, true);
-      xhr.timeout = 15000;
-      xhr.setRequestHeader("Accept", "text/html");
-      xhr.onload = () => resolve(xhr);
-      xhr.onerror = () => reject(new Error("网络错误"));
-      xhr.ontimeout = () => reject(new Error("请求超时"));
-      xhr.send();
-    });
+    const qrPageUrl = getApiUrl(path, 'weixin');
+    console.log("请求 URL:", qrPageUrl);
+
+    // 使用 apiConfig 获取请求头
+    const headers = getApiHeaders('weixin');
+    headers['Accept-Language'] = 'zh-CN,zh;q=0.9';
+    headers['Cache-Control'] = 'no-cache';
+
+    // 使用原生 HTTP 请求绕过 CORS
+    const response = await nativeHttp.get(qrPageUrl, headers);
+
+    console.log("响应状态:", response.status);
+    console.log("响应数据长度:", response.data?.length);
 
     if (response.status !== 200) {
       throw new Error("HTTP 状态码：" + response.status);
     }
 
-    const html = response.responseText;
+    const html = response.data;
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     let qrUrl = doc.querySelector("img.auth_qrcode")?.src;
@@ -513,6 +536,8 @@ const tryGetWeixinQR = async () => {
       const m = html.match(/https:\/\/[^"']*qrcode[^"']*/i);
       if (m) qrUrl = m[0];
     }
+
+    console.log("二维码 URL:", qrUrl);
 
     if (!qrUrl) {
       throw new Error("未找到二维码图片地址");
@@ -528,9 +553,23 @@ const tryGetWeixinQR = async () => {
     // 开始轮询扫码状态
     startScanMonitoring();
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error("二维码解析失败:", err);
-    updateStatus("二维码获取失败：" + err.message, "error");
+    console.error("错误详情:", err.message, err.stack);
+
+    // 移动端特定错误提示
+    let errorMsg = "二维码获取失败";
+    if (err.message?.includes('timeout')) {
+      errorMsg = "请求超时，请检查网络连接";
+    } else if (err.message?.includes('Network') || err.message?.includes('network')) {
+      errorMsg = "网络请求失败，请检查网络连接";
+    } else if (err.message?.includes('CORS') || err.message?.includes('cors')) {
+      errorMsg = "跨域请求被阻止";
+    } else if (err.message) {
+      errorMsg = err.message;
+    }
+
+    updateStatus("二维码获取失败：" + errorMsg, "error");
     return false;
   }
 };
@@ -564,27 +603,31 @@ const checkScanStatus = async () => {
       return;
     }
 
-    // 使用微信官方推荐的扫码状态轮询路径
-    const url =
-      "/api/weixin/connect/l/qrconnect?uuid=" +
+    // 使用 apiConfig 构建 URL
+    const path = "/api/weixin/connect/l/qrconnect?uuid=" +
       qrcodeUUID.value +
       "&f=url&_=" +
       Date.now();
+    const url = getApiUrl(path, 'weixin');
 
-    const res = await new Promise((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("GET", url, true);
-      xhr.timeout = 5000;
-      xhr.setRequestHeader("Accept", "*/*");
-      xhr.onload = () => resolve(xhr);
-      xhr.onerror = () => resolve({ status: 0 });
-      xhr.ontimeout = () => resolve({ status: 0 });
-      xhr.send();
-    });
+    // 使用 apiConfig 获取请求头
+    const headers = getApiHeaders('weixin');
+    headers['Cache-Control'] = 'no-cache';
 
-    if (res.status === 200) {
-      const text = res.responseText;
+    // 使用原生 HTTP 请求绕过 CORS
+    let text = '';
+    try {
+      const res = await nativeHttp.get(url, headers);
 
+      if (res.status === 200) {
+        text = res.data;
+      }
+    } catch (fetchErr) {
+      // 网络错误时静默处理，继续轮询
+      return;
+    }
+
+    if (text) {
       // 405 → 扫码确认
       if (text.includes("window.wx_errcode=405")) {
         // 提取code
@@ -691,8 +734,8 @@ const getEncryptedData = async (code) => {
     console.log("解密:", decodePayload(encoded));
   } catch (err) { }
 
-  const loginUrl =
-    "/api/hortor/comb-login-server/api/v1/login" +
+  // 使用 apiConfig 构建 URL
+  const path = "/api/hortor/comb-login-server/api/v1/login" +
     "?gameId=xyzwapp" +
     "&timestamp=" +
     Date.now() +
@@ -701,24 +744,42 @@ const getEncryptedData = async (code) => {
     "&gameTp=app&system=android" +
     "&deviceUniqueId=DID-0e782e88-2f3b-4f5b-9020-47f5e5a5a026" +
     "&packageName=com.hortorgames.xyzw";
+  
+  const loginUrl = getApiUrl(path, 'hortor');
+  const headers = getApiHeaders('hortor');
 
-  const res = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", loginUrl, true);
-    xhr.timeout = 15000;
-    xhr.setRequestHeader("Accept", "*/*");
-    xhr.setRequestHeader("Content-Type", "text/plain; charset=utf-8");
-    xhr.onload = () => resolve(xhr);
-    xhr.onerror = () => reject(new Error("登录失败"));
-    xhr.ontimeout = () => reject(new Error("登录超时"));
-    xhr.send(encoded);
-  });
+  console.log("Hortor 登录 URL:", loginUrl);
 
-  if (res.status !== 200) {
-    throw new Error("HTTP 状态码：" + res.status);
+  let responseText = '';
+  
+  if (isNativePlatform()) {
+    // 移动端使用 nativeHttp
+    const response = await nativeHttp.post(loginUrl, encoded, headers);
+    if (response.status !== 200) {
+      throw new Error("HTTP 状态码：" + response.status);
+    }
+    responseText = response.data;
+  } else {
+    // 网页端使用 XMLHttpRequest（保持原有逻辑）
+    const res = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", path, true); // 网页端使用相对路径
+      xhr.timeout = 15000;
+      xhr.setRequestHeader("Accept", "*/*");
+      xhr.setRequestHeader("Content-Type", "text/plain; charset=utf-8");
+      xhr.onload = () => resolve(xhr);
+      xhr.onerror = () => reject(new Error("登录失败"));
+      xhr.ontimeout = () => reject(new Error("登录超时"));
+      xhr.send(encoded);
+    });
+
+    if (res.status !== 200) {
+      throw new Error("HTTP 状态码：" + res.status);
+    }
+    responseText = res.responseText;
   }
 
-  const json = JSON.parse(res.responseText);
+  const json = JSON.parse(responseText);
   if (json.meta?.errCode !== 0) {
     throw new Error("登录失败：" + json.meta?.errMsg);
   }
@@ -884,7 +945,9 @@ const saveAccount = async (arrBuf: ArrayBuffer, nickname = "") => {
   currentBinData.value = bin.buffer;
 
   try {
+    console.log("[saveAccount] 开始获取服务器列表，bin长度:", bin.buffer.byteLength);
     const listStr = await getServerList(bin.buffer);
+    console.log("[saveAccount] 获取到服务器列表字符串:", listStr?.substring(0, 200));
     const parsedList = JSON.parse(listStr);
     // 转换为数组并排序
     if (parsedList && typeof parsedList === 'object') {
@@ -892,11 +955,13 @@ const saveAccount = async (arrBuf: ArrayBuffer, nickname = "") => {
     } else {
       serverListData.value = [];
     }
-    console.log("Server List:", parsedList);
+    console.log("[saveAccount] Server List:", parsedList);
     message.success("获取服务器角色列表成功，请选择角色添加");
-  } catch (err) {
-    console.error("Failed to get server list", err);
-    message.warning("获取服务器角色列表失败");
+  } catch (err: any) {
+    console.error("[saveAccount] Failed to get server list:", err);
+    console.error("[saveAccount] Error message:", err.message);
+    console.error("[saveAccount] Error stack:", err.stack);
+    message.warning("获取服务器角色列表失败: " + (err.message || "未知错误"));
     serverListData.value = [];
   }
   // 尝试解析 bin 文件内容
