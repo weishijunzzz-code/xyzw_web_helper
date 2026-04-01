@@ -692,6 +692,115 @@ export class GameCommands {
       time: Date.now(),
     };
   }
+
+  /**
+   * 江湖黑市购买商品（旧命令，已废弃）
+   */
+  activity_shopbuygoods(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        goodsIndex: 0,
+        ...params,
+      }),
+      cmd: "activity_shopbuygoods",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 江湖黑市购买商品（正确命令）
+   */
+  activity_buystoregoods(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        activityId: 9,
+        goodsIndex: 0,
+        buyNum: 1,
+        ...params,
+      }),
+      cmd: "activity_buystoregoods",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 俱乐部商店购买皮肤币
+   */
+  legion_storebuyskincoins(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "legion_storebuyskincoins",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 助威商店购买
+   */
+  warguess_storebuy(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "warguess_storebuy",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 英雄升星
+   */
+  hero_upgrade(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "hero_upgrade",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 图鉴升星
+   */
+  book_upgrade(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "book_upgrade",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 领取图鉴奖励
+   */
+  book_claimstarreward(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "book_claimstarreward",
+      seq,
+      time: Date.now(),
+    };
+  }
 }
 
 // 三国答题题库（基于mirror代码中的题目）

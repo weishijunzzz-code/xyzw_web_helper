@@ -16,6 +16,90 @@ export const fishTypeOptions = [
   { label: "黄金鱼竿", value: 2 },
 ];
 
+/**
+ * 游戏物品ID映射表（全局统一）
+ * 用于识别物品名称，方便开发调试
+ *
+ * 货币类：
+ *   2: 金砖
+ *   1002: 银两
+ *   2101: 助威币
+ *
+ * 招募类：
+ *   1001: 招募令
+ *
+ * 进阶/养成类：
+ *   1003: 进阶石
+ *   1006: 精铁
+ *   1016: 梦魇晶石
+ *   1022: 白玉
+ *   1026: 灵贝
+ *   1033: 贝壳
+ *   1041: 扳手（灵贝相关）
+ *
+ * 鱼竿类：
+ *   1011: 普通鱼竿
+ *   1012: 黄金鱼竿
+ *
+ * 宝箱类：
+ *   2001: 木质箱子
+ *   2002: 青铜箱子
+ *   2003: 黄金箱子
+ *   2004: 铂金箱子
+ *
+ * 碎片类：
+ *   3007: 随机红将碎片
+ *   3201: 红色万能碎片
+ */
+export const ITEM_ID_MAP = {
+  2: '金砖',
+  1001: '招募令',
+  1002: '银两',
+  1003: '进阶石',
+  1006: '精铁',
+  1011: '普通鱼竿',
+  1012: '黄金鱼竿',
+  1016: '梦魇晶石',
+  1022: '白玉',
+  1026: '灵贝',
+  1033: '贝壳',
+  1041: '扳手',
+  2001: '木质箱子',
+  2002: '青铜箱子',
+  2003: '黄金箱子',
+  2004: '铂金箱子',
+  2101: '助威币',
+  3007: '随机红将碎片',
+  3201: '红色万能碎片',
+};
+
+// 江湖黑市商品选项（value 为 goodsIndex）
+export const blackMarketGoodsOptions = [
+  { label: "黑市福利", value: 0, price: 0, rewards: "金砖 x500" },
+  { label: "黑市见面礼", value: 1, price: 600, rewards: "招募令 x5、精铁 x1000" },
+  { label: "黑市惊喜礼", value: 2, price: 1200, rewards: "招募令 x10、进阶石 x2000" },
+  { label: "初级黑市包", value: 3, price: 2500, rewards: "进阶石 x6000" },
+  { label: "中级黑市包", value: 4, price: 5000, rewards: "铂金箱子 x10、黄金箱子 x10、青铜箱子 x10、木质箱子 x10" },
+  { label: "高级黑市包", value: 5, price: 8000, rewards: "招募令 x40、随机红将碎片 x50" },
+  { label: "顶级鱼竿包", value: 6, price: 12000, rewards: "普通鱼竿 x30、黄金鱼竿 x30" },
+  { label: "白玉黑市包", value: 7, price: 2000, rewards: "白玉 x2000" },
+  { label: "特级灵贝包", value: 8, price: 25000, rewards: "灵贝 x10" },
+  { label: "养成补给包", value: 9, price: 8000, rewards: "梦魇晶石 x2000、扳手 x3000" },
+];
+
+// 助威商店商品选项
+export const warguessStoreGoodsOptions = [
+  { id: 7, name: "随机红将碎片" },
+  { id: 8, name: "白玉" },
+  { id: 9, name: "军团币" },
+  { id: 10, name: "进阶石" },
+  { id: 11, name: "精铁" },
+  { id: 12, name: "梦魇晶石" },
+  { id: 13, name: "普通鱼竿" },
+  { id: 14, name: "黄金鱼竿" },
+  { id: 15, name: "招募令" },
+];
+
 // 阵容选项
 export const formationOptions = [1, 2, 3, 4, 5, 6].map((v) => ({
   label: `阵容${v}`,
@@ -30,6 +114,7 @@ export const bossTimesOptions = [0, 1, 2, 3, 4].map((v) => ({
 
 // 可用的定时任务列表
 export const availableTasks = [
+  { label: "刷新所有Token", value: "refreshTokens", noTokenRequired: true },
   { label: "日常任务", value: "startBatch" },
   { label: "领取挂机", value: "claimHangUpRewards" },
   { label: "一键加钟", value: "batchAddHangUpTime" },
@@ -41,7 +126,6 @@ export const availableTasks = [
   { label: "智能发车", value: "batchSmartSendCar" },
   { label: "一键收车", value: "batchClaimCars" },
   { label: "批量开箱", value: "batchOpenBox" },
-  { label: "按积分开箱", value: "batchOpenBoxByPoints" },
   { label: "领取宝箱积分", value: "batchClaimBoxPointReward" },
   { label: "批量钓鱼", value: "batchFish" },
   { label: "批量招募", value: "batchRecruit" },
@@ -52,10 +136,15 @@ export const availableTasks = [
   { label: "一键竞技场战斗3次", value: "batcharenafight" },
   { label: "一键钓鱼补齐", value: "batchTopUpFish" },
   { label: "一键竞技场补齐", value: "batchTopUpArena" },
+  { label: "一键补齐箱子周（不领积分）", value: "batchTopUpBoxWeek" },
+  { label: "一键补齐箱子周（领箱子积分）", value: "batchTopUpBoxWeekWithClaim" },
+  { label: "按积分开箱", value: "batchOpenBoxByPoints" },
   { label: "一键领取怪异塔免费道具", value: "batchClaimFreeEnergy" },
   { label: "一键换皮闯关", value: "skinChallenge" },
   { label: "一键购买四圣碎片", value: "legion_storebuygoods" },
+  { label: "一键购买俱乐部5皮肤币", value: "legionStoreBuySkinCoins" },
   { label: "一键黑市采购", value: "store_purchase" },
+  { label: "一键购买江湖黑市", value: "activityShopBuy" },
   { label: "免费领取珍宝阁", value: "collection_claimfreereward" },
   { label: "批量领取功法残卷", value: "batchLegacyClaim" },
   { label: "批量赠送功法残卷", value: "batchLegacyGiftSendEnhanced" },
@@ -64,6 +153,10 @@ export const availableTasks = [
   { label: "一键领取蟠桃园任务", value: "batchClaimPeachTasks" },
   { label: "一键扫荡灯神", value: "batchGenieSweep" },
   { label: "一键购买梦境商品", value: "batchBuyDreamItems" },
+  { label: "一键英雄升星", value: "batchHeroUpgrade" },
+  { label: "一键图鉴升星", value: "batchBookUpgrade" },
+  { label: "一键领取图鉴奖励", value: "batchClaimStarRewards" },
+  { label: "一键购买助威商店", value: "executeWarguessStoreBuy" },
 ];
 
 // 车辆研究消耗表

@@ -181,6 +181,8 @@ export const getActivityStatus = () => {
   const hour = now.getHours();
 
   // 计算当前活动周
+  // 校准后的起始日期：2025-12-12是黑市周开始
+  // 根据用户反馈，2026-04-03应该是招募周
   const start = new Date("2025-12-12T12:00:00"); // 起始时间：黑市周开始
   const weekDuration = 7 * 24 * 60 * 60 * 1000; // 一周毫秒数
   const cycleDuration = 3 * weekDuration; // 三周期毫秒数

@@ -122,11 +122,11 @@ const today = new Date();
 
 const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
-// 活动周类型循环
+// 活动周类型循环（按正确顺序：黑市周 -> 招募周 -> 宝箱周）
 const activityWeekCycle = [
-  { name: '宝箱周', alias: '白玉周', type: 'success' },
   { name: '黑市周', alias: '怪异塔', type: 'warning' },
-  { name: '招募周', alias: '贝壳周', type: 'info' }
+  { name: '招募周', alias: '贝壳周', type: 'info' },
+  { name: '宝箱周', alias: '白玉周', type: 'success' }
 ];
 
 // 切换展开状态
@@ -139,11 +139,36 @@ const changeYear = (delta) => {
   currentYear.value += delta;
 };
 
-// 获取某月的活动周
+// 获取指定日期的活动周（基于校准后的起始日期）
+// 校准后起始日期：2025-12-12是黑市周开始
+const getActivityWeekByDate = (year, month, date) => {
+  const currentDate = new Date(year, month - 1, date, 12, 0, 0);
+  const start = new Date('2025-12-12T12:00:00');
+  const weekDuration = 7 * 24 * 60 * 60 * 1000;
+  const cycleDuration = 3 * weekDuration;
+
+  const elapsed = currentDate - start;
+  if (elapsed < 0) {
+    // 如果日期在校准起始日期之前，使用基于月份的计算方法作为回退
+    const cycleIndex = (month - 1) % 3;
+    return activityWeekCycle[cycleIndex];
+  }
+
+  const cyclePosition = elapsed % cycleDuration;
+
+  if (cyclePosition < weekDuration) {
+    return activityWeekCycle[0]; // 黑市周
+  } else if (cyclePosition < 2 * weekDuration) {
+    return activityWeekCycle[1]; // 招募周
+  } else {
+    return activityWeekCycle[2]; // 宝箱周
+  }
+};
+
+// 获取某月的活动周（基于该月第一个周五）
 const getActivityWeek = (month) => {
-  // 根据月份计算活动周类型 (1月=宝箱周, 2月=黑市周, 3月=招募周, 循环)
-  const cycleIndex = (month - 1) % 3;
-  return activityWeekCycle[cycleIndex];
+  // 使用基于校准起始日期的计算方法
+  return getActivityWeekByDate(currentYear.value, month, 1);
 };
 
 // 获取某月的天数

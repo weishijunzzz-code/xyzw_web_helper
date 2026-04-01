@@ -159,10 +159,12 @@ onUnmounted(() => {
 
 const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
+// 活动周顺序：黑市周 -> 招募周 -> 宝箱周
+// 校准后起始日期：2025-12-19是黑市周开始
 const activityWeekCycle = [
-  { name: '宝箱周', shortName: '宝箱', alias: '白玉周', aliasShort: '白玉', type: 'success' },
   { name: '黑市周', shortName: '黑市', alias: '怪异塔', aliasShort: '怪异', type: 'warning' },
-  { name: '招募周', shortName: '招募', alias: '贝壳周', aliasShort: '贝壳', type: 'info' }
+  { name: '招募周', shortName: '招募', alias: '贝壳周', aliasShort: '贝壳', type: 'info' },
+  { name: '宝箱周', shortName: '宝箱', alias: '白玉周', aliasShort: '白玉', type: 'success' }
 ];
 
 const legendItems = [
@@ -285,18 +287,37 @@ const changeYear = (delta) => {
   selectedDate.value = null;
 };
 
-// 获取指定日期的活动周类型（基于周数轮换，不是基于月份）
+// 获取指定日期的活动周类型（基于校准后的起始日期）
+// 校准后起始日期：2025-12-12是黑市周开始
+// 活动周顺序：黑市周 -> 招募周 -> 宝箱周
 const getActivityWeekByDate = (year, month, date) => {
-  // 计算这一天是该年的第几周
-  const currentDate = new Date(year, month - 1, date);
-  const startOfYear = new Date(year, 0, 1);
-  const diff = currentDate - startOfYear;
-  const oneWeek = 7 * 24 * 60 * 60 * 1000;
-  const weekNumber = Math.floor(diff / oneWeek) + 1;
+  const currentDate = new Date(year, month - 1, date, 12, 0, 0);
+  // 校准后的起始日期：2025-12-12是黑市周开始
+  // 根据用户反馈，2026-04-03应该是招募周
+  const start = new Date('2025-12-12T12:00:00');
+  const weekDuration = 7 * 24 * 60 * 60 * 1000;
+  const cycleDuration = 3 * weekDuration;
 
-  // 基于周数计算活动周类型
-  const cycleIndex = (weekNumber - 1) % 3;
-  return activityWeekCycle[cycleIndex];
+  const elapsed = currentDate - start;
+  if (elapsed < 0) {
+    // 如果日期在校准起始日期之前，使用旧的基于周数的计算方法作为回退
+    const startOfYear = new Date(year, 0, 1);
+    const diff = currentDate - startOfYear;
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    const weekNumber = Math.floor(diff / oneWeek) + 1;
+    const cycleIndex = (weekNumber - 1) % 3;
+    return activityWeekCycle[cycleIndex];
+  }
+
+  const cyclePosition = elapsed % cycleDuration;
+
+  if (cyclePosition < weekDuration) {
+    return activityWeekCycle[0]; // 黑市周
+  } else if (cyclePosition < 2 * weekDuration) {
+    return activityWeekCycle[1]; // 招募周
+  } else {
+    return activityWeekCycle[2]; // 宝箱周
+  }
 };
 
 const getDaysInMonth = (year, month) => {
