@@ -317,6 +317,7 @@ export function registerDefaultCommands(reg) {
     .register("warguess_startguess")
     .register("warguess_getguesscoinreward")
     .register("legion_payloadsignup") // 蟠桃报名
+    .register("activity_buystoregoods", { activityId: 9, goodsIndex: 0, buyNum: 1 }) // 江湖黑市购买
 
     // 珍宝阁相关
     .register("collection_claimfreereward")
