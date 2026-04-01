@@ -381,6 +381,20 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="executeActivityShopBuy"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键购买江湖黑市
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="executeWarguessStoreBuyWithConfig"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键购买助威商店
+                </n-button>
+                <n-button
+                  size="small"
                   @click="collection_claimfreereward"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -627,6 +641,20 @@
                   "
                 >
                   一键竞技场补齐
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="batchTopUpBoxWeekWithoutClaim"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键补齐箱子周（不领积分）
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="batchTopUpBoxWeekWithClaim"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键补齐箱子周（领积分）
                 </n-button>
                 <n-button
                   size="small"
@@ -2021,6 +2049,32 @@
                   >点击配置</n-button
                 >
               </div>
+              <div
+                class="setting-item"
+                style="
+                  flex-direction: row;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label class="setting-label">江湖黑市购买配置</label>
+                <n-button size="small" @click="openBlackMarketModal"
+                  >点击配置</n-button
+                >
+              </div>
+              <div
+                class="setting-item"
+                style="
+                  flex-direction: row;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label class="setting-label">助威商店购买配置</label>
+                <n-button size="small" @click="openWarguessStoreModal"
+                  >点击配置</n-button
+                >
+              </div>
             </div>
             <n-divider title-placement="left" style="margin: 12px 0 8px 0"
               >智能发车条件设置(0为不限制)</n-divider
@@ -2450,6 +2504,85 @@
       </div>
     </n-modal>
 
+    <!-- Black Market Config Modal -->
+    <n-modal
+      v-model:show="showBlackMarketModal"
+      preset="card"
+      title="江湖黑市购买配置"
+      style="width: 90%; max-width: 600px"
+      :mask-closable="false"
+    >
+      <div class="settings-content">
+        <div class="settings-grid">
+          <n-alert type="info" show-icon style="margin-bottom: 12px">
+            请勾选需要购买的商品。只会购买未购买过的商品（每个商品限购一次）。
+          </n-alert>
+
+          <div style="display: flex; gap: 12px; margin-bottom: 12px">
+            <n-button size="small" type="primary" @click="selectAllBlackMarketItems">
+              全选所有
+            </n-button>
+            <n-button size="small" @click="clearAllBlackMarketItems">
+              清空选择
+            </n-button>
+            <n-button size="small" type="warning" @click="selectRecommendedBlackMarketItems">
+              推荐配置
+            </n-button>
+          </div>
+
+          <div style="max-height: 400px; overflow-y: auto;">
+            <div v-for="item in blackMarketGoodsOptions" :key="item.value" style="padding: 6px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 6px">
+              <n-checkbox
+                :checked="blackMarketPurchaseList.includes(item.value)"
+                @update:checked="(checked) => toggleBlackMarketItem(item.value, checked)"
+              >
+                <div style="font-weight: 500">{{ item.label }} ({{ item.price === 0 ? '免费' : item.price + '金砖' }})</div>
+                <div style="margin-left: 24px; margin-top: 2px; color: #888; font-size: 11px">
+                  {{ item.rewards }}
+                </div>
+              </n-checkbox>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: right">
+          <n-button @click="showBlackMarketModal = false" style="margin-right: 12px">取消</n-button>
+          <n-button type="primary" @click="saveBlackMarketConfig">保存配置</n-button>
+        </div>
+      </div>
+    </n-modal>
+
+    <!-- Warguess Store Config Modal -->
+    <n-modal
+      v-model:show="showWarguessStoreModal"
+      preset="card"
+      title="助威商店购买配置"
+      style="width: 90%; max-width: 500px"
+      :mask-closable="false"
+    >
+      <div class="settings-content">
+        <div class="settings-grid">
+          <n-alert type="info" show-icon style="margin-bottom: 12px">
+            请勾选需要购买的商品。
+          </n-alert>
+
+          <n-space vertical style="width: 100%">
+            <div v-for="goods in warguessStoreGoodsOptions" :key="goods.id" style="padding: 8px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px">
+              <n-checkbox
+                :checked="warguessStorePurchaseList.includes(goods.id)"
+                @update:checked="(checked) => toggleWarguessStoreItem(goods.id, checked)"
+              >
+                <div style="font-weight: 500">{{ goods.name }}</div>
+              </n-checkbox>
+            </div>
+          </n-space>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: right">
+          <n-button @click="showWarguessStoreModal = false" style="margin-right: 12px">取消</n-button>
+          <n-button type="primary" @click="saveWarguessStoreConfig">保存配置</n-button>
+        </div>
+      </div>
+    </n-modal>
+
     <!-- War Guess Modal -->
     <n-modal
       v-model:show="showWarGuessModal"
@@ -2830,6 +2963,8 @@ import {
   formationOptions,
   bossTimesOptions,
   availableTasks,
+  blackMarketGoodsOptions,
+  warguessStoreGoodsOptions,
   CarresearchItem,
   FISH_TARGET,
   ARENA_TARGET,
@@ -2994,6 +3129,8 @@ const isarenaActivityOpen = computed(() => {
 });
 const getCurrentActivityWeek = computed(() => {
   const now = new Date();
+  // 校准后的起始日期：2025-12-12是黑市周开始
+  // 根据用户反馈，2026-04-03应该是招募周
   const start = new Date("2025-12-12T12:00:00"); // 起始时间：黑市周开始
   const weekDuration = 7 * 24 * 60 * 60 * 1000; // 一周毫秒数
   const cycleDuration = 3 * weekDuration; // 三周期毫秒数
@@ -3363,6 +3500,8 @@ for (const merchantId in goldItemsConfig) {
 
 const batchSettings = reactive({
   dreamPurchaseList: defaultDreamPurchaseList,
+  blackMarketPurchaseList: [0, 1, 2, 3, 4, 5, 7], // 默认购买的黑市商品
+  warguessStorePurchaseList: [7, 8, 9], // 默认购买的助威商店商品：随机红将碎片、白玉、军团币
   boxCount: 100,
   fishCount: 100,
   recruitCount: 100,
@@ -3446,6 +3585,119 @@ const securityPassword = ref(""); // 安全密码
 // 头像加载状态
 const isAvatarLoading = ref(false);
 const avatarLoadError = ref(false);
+
+// ======================
+// Black Market Feature
+// ======================
+
+// Black Market Modal State
+const showBlackMarketModal = ref(false);
+const blackMarketPurchaseList = ref([]);
+
+// Open black market config modal
+const openBlackMarketModal = () => {
+  blackMarketPurchaseList.value = [...(batchSettings.blackMarketPurchaseList || [])];
+  showBlackMarketModal.value = true;
+};
+
+// Toggle black market item selection
+const toggleBlackMarketItem = (itemId, checked) => {
+  const currentList = [...blackMarketPurchaseList.value];
+  if (checked) {
+    if (!currentList.includes(itemId)) {
+      currentList.push(itemId);
+    }
+  } else {
+    const index = currentList.indexOf(itemId);
+    if (index > -1) {
+      currentList.splice(index, 1);
+    }
+  }
+  blackMarketPurchaseList.value = currentList;
+};
+
+// Save black market config
+const saveBlackMarketConfig = () => {
+  batchSettings.blackMarketPurchaseList = [...blackMarketPurchaseList.value];
+  localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
+  message.success("江湖黑市购买配置已保存");
+  showBlackMarketModal.value = false;
+};
+
+// Select all black market items
+const selectAllBlackMarketItems = () => {
+  blackMarketPurchaseList.value = blackMarketGoodsOptions.map(item => item.value);
+};
+
+// Clear all black market items
+const clearAllBlackMarketItems = () => {
+  blackMarketPurchaseList.value = [];
+};
+
+// Select recommended black market items
+const selectRecommendedBlackMarketItems = () => {
+  blackMarketPurchaseList.value = [0, 1, 2, 4, 6, 7];
+};
+
+// Execute activity shop buy with config
+const executeActivityShopBuy = () => {
+  const goodsIndices = batchSettings.blackMarketPurchaseList || [];
+  if (goodsIndices.length === 0) {
+    message.warning("请先配置要购买的商品");
+    openBlackMarketModal();
+    return;
+  }
+  activityShopBuy({ goodsIndices });
+};
+
+// ======================
+// Warguess Store Feature
+// ======================
+
+// Warguess Store Modal State
+const showWarguessStoreModal = ref(false);
+const warguessStorePurchaseList = ref([]);
+
+// Open warguess store config modal
+const openWarguessStoreModal = () => {
+  warguessStorePurchaseList.value = [...(batchSettings.warguessStorePurchaseList || [])];
+  showWarguessStoreModal.value = true;
+};
+
+// Toggle warguess store item selection
+const toggleWarguessStoreItem = (itemId, checked) => {
+  const currentList = [...warguessStorePurchaseList.value];
+  if (checked) {
+    if (!currentList.includes(itemId)) {
+      currentList.push(itemId);
+    }
+  } else {
+    const index = currentList.indexOf(itemId);
+    if (index > -1) {
+      currentList.splice(index, 1);
+    }
+  }
+  warguessStorePurchaseList.value = currentList;
+};
+
+// Save warguess store config
+const saveWarguessStoreConfig = () => {
+  batchSettings.warguessStorePurchaseList = [...warguessStorePurchaseList.value];
+  localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
+  message.success("助威商店购买配置已保存");
+  showWarguessStoreModal.value = false;
+};
+
+// Execute warguess store buy with config
+const executeWarguessStoreBuyWithConfig = () => {
+  const goodsIds = batchSettings.warguessStorePurchaseList || [];
+  if (goodsIds.length === 0) {
+    message.warning("请先配置要购买的商品");
+    openWarguessStoreModal();
+    return;
+  }
+  executeWarguessStoreBuy({ goodsIds });
+};
 
 // ======================
 // Scheduled Tasks Feature
@@ -5746,6 +5998,8 @@ const {
   batchClaimStarRewards,
   batchClaimPeachTasks,
   batchGenieSweep,
+  batchTopUpBoxWeekWithoutClaim,
+  batchTopUpBoxWeekWithClaim,
 } = tasksItem;
 
 const tasksDungeon = createTasksDungeon(createTaskDeps());
@@ -5761,6 +6015,8 @@ const {
   legionStoreBuySkinCoins,
   store_purchase,
   collection_claimfreereward,
+  activityShopBuy,
+  executeWarguessStoreBuy,
 } = tasksStore;
 
 const tasksLegacy = createTasksLegacy(createTaskDeps());
@@ -5810,9 +6066,14 @@ const taskFunctionMap = {
   legionStoreBuySkinCoins,
   store_purchase,
   collection_claimfreereward,
+  activityShopBuy,
+  executeWarguessStoreBuy,
   // Legacy tasks
   batchLegacyClaim,
   batchLegacyGiftSendEnhanced,
+  // Box week tasks
+  batchTopUpBoxWeekWithoutClaim,
+  batchTopUpBoxWeekWithClaim,
 };
 
 const startBatch = async () => {
