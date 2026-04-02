@@ -26,7 +26,7 @@
       <a-modal
         class="token-import-modal"
         v-model:visible="showImportForm"
-        width="40rem"
+        :width="isMobile ? '95vw' : '40rem'"
         :footer="false"
         :default-visible="!tokenStore.hasTokens"
       >
@@ -39,8 +39,8 @@
           </h2>
         </template>
         <div class="card-header">
-          <!-- 导入方式选择 -->
-          <div class="import-method-scroll">
+          <!-- 导入方式选择 - 桌面端使用选项卡 -->
+          <div v-if="!isMobile" class="import-method-scroll">
             <n-radio-group
               v-model:value="importMethod"
               class="import-method-tabs"
@@ -48,11 +48,19 @@
             >
               <n-radio-button value="manual"> 手动输入 </n-radio-button>
               <n-radio-button value="url"> URL获取 </n-radio-button>
-              <n-radio-button value="wxQrcode"> 微信扫码获取 </n-radio-button>
-              <!-- <n-radio-button value="tokenToBin"> Token转Bin </n-radio-button> -->
-              <n-radio-button value="bin"> BIN多角色获取 </n-radio-button>
-              <n-radio-button value="singlebin"> BIN单角色获取 </n-radio-button>
+              <n-radio-button value="wxQrcode"> 微信扫码 </n-radio-button>
+              <n-radio-button value="bin"> 多角色 </n-radio-button>
+              <n-radio-button value="singlebin"> 单角色 </n-radio-button>
             </n-radio-group>
+          </div>
+          <!-- 导入方式选择 - 移动端使用下拉选择 -->
+          <div v-else class="import-method-mobile">
+            <n-select
+              v-model:value="importMethod"
+              :options="importMethodOptions"
+              size="small"
+              class="mobile-method-select"
+            />
           </div>
         </div>
         <div class="card-body">
@@ -91,72 +99,92 @@
 
       <!-- Token列表 -->
       <div v-if="tokenStore.hasTokens" class="tokens-section">
-        <div class="section-header">
-          <n-space align="center">
-            <h2>我的Token列表 ({{ tokenStore.gameTokens.length }}个)</h2>
-            <n-radio-group v-model:value="viewMode" size="small">
-              <n-radio-button value="list">列表</n-radio-button>
-              <n-radio-button value="card">卡片</n-radio-button>
-            </n-radio-group>
-            <n-divider vertical style="height: 24px"></n-divider>
-            <n-button-group size="small">
+        <div class="section-header" :class="{ 'is-mobile': isMobile }">
+          <div class="header-left">
+            <h2>Token列表 ({{ tokenStore.gameTokens.length }}个)</h2>
+            <n-space v-if="!isMobile" align="center" size="small">
+              <n-radio-group v-model:value="viewMode" size="small">
+                <n-radio-button value="list">列表</n-radio-button>
+                <n-radio-button value="card">卡片</n-radio-button>
+              </n-radio-group>
+              <n-divider vertical style="height: 24px"></n-divider>
+              <n-button-group size="small">
+                <n-button
+                  @click="toggleSort('name')"
+                  :type="sortConfig.field === 'name' ? 'primary' : 'default'"
+                >
+                  名称 {{ getSortIcon("name") }}
+                </n-button>
+                <n-button
+                  @click="toggleSort('server')"
+                  :type="sortConfig.field === 'server' ? 'primary' : 'default'"
+                >
+                  服务器 {{ getSortIcon("server") }}
+                </n-button>
+                <n-button
+                  @click="toggleSort('createdAt')"
+                  :type="sortConfig.field === 'createdAt' ? 'primary' : 'default'"
+                >
+                  创建 {{ getSortIcon("createdAt") }}
+                </n-button>
+                <n-button
+                  @click="toggleSort('lastUsed')"
+                  :type="sortConfig.field === 'lastUsed' ? 'primary' : 'default'"
+                >
+                  使用 {{ getSortIcon("lastUsed") }}
+                </n-button>
+              </n-button-group>
+            </n-space>
+            <!-- 移动端简化控制 -->
+            <n-space v-else align="center" size="small">
+              <n-select
+                v-model:value="sortConfig.field"
+                :options="sortOptions"
+                size="tiny"
+                style="width: 80px"
+                @update:value="(val) => { sortConfig.field = val; localStorage.setItem('tokenSortConfig', JSON.stringify(sortConfig)); }"
+              />
               <n-button
-                @click="toggleSort('name')"
-                :type="sortConfig.field === 'name' ? 'primary' : 'default'"
+                size="tiny"
+                @click="toggleSortDirection"
               >
-                名称 {{ getSortIcon("name") }}
+                {{ sortConfig.direction === 'asc' ? '↑' : '↓' }}
               </n-button>
-              <n-button
-                @click="toggleSort('server')"
-                :type="sortConfig.field === 'server' ? 'primary' : 'default'"
-              >
-                服务器 {{ getSortIcon("server") }}
-              </n-button>
-              <n-button
-                @click="toggleSort('createdAt')"
-                :type="sortConfig.field === 'createdAt' ? 'primary' : 'default'"
-              >
-                创建时间 {{ getSortIcon("createdAt") }}
-              </n-button>
-              <n-button
-                @click="toggleSort('lastUsed')"
-                :type="sortConfig.field === 'lastUsed' ? 'primary' : 'default'"
-              >
-                最后使用 {{ getSortIcon("lastUsed") }}
-              </n-button>
-            </n-button-group>
-          </n-space>
-          <div class="header-actions">
-            <n-button type="success" @click="goToDashboard">
+            </n-space>
+          </div>
+          <div class="header-actions" :class="{ 'is-mobile': isMobile }">
+            <n-button v-if="!isMobile" type="success" @click="goToDashboard" size="small">
               <template #icon>
                 <n-icon>
                   <List />
                 </n-icon>
               </template>
-              批量功能
+              批量
             </n-button>
 
             <n-button
               v-if="!showImportForm"
               type="primary"
               @click="showImportForm = true"
+              size="small"
             >
               <template #icon>
                 <n-icon>
                   <Add />
                 </n-icon>
               </template>
-              添加Token
+              <span v-if="!isMobile">添加Token</span>
+              <span v-else>添加</span>
             </n-button>
 
             <n-dropdown :options="bulkOptions" @select="handleBulkAction">
-              <n-button>
+              <n-button size="small">
                 <template #icon>
                   <n-icon>
                     <Menu />
                   </n-icon>
                 </template>
-                批量操作
+                <span v-if="!isMobile">批量操作</span>
               </n-button>
             </n-dropdown>
           </div>
@@ -648,6 +676,7 @@ import { useRouter } from "vue-router";
 import { transformToken, scheduleAuthUserRequest } from "@/utils/token";
 import { $emit } from "@/stores/events/index.ts";
 import useIndexedDB from "@/hooks/useIndexedDB";
+import { useMobile } from "@/composables/useMobile";
 const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer, clearAll } =
   useIndexedDB();
 // 接收路由参数
@@ -664,6 +693,7 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const tokenStore = useTokenStore();
+const { isMobile } = useMobile();
 
 // 限流等待状态
 const rateLimitWaiting = ref(false);
@@ -683,6 +713,29 @@ const connectingTokens = ref(new Set());
 // 从localStorage读取上次的视图模式，默认为列表视图
 const viewMode = ref(localStorage.getItem("tokenViewMode") || "list");
 const dragIndex = ref(null);
+
+// 导入方式选项 - 用于移动端下拉选择
+const importMethodOptions = [
+  { label: "手动输入", value: "manual" },
+  { label: "URL获取", value: "url" },
+  { label: "微信扫码", value: "wxQrcode" },
+  { label: "多角色BIN", value: "bin" },
+  { label: "单角色BIN", value: "singlebin" },
+];
+
+// 排序选项 - 用于移动端下拉选择
+const sortOptions = [
+  { label: "名称", value: "name" },
+  { label: "服务器", value: "server" },
+  { label: "创建", value: "createdAt" },
+  { label: "使用", value: "lastUsed" },
+];
+
+// 切换排序方向
+const toggleSortDirection = () => {
+  sortConfig.value.direction = sortConfig.value.direction === "asc" ? "desc" : "asc";
+  localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
+};
 
 // 备注编辑状态管理
 const editingRemark = ref(null); // 当前正在编辑备注的tokenId
@@ -1783,6 +1836,13 @@ onUnmounted(() => {
       white-space: nowrap;
       min-width: fit-content;
     }
+
+    &.is-mobile {
+      :deep(.n-radio-button) {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+    }
   }
 }
 
@@ -1794,34 +1854,43 @@ onUnmounted(() => {
 
   .token-import-modal {
     .arco-modal {
-      width: 95vw !important;
-      max-width: 95vw !important;
-      margin: 0 auto !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      margin: 0 !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      border-radius: 0 !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
     }
 
     .arco-modal-content {
       padding: 12px !important;
+      height: calc(100vh - 60px) !important;
+      overflow-y: auto !important;
     }
 
-    .import-method-scroll {
-      margin: 12px -12px !important;
-      padding: 0 12px !important;
-      width: calc(100% + 24px) !important;
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch !important;
+    .card-header {
+      margin-bottom: 16px;
     }
 
-    .import-method-tabs {
-      display: flex !important;
-      flex-wrap: nowrap !important;
-      width: max-content !important;
+    // 移动端使用下拉选择器
+    .import-method-mobile {
+      width: 100%;
 
-      :deep(.n-radio-button) {
-        flex-shrink: 0 !important;
-        white-space: nowrap !important;
-        min-width: fit-content !important;
-        padding: 8px 16px !important;
-        font-size: 14px !important;
+      .mobile-method-select {
+        width: 100%;
+
+        :deep(.n-base-selection) {
+          height: 40px;
+        }
+
+        :deep(.n-base-selection-label) {
+          height: 40px;
+          line-height: 40px;
+        }
       }
     }
 
@@ -1832,6 +1901,21 @@ onUnmounted(() => {
     .n-form-item {
       margin-bottom: 12px !important;
     }
+  }
+
+  // Token列表移动端适配
+  .tokens-section {
+    padding: var(--spacing-md);
+    max-height: none;
+  }
+
+  .tokens-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .token-card {
+    padding: var(--spacing-md);
   }
 }
 
@@ -1966,6 +2050,31 @@ onUnmounted(() => {
     font-size: var(--font-size-xl);
     margin: 0;
   }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+
+  // 移动端适配
+  &.is-mobile {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+
+    h2 {
+      font-size: var(--font-size-md);
+    }
+
+    .header-left {
+      width: 100%;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+    }
+  }
 }
 
 .header-actions {
@@ -1975,6 +2084,17 @@ onUnmounted(() => {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   flex-wrap: nowrap;
+
+  // 移动端适配
+  &.is-mobile {
+    width: 100%;
+    justify-content: flex-end;
+    gap: var(--spacing-xs);
+
+    .n-button {
+      padding: 0 8px;
+    }
+  }
 }
 
 .tokens-grid {
