@@ -86,23 +86,27 @@
               @drop="onDrop($event, hero)"
             >
               <div class="hero-position">{{ hero.position + 1 }}</div>
-              <div class="hero-avatar" @click="showHeroRefineModal(hero)">
-                <img
-                  v-if="getHeroAvatar(hero.heroId)"
-                  :src="getHeroAvatar(hero.heroId)"
-                  :alt="getHeroName(hero.heroId)"
-                />
-                <div v-else class="hero-placeholder">
-                  {{ getHeroName(hero.heroId)?.substring(0, 2) || "?" }}
+              <div class="hero-left" @click="showHeroRefineModal(hero)">
+                <div class="hero-avatar">
+                  <img
+                    v-if="getHeroAvatar(hero.heroId)"
+                    :src="getHeroAvatar(hero.heroId)"
+                    :alt="getHeroName(hero.heroId)"
+                  />
+                  <div v-else class="hero-placeholder">
+                    {{ getHeroName(hero.heroId)?.substring(0, 2) || "?" }}
+                  </div>
+                </div>
+                <div class="hero-avatar-info">
+                  <div class="hero-name-small-inline">
+                    {{ getHeroName(hero.heroId) || `武将${hero.heroId}` }}
+                  </div>
+                  <div class="hero-level-small-inline" v-if="hero.level">
+                    Lv.{{ hero.level }}
+                  </div>
                 </div>
               </div>
               <div class="hero-info" @click="showHeroRefineModal(hero)">
-                <div class="hero-name">
-                  {{ getHeroName(hero.heroId) || `武将${hero.heroId}` }}
-                </div>
-                <div class="hero-level" v-if="hero.level">
-                  Lv.{{ hero.level }}
-                </div>
                 <div class="hero-fish" v-if="getFishInfo(hero.artifactId)">
                   {{ getFishInfo(hero.artifactId).name }}
                   <span
@@ -124,6 +128,24 @@
                       :style="{ backgroundColor: color }"
                     ></span>
                   </span>
+                </div>
+                <div class="hero-stats" v-if="hero.power">
+                  <div class="stat-row">
+                    <span class="stat-power"
+                      >战力{{ formatPower(hero.power) }}</span
+                    >
+                    <span class="stat-speed" v-if="hero.speed"
+                      >速度{{ hero.speed }}</span
+                    >
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-attack" v-if="hero.attack"
+                      >攻击{{ formatPower(hero.attack) }}</span
+                    >
+                    <span class="stat-hp" v-if="hero.hp"
+                      >血量{{ formatPower(hero.hp) }}</span
+                    >
+                  </div>
                 </div>
               </div>
               <div class="hero-actions">
@@ -153,7 +175,7 @@
         v-model:show="savedLineupsModalVisible"
         preset="card"
         title="已保存的阵容"
-        style="width: 600px; max-width: 90vw"
+        style="width: 900px; max-width: 90vw"
         :bordered="false"
       >
         <div v-if="savedLineups.length === 0" class="empty-tip">
@@ -161,17 +183,29 @@
         </div>
         <div v-else class="saved-lineups-modal-content">
           <div class="team-tabs">
-            <div
-              v-for="teamId in availableTeams"
-              :key="teamId"
-              class="team-tab"
-              :class="{ active: selectedTeamTab === teamId }"
-              @click="selectedTeamTab = teamId"
-            >
-              槽位{{ teamId }}
-              <span class="tab-count"
-                >({{ getLineupsByTeamId(teamId).length }})</span
+            <div class="team-tabs-left">
+              <div
+                v-for="teamId in availableTeams"
+                :key="teamId"
+                class="team-tab"
+                :class="{ active: selectedTeamTab === teamId }"
+                @click="selectedTeamTab = teamId"
               >
+                槽位{{ teamId }}
+                <span class="tab-count"
+                  >({{ getLineupsByTeamId(teamId).length }})</span
+                >
+              </div>
+            </div>
+            <div class="team-tabs-right">
+              <n-button size="tiny" @click="exportLineups"> 导出 </n-button>
+              <n-upload
+                :show-file-list="false"
+                :custom-request="importLineups"
+                accept=".json"
+              >
+                <n-button size="tiny">导入</n-button>
+              </n-upload>
             </div>
           </div>
           <div class="lineups-list">
@@ -251,29 +285,58 @@
                     <div v-else class="hero-avatar-placeholder">
                       {{ getHeroName(hero.heroId)?.[0] || "?" }}
                     </div>
-                    <div class="hero-name-small">
-                      {{ getHeroName(hero.heroId) || `武将${hero.heroId}` }}
-                    </div>
-                    <div v-if="hero.level" class="hero-level-small">
-                      Lv.{{ formatLevel(hero.level) }}
-                    </div>
-                    <div v-if="hero.fishId" class="hero-fish-info">
-                      <span class="hero-fish-name">
-                        {{ getFishNameById(hero.fishId) }}
-                        <span v-if="hero.skillId" class="hero-fish-skill-name">
-                          {{ getPearlSkillNameById(hero.skillId) }}
-                        </span>
-                      </span>
-                      <div
-                        v-if="getSlotColors(hero.slotMap)"
-                        class="hero-fish-slots"
-                      >
-                        <span
-                          v-for="(color, idx) in getSlotColors(hero.slotMap)"
-                          :key="idx"
-                          class="slot-dot"
-                          :style="{ backgroundColor: color }"
-                        ></span>
+                    <div class="hero-info-small">
+                      <div class="hero-header-small">
+                        <div class="hero-name-small">
+                          {{ getHeroName(hero.heroId) || `武将${hero.heroId}` }}
+                        </div>
+                        <div v-if="hero.level" class="hero-level-small">
+                          Lv.{{ formatLevel(hero.level) }}
+                        </div>
+                      </div>
+                      <div v-if="hero.fishId" class="hero-fish-info">
+                        <div class="hero-fish-row">
+                          <span class="hero-fish-name">
+                            {{ getFishNameById(hero.fishId) }}
+                            <span
+                              v-if="hero.skillId"
+                              class="hero-fish-skill-name"
+                            >
+                              {{ getPearlSkillNameById(hero.skillId) }}
+                            </span>
+                          </span>
+                          <div
+                            v-if="getSlotColors(hero.slotMap)"
+                            class="hero-fish-slots"
+                          >
+                            <span
+                              v-for="(color, idx) in getSlotColors(
+                                hero.slotMap,
+                              )"
+                              :key="idx"
+                              class="slot-dot"
+                              :style="{ backgroundColor: color }"
+                            ></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="hero.power" class="hero-stats-small">
+                        <div class="stat-row-small">
+                          <span class="stat-power"
+                            >战力{{ formatPower(hero.power) }}</span
+                          >
+                          <span class="stat-speed" v-if="hero.speed"
+                            >速度{{ hero.speed }}</span
+                          >
+                        </div>
+                        <div class="stat-row-small">
+                          <span class="stat-attack" v-if="hero.attack"
+                            >攻击{{ formatPower(hero.attack) }}</span
+                          >
+                          <span class="stat-hp" v-if="hero.hp"
+                            >血量{{ formatPower(hero.hp) }}</span
+                          >
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -511,6 +574,7 @@ import {
   PearlMap,
   LEGION_TECH_MAX_LEVEL,
   LEGION_TECH_TYPE_MAP,
+  LEGION_TECH_RESET_TYPE_MAP,
   LEGION_TECH_TYPE_NAME,
   LEGION_TECH_NAME,
   getTechType,
@@ -539,6 +603,26 @@ const REFRESH_DEBOUNCE = 3000;
 const COMMAND_DELAY = 500;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const formatPower = (power) => {
+  if (!power) return "0";
+  if (power >= 100000000) {
+    return (power / 100000000).toFixed(2) + "亿";
+  }
+  if (power >= 10000) {
+    return (power / 10000).toFixed(2) + "万";
+  }
+  return power.toString();
+};
+
+const generateLineupId = () => {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
 
 const state = ref({
   isRunning: false,
@@ -583,43 +667,60 @@ const syncLegionResearch = async (tokenId, targetResearch) => {
   const currentResearch = role?.legionResearch || {};
 
   const typesToReset = new Set();
+  const typesToResetResearch = new Set();
 
   for (const type of [1, 2, 3, 4, 5, 6]) {
-    const techIds = LEGION_TECH_TYPE_MAP[type];
+    const techIds = LEGION_TECH_RESET_TYPE_MAP[type];
     for (const techId of techIds) {
       const currentLevel = currentResearch[techId] || 0;
       const targetLevel = targetResearch[techId] || 0;
-      if (currentLevel !== targetLevel) {
+      if (
+        currentLevel !== targetLevel &&
+        (currentLevel > 0 || targetLevel > 0)
+      ) {
+        typesToResetResearch.add(type);
+        break;
+      }
+    }
+    const techIds2 = LEGION_TECH_TYPE_MAP[type];
+    for (const techId of techIds2) {
+      const currentLevel = currentResearch[techId] || 0;
+      const targetLevel = targetResearch[techId] || 0;
+      if (
+        currentLevel !== targetLevel &&
+        (currentLevel > 0 || targetLevel > 0)
+      ) {
         typesToReset.add(type);
         break;
       }
     }
   }
 
-  if (typesToReset.size === 0) {
+  if (typesToResetResearch.size === 0 && typesToReset.size === 0) {
     return { success: true, message: "科技配置已匹配，无需调整" };
   }
 
   const errors = [];
 
-  for (const type of typesToReset) {
+  for (const type of typesToResetResearch) {
     try {
       await tokenStore.sendMessageWithPromise(tokenId, "legion_resetresearch", {
         advanced: false,
         type: type,
       });
-      await delay(COMMAND_DELAY);
     } catch (err) {}
+    await delay(COMMAND_DELAY);
   }
 
   const sortedTypes = [...typesToReset].sort((a, b) => a - b);
+  console.log(sortedTypes);
 
   for (const type of sortedTypes) {
-    const techIds = LEGION_TECH_TYPE_MAP[type];
-    for (const techId of techIds) {
+    const techIds2 = LEGION_TECH_TYPE_MAP[type];
+    for (const techId of techIds2) {
       const targetLevel = targetResearch[techId] || 0;
       if (targetLevel > 0) {
-        const maxLevel = LEGION_TECH_MAX_LEVEL[techId] || 20;
+        const maxLevel = LEGION_TECH_MAX_LEVEL[techId];
         const isMax = targetLevel >= maxLevel;
         if (isMax) {
           try {
@@ -631,8 +732,8 @@ const syncLegionResearch = async (tokenId, targetResearch) => {
                 researchId: techId,
               },
             );
-            await delay(COMMAND_DELAY);
           } catch (err) {}
+          await delay(COMMAND_DELAY);
         } else {
           for (let i = 0; i < targetLevel; i++) {
             try {
@@ -644,8 +745,8 @@ const syncLegionResearch = async (tokenId, targetResearch) => {
                   researchId: techId,
                 },
               );
-              await delay(COMMAND_DELAY);
             } catch (err) {}
+            await delay(COMMAND_DELAY);
           }
         }
       }
@@ -838,13 +939,20 @@ const currentTeamHeroes = computed(() => {
   if (!currentTeamInfo.value) return [];
   const teamInfo = currentTeamInfo.value;
   return Object.entries(teamInfo)
-    .map(([key, hero]) => ({
-      position: hero?.battleTeamSlot ?? Number(key),
-      heroId: hero?.heroId || hero?.id,
-      level: hero?.level || null,
-      artifactId: hero?.artifactId || null,
-      attachmentUid: hero?.attachmentUid || null,
-    }))
+    .map(([key, hero]) => {
+      const heroData = roleHeroesData.value[String(hero?.heroId || hero?.id)];
+      return {
+        position: hero?.battleTeamSlot ?? Number(key),
+        heroId: hero?.heroId || hero?.id,
+        level: hero?.level || null,
+        artifactId: hero?.artifactId || null,
+        attachmentUid: hero?.attachmentUid || null,
+        power: heroData?.power || null,
+        attack: heroData?.attack || null,
+        hp: heroData?.hp || null,
+        speed: heroData?.speed || null,
+      };
+    })
     .filter((h) => h.heroId)
     .sort((a, b) => a.position - b.position);
 });
@@ -853,13 +961,20 @@ const editingHeroes = computed(() => {
   if (Object.keys(editingTeamHeroes.value).length > 0) {
     return Object.entries(editingTeamHeroes.value)
       .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([pos, hero]) => ({
-        position: Number(pos),
-        heroId: hero?.heroId,
-        level: hero?.level || null,
-        artifactId: hero?.artifactId || null,
-        attachmentUid: hero?.attachmentUid || null,
-      }))
+      .map(([pos, hero]) => {
+        const heroData = roleHeroesData.value[String(hero?.heroId)];
+        return {
+          position: Number(pos),
+          heroId: hero?.heroId,
+          level: hero?.level || null,
+          artifactId: hero?.artifactId || null,
+          attachmentUid: hero?.attachmentUid || null,
+          power: heroData?.power || null,
+          attack: heroData?.attack || null,
+          hp: heroData?.hp || null,
+          speed: heroData?.speed || null,
+        };
+      })
       .filter((h) => h.heroId);
   }
   return currentTeamHeroes.value;
@@ -995,7 +1110,6 @@ const showHeroRefineModal = async (hero) => {
         "role_getroleinfo",
         {},
       );
-      await delay(COMMAND_DELAY);
       const role = roleInfo?.role || roleInfo;
       const heroes = role?.heroes || {};
       allHeroesData.value = heroes;
@@ -1008,10 +1122,10 @@ const showHeroRefineModal = async (hero) => {
       message.warning("未找到该武将的装备数据");
     }
   } catch (error) {
-    message.error(`获取装备信息失败: ${error.message}`);
   } finally {
     refineModalLoading.value = false;
   }
+  await delay(COMMAND_DELAY);
 };
 
 const openExchangeModal = (hero) => {
@@ -1392,10 +1506,15 @@ const saveCurrentLineup = async () => {
         pearlId: pearlId,
         skillId: pearlData?.skillId || null,
         slotMap: slotMap,
+        power: heroData?.power || null,
+        attack: heroData?.attack || null,
+        hp: heroData?.hp || null,
+        speed: heroData?.speed || null,
       };
     });
 
     savedLineups.value.unshift({
+      id: generateLineupId(),
       name: lineupName,
       heroes: heroesData,
       teamId: currentTeamId.value,
@@ -1459,20 +1578,79 @@ const getOrder = (level) => {
   return order;
 };
 
-const applyHeroLevel = async (tokenId, heroId, targetLevel, currentLevel) => {
+const applyHeroLevel = async (
+  tokenId,
+  heroId,
+  targetLevel,
+  currentLevel,
+  currentOrder = 0,
+  slot = -1,
+) => {
   if (!targetLevel || targetLevel <= 0)
     return { success: true, message: "无目标等级" };
 
   let actualCurrentLevel = currentLevel;
+  let actualCurrentOrder = currentOrder;
 
   if (actualCurrentLevel > targetLevel) {
-    try {
-      await tokenStore.sendMessageWithPromise(tokenId, "hero_rebirth", {
-        heroId,
-      });
+    if (slot >= 0) {
+      try {
+        await tokenStore.sendMessageWithPromise(tokenId, "hero_gobackbattle", {
+          slot,
+        });
+      } catch (err) {}
       await delay(COMMAND_DELAY);
-      actualCurrentLevel = 1;
+    }
+
+    try {
+      const result = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "hero_rebirth",
+        {
+          heroId,
+        },
+      );
+      if (result?.role?.heroes?.[heroId]?.level !== undefined) {
+        actualCurrentLevel = result.role.heroes[heroId].level;
+      } else {
+        actualCurrentLevel = 1;
+      }
+      if (result?.role?.heroes?.[heroId]?.order !== undefined) {
+        actualCurrentOrder = result.role.heroes[heroId].order;
+      } else {
+        actualCurrentOrder = 0;
+      }
     } catch (err) {}
+    await delay(COMMAND_DELAY);
+
+    if (slot >= 0) {
+      try {
+        await tokenStore.sendMessageWithPromise(tokenId, "hero_gointobattle", {
+          heroId,
+          slot,
+        });
+      } catch (err) {}
+      await delay(COMMAND_DELAY);
+    }
+  }
+
+  const expectedOrder = getOrder(actualCurrentLevel);
+  if (actualCurrentOrder < expectedOrder) {
+    try {
+      const result = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "hero_heroupgradeorder",
+        {
+          heroId,
+        },
+      );
+      if (result?.role?.heroes?.[heroId]?.order !== undefined) {
+        actualCurrentOrder = result.role.heroes[heroId].order;
+      } else {
+        actualCurrentOrder = expectedOrder;
+      }
+    } catch (err) {}
+    await delay(COMMAND_DELAY);
   }
 
   if (actualCurrentLevel >= targetLevel) {
@@ -1504,21 +1682,26 @@ const applyHeroLevel = async (tokenId, heroId, targetLevel, currentLevel) => {
           upgradeNum,
         },
       );
-      await delay(COMMAND_DELAY);
       actualCurrentLevel += upgradeNum;
     } catch (err) {}
+    await delay(COMMAND_DELAY);
 
     if (nextOrderLevel && actualCurrentLevel >= nextOrderLevel) {
       try {
-        await tokenStore.sendMessageWithPromise(
+        const result = await tokenStore.sendMessageWithPromise(
           tokenId,
           "hero_heroupgradeorder",
           {
             heroId,
           },
         );
-        await delay(COMMAND_DELAY);
+        if (result?.role?.heroes?.[heroId]?.order !== undefined) {
+          actualCurrentOrder = result.role.heroes[heroId].order;
+        } else {
+          actualCurrentOrder++;
+        }
       } catch (err) {}
+      await delay(COMMAND_DELAY);
     }
   }
 
@@ -1575,6 +1758,7 @@ const applyLineup = async (lineup) => {
       "presetteam_getinfo",
       {},
     );
+    await delay(COMMAND_DELAY);
     const heroes = roleInfo?.role?.heroes || roleInfo?.heroes || {};
     const pearlMapData = roleInfo?.role?.pearlMap || roleInfo?.pearlMap || {};
     const artifactBooksData =
@@ -1634,10 +1818,10 @@ const applyLineup = async (lineup) => {
                 slot: emptySlot,
               },
             );
-            await delay(COMMAND_DELAY);
           } catch (err) {
             continue;
           }
+          await delay(COMMAND_DELAY);
 
           try {
             await tokenStore.sendMessageWithPromise(
@@ -1648,8 +1832,8 @@ const applyLineup = async (lineup) => {
                 slot: emptySlot + 1,
               },
             );
-            await delay(COMMAND_DELAY);
           } catch (err) {}
+          await delay(COMMAND_DELAY);
         }
 
         try {
@@ -1657,13 +1841,14 @@ const applyLineup = async (lineup) => {
             heroId: currentHolderId,
             targetHeroId: targetHero.heroId,
           });
-          await delay(COMMAND_DELAY);
         } catch (err) {}
+        await delay(COMMAND_DELAY);
       }
     }
 
     await delay(COMMAND_DELAY);
     const data1 = await fetchLatestData();
+    await delay(COMMAND_DELAY);
     heroes = data1.heroes;
     for (const [id, hero] of Object.entries(heroes)) {
       if (hero.attachmentUid && hero.attachmentUid !== -1) {
@@ -1676,7 +1861,6 @@ const applyLineup = async (lineup) => {
 
     for (const hero of [...currentHeroes]) {
       if (!targetHeroIds.has(hero.heroId)) {
-        if (currentHeroes.length <= targetHeroes.length) break;
         try {
           await tokenStore.sendMessageWithPromise(
             tokenId,
@@ -1685,9 +1869,8 @@ const applyLineup = async (lineup) => {
               slot: hero.position,
             },
           );
-          await delay(COMMAND_DELAY);
-          currentHeroes = currentHeroes.filter((h) => h.heroId !== hero.heroId);
         } catch (err) {}
+        await delay(COMMAND_DELAY);
       }
     }
 
@@ -1696,57 +1879,11 @@ const applyLineup = async (lineup) => {
     await delay(COMMAND_DELAY);
     currentHeroes = getTeamHeroes(data2.teamInfo);
 
-    const needPositionFix = targetHeroes.some((targetHero) => {
+    for (const targetHero of targetHeroes) {
       const currentHero = currentHeroes.find(
         (h) => h.heroId === targetHero.heroId,
       );
-      return !currentHero || currentHero.position !== targetHero.position;
-    });
-
-    if (needPositionFix) {
-      const correctHeroes = currentHeroes.filter((h) => {
-        const target = targetHeroes.find((t) => t.heroId === h.heroId);
-        return target && target.position === h.position;
-      });
-
-      const heroesToRemove = currentHeroes.filter((h) => {
-        const target = targetHeroes.find((t) => t.heroId === h.heroId);
-        return !target || target.position !== h.position;
-      });
-
-      const keepHero =
-        correctHeroes.length > 0
-          ? correctHeroes[0]
-          : heroesToRemove.length > 0
-            ? heroesToRemove.pop()
-            : null;
-
-      for (const hero of heroesToRemove) {
-        try {
-          await tokenStore.sendMessageWithPromise(
-            tokenId,
-            "hero_gobackbattle",
-            {
-              slot: hero.position,
-            },
-          );
-          await delay(COMMAND_DELAY);
-        } catch (err) {}
-      }
-
-      const heroesToDeploy = targetHeroes.filter((t) => {
-        if (
-          keepHero &&
-          t.heroId === keepHero.heroId &&
-          t.position === keepHero.position
-        ) {
-          return false;
-        }
-        const current = currentHeroes.find((h) => h.heroId === t.heroId);
-        return !current || current.position !== t.position;
-      });
-
-      for (const targetHero of heroesToDeploy) {
+      if (!currentHero) {
         try {
           await tokenStore.sendMessageWithPromise(
             tokenId,
@@ -1756,8 +1893,31 @@ const applyLineup = async (lineup) => {
               slot: targetHero.position,
             },
           );
+        } catch (err) {}
+        await delay(COMMAND_DELAY);
+      } else if (currentHero.position !== targetHero.position) {
+        try {
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "hero_gobackbattle",
+            {
+              slot: currentHero.position,
+            },
+          );
+          await delay(COMMAND_DELAY);
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "hero_gointobattle",
+              {
+                heroId: targetHero.heroId,
+                slot: targetHero.position,
+              },
+            );
+          } catch (err) {}
           await delay(COMMAND_DELAY);
         } catch (err) {}
+        await delay(COMMAND_DELAY);
       }
     }
 
@@ -1772,6 +1932,7 @@ const applyLineup = async (lineup) => {
 
         const heroData = currentHeroesData[String(targetHero.heroId)];
         const currentLevel = heroData?.level || 1;
+        const currentOrder = heroData?.order || 0;
 
         if (currentLevel !== targetHero.level) {
           const result = await applyHeroLevel(
@@ -1779,6 +1940,8 @@ const applyLineup = async (lineup) => {
             targetHero.heroId,
             targetHero.level,
             currentLevel,
+            currentOrder,
+            targetHero.position,
           );
 
           if (result.success) {
@@ -1799,11 +1962,12 @@ const applyLineup = async (lineup) => {
       message.success(`阵容 "${lineup.name}" 已应用`);
     }
 
-    const hasFishData = lineup.heroes.some((h) => h.pearlId);
+    const hasFishData = lineup.heroes.some((h) => h.pearlId || h.fishId);
     if (hasFishData) {
       const fishData = await fetchLatestData();
       const currentHeroes = fishData.heroes;
       const pearlMap = fishData.pearlMap || {};
+      const artifactBooks = fishData.artifactBooks || {};
 
       const artifactToHero = {};
       for (const [heroId, hero] of Object.entries(currentHeroes)) {
@@ -1812,19 +1976,40 @@ const applyLineup = async (lineup) => {
         }
       }
 
+      const fishToArtifact = {};
+      for (const [fishId, book] of Object.entries(artifactBooks)) {
+        if (book.artifactId && book.artifactId !== -1) {
+          fishToArtifact[Number(fishId)] = book.artifactId;
+        }
+      }
+
       let fishApplied = 0;
       for (const targetHero of targetHeroes) {
-        if (!targetHero.pearlId) continue;
+        if (!targetHero.fishId && !targetHero.pearlId) continue;
 
-        const pearlData = pearlMap[targetHero.pearlId];
-        if (!pearlData) continue;
+        let artifactId = null;
+        let pearlId = targetHero.pearlId || 0;
 
-        const artifactId = pearlData.artifactId;
-        if (!artifactId || artifactId === -1) continue;
+        if (targetHero.fishId) {
+          artifactId = fishToArtifact[targetHero.fishId];
+        }
+
+        if (!artifactId && targetHero.pearlId) {
+          const pearlData = pearlMap[targetHero.pearlId];
+          if (pearlData?.artifactId && pearlData.artifactId !== -1) {
+            artifactId = pearlData.artifactId;
+          }
+        }
+
+        if (!artifactId) continue;
 
         const currentHolderId = artifactToHero[artifactId];
 
-        if (currentHolderId && currentHolderId !== targetHero.heroId) {
+        if (currentHolderId === targetHero.heroId) {
+          continue;
+        }
+
+        if (currentHolderId) {
           try {
             await tokenStore.sendMessageWithPromise(
               tokenId,
@@ -1833,43 +2018,104 @@ const applyLineup = async (lineup) => {
                 heroId: currentHolderId,
               },
             );
-            await delay(COMMAND_DELAY);
           } catch (err) {}
+          await delay(COMMAND_DELAY);
         }
 
         try {
           await tokenStore.sendMessageWithPromise(tokenId, "artifact_load", {
             heroId: targetHero.heroId,
             itemId: artifactId,
-            pearlId: targetHero.pearlId,
+            pearlId: pearlId,
           });
-          await delay(COMMAND_DELAY);
           fishApplied++;
         } catch (err) {}
-
-        if (targetHero.skillId) {
-          const currentPearlData = pearlMap[targetHero.pearlId];
-          if (
-            currentPearlData &&
-            currentPearlData.skillId !== targetHero.skillId
-          ) {
-            try {
-              await tokenStore.sendMessageWithPromise(
-                tokenId,
-                "pearl_replaceskill",
-                {
-                  pearlId: targetHero.pearlId,
-                  skillId: targetHero.skillId,
-                },
-              );
-              await delay(COMMAND_DELAY);
-            } catch (err) {}
-          }
-        }
+        await delay(COMMAND_DELAY);
       }
 
       if (fishApplied > 0) {
         message.success(`已应用 ${fishApplied} 个鱼灵配置`);
+      }
+
+      let skillApplied = 0;
+      const skillData = await fetchLatestData();
+      const latestPearlMap = skillData.pearlMap || {};
+
+      const processedPearlIds = new Set();
+      const pearlIdsToHandle = targetHeroes
+        .filter((h) => h.pearlId)
+        .map((h) => h.pearlId);
+
+      for (const pearlId of pearlIdsToHandle) {
+        if (processedPearlIds.has(pearlId)) continue;
+
+        const targetHero = targetHeroes.find((h) => h.pearlId === pearlId);
+        const currentPearlData = latestPearlMap[pearlId];
+        const currentSkillId = currentPearlData?.skillId || null;
+        const targetSkillId = targetHero?.skillId || null;
+
+        if (!targetSkillId) {
+          if (currentSkillId) {
+            try {
+              await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "pearl_unloadskill",
+                {
+                  pearlId: pearlId,
+                },
+              );
+              skillApplied++;
+              processedPearlIds.add(pearlId);
+            } catch (err) {}
+            await delay(COMMAND_DELAY);
+          }
+          continue;
+        }
+
+        if (currentSkillId === targetSkillId) {
+          continue;
+        }
+
+        const holderPearlId = Object.keys(latestPearlMap).find((pid) => {
+          if (Number(pid) === pearlId) return false;
+          const data = latestPearlMap[pid];
+          return data?.skillId === targetSkillId;
+        });
+
+        if (holderPearlId && !processedPearlIds.has(Number(holderPearlId))) {
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "pearl_exchangeskill",
+              {
+                pearlId1: pearlId,
+                pearlId2: Number(holderPearlId),
+              },
+            );
+            skillApplied += 2;
+            processedPearlIds.add(pearlId);
+            processedPearlIds.add(Number(holderPearlId));
+          } catch (err) {}
+          await delay(COMMAND_DELAY);
+        } else {
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "pearl_replaceskill",
+              {
+                pearlId: pearlId,
+                skillId: targetSkillId,
+              },
+            );
+            skillApplied++;
+            processedPearlIds.add(pearlId);
+          } catch (err) {}
+          await delay(COMMAND_DELAY);
+        }
+      }
+
+      if (skillApplied > 0) {
+        message.success(`已切换 ${skillApplied} 个鱼珠技能`);
       }
     }
 
@@ -1913,11 +2159,11 @@ const applyLineup = async (lineup) => {
               weaponId: lineup.weaponId,
             },
           );
-          await delay(COMMAND_DELAY);
           message.success(
             `玩具已切换为: ${weapon[lineup.weaponId] || lineup.weaponId}`,
           );
         } catch (err) {}
+        await delay(COMMAND_DELAY);
       }
     }
 
@@ -1973,6 +2219,170 @@ const deleteLineup = (index) => {
       message.success("阵容已删除");
     },
   });
+};
+
+const exportLineups = async () => {
+  const token = tokenStore.selectedToken;
+  if (!token) {
+    message.warning("请先选择Token");
+    return;
+  }
+
+  const tokenId = token.id;
+  const status = tokenStore.getWebSocketStatus(tokenId);
+  if (status !== "connected") {
+    message.error("WebSocket未连接，无法导出");
+    return;
+  }
+
+  try {
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+    );
+    const role = roleInfo?.role || roleInfo;
+    const roleId = role?.roleId || role?.id;
+
+    if (!roleId) {
+      message.error("无法获取角色ID");
+      return;
+    }
+
+    const exportData = {
+      roleId: roleId,
+      exportTime: Date.now(),
+      lineups: savedLineups.value,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `阵容配置_${roleId}_${new Date().toLocaleDateString().replace(/\//g, "-")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    message.success(`已导出 ${savedLineups.value.length} 个阵容`);
+  } catch (error) {
+    message.error(`导出失败: ${error.message}`);
+  }
+};
+
+const importLineups = async ({ file }) => {
+  const token = tokenStore.selectedToken;
+  if (!token) {
+    message.warning("请先选择Token");
+    return;
+  }
+
+  const tokenId = token.id;
+  const status = tokenStore.getWebSocketStatus(tokenId);
+  if (status !== "connected") {
+    message.error("WebSocket未连接，无法导入");
+    return;
+  }
+
+  try {
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+    );
+    const role = roleInfo?.role || roleInfo;
+    const currentRoleId = role?.roleId || role?.id;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importData = JSON.parse(e.target.result);
+
+        if (!importData.roleId || !importData.lineups) {
+          message.error("无效的阵容文件格式");
+          return;
+        }
+
+        const processImport = (lineupsToImport) => {
+          const existingIds = new Set(savedLineups.value.map((l) => l.id));
+          const newLineups = [];
+          const duplicateLineups = [];
+
+          for (const lineup of lineupsToImport) {
+            if (lineup.id && existingIds.has(lineup.id)) {
+              duplicateLineups.push(lineup);
+            } else {
+              newLineups.push({
+                ...lineup,
+                id: lineup.id || generateLineupId(),
+                savedAt: Date.now(),
+                applying: false,
+              });
+            }
+          }
+
+          if (duplicateLineups.length > 0) {
+            dialog.warning({
+              title: "发现重复阵容",
+              content: `发现 ${duplicateLineups.length} 个已存在的阵容，是否覆盖？`,
+              positiveText: "覆盖",
+              negativeText: "跳过重复",
+              onPositiveClick: () => {
+                for (const dupLineup of duplicateLineups) {
+                  const index = savedLineups.value.findIndex(
+                    (l) => l.id === dupLineup.id,
+                  );
+                  if (index !== -1) {
+                    savedLineups.value[index] = {
+                      ...dupLineup,
+                      savedAt: Date.now(),
+                      applying: false,
+                    };
+                  }
+                }
+                savedLineups.value = [...savedLineups.value, ...newLineups];
+                saveLineupsToStorage();
+                message.success(
+                  `已导入 ${newLineups.length + duplicateLineups.length} 个阵容`,
+                );
+              },
+              onNegativeClick: () => {
+                savedLineups.value = [...savedLineups.value, ...newLineups];
+                saveLineupsToStorage();
+                message.success(
+                  `已导入 ${newLineups.length} 个阵容，跳过 ${duplicateLineups.length} 个重复`,
+                );
+              },
+            });
+          } else {
+            savedLineups.value = [...savedLineups.value, ...newLineups];
+            saveLineupsToStorage();
+            message.success(`已导入 ${newLineups.length} 个阵容`);
+          }
+        };
+
+        if (importData.roleId !== currentRoleId) {
+          dialog.warning({
+            title: "角色不匹配",
+            content: `该阵容文件来自其他角色，是否继续导入？`,
+            positiveText: "导入",
+            negativeText: "取消",
+            onPositiveClick: () => {
+              processImport(importData.lineups);
+            },
+          });
+        } else {
+          processImport(importData.lineups);
+        }
+      } catch (parseError) {
+        message.error("解析文件失败，请检查文件格式");
+      }
+    };
+    reader.readAsText(file.file);
+  } catch (error) {
+    message.error(`导入失败: ${error.message}`);
+  }
 };
 
 const switchTeam = async (teamId) => {
@@ -2137,10 +2547,11 @@ onMounted(() => {
 
 .hero-actions {
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-xs);
   margin-left: auto;
-  min-width: 100px;
-  justify-content: flex-end;
+  min-width: 60px;
+  justify-content: center;
 }
 
 .hero-position {
@@ -2180,12 +2591,61 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.hero-avatar-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.hero-name-small-inline {
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-level-small-inline {
+  font-size: 10px;
+  color: white;
+  font-weight: 600;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  padding: 2px 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(240, 147, 251, 0.3);
+}
+
 .hero-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   cursor: pointer;
   flex: 1;
+}
+
+.hero-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .hero-name {
@@ -2197,37 +2657,96 @@ onMounted(() => {
 .hero-level {
   font-size: var(--font-size-xs);
   color: var(--text-accent);
-  margin-top: 2px;
+  font-weight: 500;
 }
 
 .hero-fish {
   font-size: var(--font-size-xs);
   color: var(--primary-color);
-  background: rgba(var(--primary-color-rgb), 0.1);
-  padding: 1px 4px;
-  border-radius: var(--border-radius-small);
+  background: linear-gradient(
+    135deg,
+    rgba(114, 46, 209, 0.15) 0%,
+    rgba(114, 46, 209, 0.08) 100%
+  );
+  border: 1px solid rgba(114, 46, 209, 0.2);
+  padding: 4px 8px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
   align-self: flex-start;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.hero-stats {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  .stat-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  span {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    white-space: nowrap;
+    min-width: 90px;
+    text-align: center;
+  }
+
+  .stat-power {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+    color: white;
+    font-size: 12px;
+  }
+
+  .stat-attack {
+    background: linear-gradient(135deg, #ffa940 0%, #fa8c16 100%);
+    color: white;
+  }
+
+  .stat-hp {
+    background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+    color: white;
+  }
+
+  .stat-speed {
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    color: white;
+  }
 }
 
 .hero-fish-skill-inline {
-  color: var(--success-color);
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
 }
 
 .hero-fish-slots-inline {
   display: inline-flex;
-  gap: 2px;
-  margin-left: 2px;
+  gap: 3px;
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(114, 46, 209, 0.2);
 }
 
 .slot-dot-small {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 .hero-artifact {
@@ -2236,10 +2755,12 @@ onMounted(() => {
 
 .exchange-btn {
   flex-shrink: 0;
+  width: 100%;
 }
 
 .remove-btn {
   flex-shrink: 0;
+  width: 100%;
 }
 
 .saved-lineups-section {
@@ -2306,20 +2827,23 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 60px;
+  min-width: 110px;
+  padding: 8px 6px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-small);
 }
 
 .hero-avatar {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: var(--border-radius-small);
   object-fit: cover;
   border: 2px solid var(--border-color);
 }
 
 .hero-avatar-placeholder {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: var(--border-radius-small);
   background: var(--bg-tertiary);
   display: flex;
@@ -2331,44 +2855,136 @@ onMounted(() => {
   border: 2px solid var(--border-color);
 }
 
+.hero-info-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.hero-header-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
 .hero-name-small {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  margin-top: 2px;
-  max-width: 60px;
+  font-size: 13px;
+  color: var(--text-primary);
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .hero-level-small {
-  font-size: var(--font-size-xs);
-  color: var(--text-accent);
-  margin-top: 2px;
+  font-size: 12px;
+  color: white;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  padding: 2px 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(240, 147, 251, 0.3);
 }
 
 .hero-fish-info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 4px;
+  margin-bottom: 4px;
   gap: 2px;
+  background: linear-gradient(
+    135deg,
+    rgba(114, 46, 209, 0.12) 0%,
+    rgba(114, 46, 209, 0.06) 100%
+  );
+  border: 1px solid rgba(114, 46, 209, 0.18);
+  border-radius: 6px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.hero-fish-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.hero-stats-small {
+  font-size: 10px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+
+  .stat-row-small {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  span {
+    padding: 3px 5px;
+    border-radius: 4px;
+    font-weight: 500;
+    white-space: nowrap;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  .stat-power {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+    color: white;
+  }
+
+  .stat-attack {
+    background: linear-gradient(135deg, #ffa940 0%, #fa8c16 100%);
+    color: white;
+  }
+
+  .stat-hp {
+    background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+    color: white;
+  }
+
+  .stat-speed {
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    color: white;
+  }
 }
 
 .hero-fish-name {
-  font-size: var(--font-size-xs);
-  color: var(--success-color);
+  font-size: 11px;
+  color: var(--primary-color);
+  font-weight: 500;
 }
 
 .hero-fish-skill-name {
-  font-size: var(--font-size-xs);
-  color: var(--primary-color);
+  font-size: 10px;
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  font-weight: 500;
 }
 
 .hero-fish-slots {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   justify-content: center;
+  padding-top: 3px;
 }
 
 .lineup-actions {
@@ -2390,8 +3006,8 @@ onMounted(() => {
 }
 
 .refine-modal-content {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-md);
 }
 
@@ -2667,6 +3283,18 @@ onMounted(() => {
   gap: var(--spacing-xs);
   border-bottom: 1px solid var(--border-color);
   padding-bottom: var(--spacing-sm);
+  justify-content: space-between;
+  align-items: center;
+}
+
+.team-tabs-left {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.team-tabs-right {
+  display: flex;
+  gap: var(--spacing-xs);
 }
 
 .team-tab {
@@ -2812,10 +3440,11 @@ onMounted(() => {
 }
 
 .slot-dot {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   display: inline-block;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 .tech-modal-content {

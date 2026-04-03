@@ -74,15 +74,18 @@
     <div class="filter-section">
       <div class="container">
         <div class="filter-bar">
-          <n-radio-group
-            v-model:value="currentFilter"
-            @update:value="onFilterChange"
-          >
-            <n-radio-button value="all"> 全部任务 </n-radio-button>
-            <n-radio-button value="pending"> 待完成 </n-radio-button>
-            <n-radio-button value="completed"> 已完成 </n-radio-button>
-            <n-radio-button value="auto"> 自动执行 </n-radio-button>
-          </n-radio-group>
+          <div class="filter-tabs-scroll">
+            <n-radio-group
+              v-model:value="currentFilter"
+              @update:value="onFilterChange"
+              class="filter-tabs"
+            >
+              <n-radio-button value="all"> 全部 </n-radio-button>
+              <n-radio-button value="pending"> 待办 </n-radio-button>
+              <n-radio-button value="completed"> 已完成 </n-radio-button>
+              <n-radio-button value="auto"> 自动 </n-radio-button>
+            </n-radio-group>
+          </div>
 
           <div class="search-box">
             <n-input
@@ -780,6 +783,32 @@ watch(
   gap: var(--spacing-lg);
 }
 
+.filter-tabs-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  margin: 0 -var(--spacing-md);
+  padding: 0 var(--spacing-md);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.filter-tabs {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+
+  :deep(.n-radio-button) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
 .search-box {
   width: 280px;
 }
@@ -824,6 +853,23 @@ watch(
   .filter-bar {
     flex-direction: column;
     gap: var(--spacing-md);
+  }
+
+  .filter-tabs-scroll {
+    margin: 0 -var(--spacing-md);
+    padding: 0 var(--spacing-md);
+    width: calc(100% + var(--spacing-md) * 2);
+  }
+
+  .filter-tabs {
+    gap: 1px;
+
+    :deep(.n-radio-button) {
+      padding: 2px 6px;
+      font-size: 11px;
+      height: 26px;
+      line-height: 22px;
+    }
   }
 
   .role-selector {
