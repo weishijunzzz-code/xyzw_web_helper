@@ -600,7 +600,7 @@ const artifactBooks = ref({});
 const pearlMap = ref({});
 let lastRefreshTime = 0;
 const REFRESH_DEBOUNCE = 3000;
-const COMMAND_DELAY = 500;
+const COMMAND_DELAY = 200;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -2409,7 +2409,7 @@ const switchTeam = async (teamId) => {
       teamId,
     });
 
-    await delay(500);
+    await delay(COMMAND_DELAY);
 
     currentTeamId.value = teamId;
     message.success(`已切换到阵容 ${teamId}`);
