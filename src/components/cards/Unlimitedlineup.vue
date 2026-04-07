@@ -600,7 +600,7 @@ const artifactBooks = ref({});
 const pearlMap = ref({});
 let lastRefreshTime = 0;
 const REFRESH_DEBOUNCE = 3000;
-const COMMAND_DELAY = 200;
+const COMMAND_DELAY = 50;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
