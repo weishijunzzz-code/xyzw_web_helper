@@ -134,6 +134,86 @@ const my_routes = [
       requiresToken: true
     }
   },
+  // 移动端路由配置 - 使用MobileAdapter包装PC端组件
+  {
+    path: '/mobile',
+    component: safeImport(() => import('@/layout/MobileLayout.vue')),
+    redirect: '/mobile/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'MobileDashboard',
+        component: safeImport(() => import('@/views/Dashboard.vue')),
+        meta: {
+          title: '首页',
+          requiresToken: true
+        }
+      },
+      {
+        path: 'tokens',
+        name: 'MobileTokens',
+        component: safeImport(() => import('@/views/mobile/MobileTokens.vue')),
+        meta: {
+          title: 'Token管理',
+          requiresToken: false
+        }
+      },
+      {
+        path: 'game-features',
+        name: 'MobileGameFeatures',
+        component: safeImport(() => import('@/views/mobile/MobileGameFeatures.vue')),
+        meta: {
+          title: '游戏功能',
+          requiresToken: true
+        }
+      },
+      {
+        path: 'daily-tasks',
+        name: 'MobileDailyTasks',
+        component: safeImport(() => import('@/views/DailyTasks.vue')),
+        meta: {
+          title: '日常任务',
+          requiresToken: true
+        }
+      },
+      {
+        path: 'batch-daily-tasks',
+        name: 'MobileBatchDailyTasks',
+        component: safeImport(() => import('@/views/mobile/features/MobileBatchDailyTasks.vue')),
+        meta: {
+          title: '批量日常',
+          requiresToken: true
+        }
+      },
+      {
+        path: 'task-scheduler',
+        name: 'MobileTaskScheduler',
+        component: safeImport(() => import('@/views/TaskScheduler/index.vue')),
+        meta: {
+          title: '定时任务',
+          requiresToken: true
+        }
+      },
+      {
+        path: 'legion-war',
+        name: 'MobileLegionWar',
+        component: safeImport(() => import('@/views/LegionWar.vue')),
+        meta: {
+          title: '实时盐场',
+          requiresToken: true
+        }
+      },
+      {
+        path: 'profile',
+        name: 'MobileProfile',
+        component: safeImport(() => import('@/views/Profile.vue')),
+        meta: {
+          title: '个人设置',
+          requiresToken: true
+        }
+      }
+    ]
+  },
   // 兼容旧路由，重定向到新的token管理页面
   {
     path: '/login',
@@ -190,27 +270,53 @@ router.afterEach((to, from) => {
 
 
 
+// 检测是否为移动端设备
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
 // 导航守卫
 router.beforeEach((to, from, next) => {
   const tokenStore = useTokenStore()
 
   // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - XYZW 游戏管理系统` : 'XYZW 游戏管理系统'
-  if(to.name==="LegionWar"&&!isNowInLegionWarTime()){
-  // if(to.name==="LegionWar"&&isNowInLegionWarTime()){
-    next('/admin/dashboard');
-    return;
+
+  // 移动端路由检查
+  if (to.path.startsWith('/mobile')) {
+    // 移动端盐场时间检查
+    if (to.name === 'MobileLegionWar' && !isNowInLegionWarTime()) {
+      next('/mobile/dashboard')
+      return
+    }
+    // 移动端Token检查
+    if (to.meta.requiresToken && !tokenStore.hasTokens) {
+      next('/mobile/tokens')
+      return
+    }
+    next()
+    return
   }
+
+  // PC端盐场时间检查
+  if (to.name === "LegionWar" && !isNowInLegionWarTime()) {
+    next('/admin/dashboard')
+    return
+  }
+
   // 检查是否需要Token
-  // if (to.meta.requiresToken  && tokenStore.getWebSocketStatus(tokenStore.selectedToken.id)=="disconnected") {
-    if (to.meta.requiresToken  && !tokenStore.hasTokens) {
+  if (to.meta.requiresToken && !tokenStore.hasTokens) {
     next('/tokens')
   } else if (to.path === '/' && tokenStore.hasTokens) {
-    // 首页重定向逻辑
-    if (tokenStore.selectedToken) {
-      next('/admin/dashboard')
+    // 首页重定向逻辑 - 根据设备类型跳转
+    if (isMobileDevice()) {
+      next('/mobile/dashboard')
     } else {
-      next('/tokens')
+      if (tokenStore.selectedToken) {
+        next('/admin/dashboard')
+      } else {
+        next('/tokens')
+      }
     }
   } else {
     next()

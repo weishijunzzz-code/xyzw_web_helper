@@ -135,7 +135,7 @@ import {
   Trash,
 } from "@vicons/ionicons5";
 import { useMessage } from "naive-ui";
-import { getTokenId, transformToken } from "@/utils/token";
+import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { g_utils } from "@/utils/bonProtocol";
 import { useTokenStore } from "@/stores/tokenStore";
@@ -587,12 +587,7 @@ const resetQRCode = () => {
   updateStatus("点击获取二维码", "info");
 };
 
-// 获取服务器列表
-const getServerList = async (binBuffer) => {
-  // 这里需要实现获取服务器列表的逻辑
-  // 暂时返回空，实际使用时需要调用相应的API
-  return "{}";
-};
+// 获取服务器列表 - 使用从 @/utils/token 导入的 getServerList
 
 // 生命周期
 onMounted(() => {});

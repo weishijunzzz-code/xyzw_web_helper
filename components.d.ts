@@ -69,6 +69,7 @@ declare module 'vue' {
     LegionWarMap: typeof import('./src/components/Club/LegionWarMap.vue')['default']
     LegionWarStatistics: typeof import('./src/components/Club/LegionWarStatistics.vue')['default']
     MessageTester: typeof import('./src/components/Test/MessageTester.vue')['default']
+    MobileAdapter: typeof import('./src/components/MobileAdapter.vue')['default']
     MonthlyTasksCard: typeof import('./src/components/cards/MonthlyTasksCard.vue')['default']
     MyCard: typeof import('./src/components/Common/MyCard.vue')['default']
     NotificationCenter: typeof import('./src/components/Common/NotificationCenter.vue')['default']

@@ -29,34 +29,34 @@
     <div class="header-section" v-if="battleInfo">
       <div class="club-vs-container">
         <!-- Own Club (Left) -->
-        <div class="club-info own">
+        <div class="club-info own" v-if="battleInfo?.ownClub">
           <n-avatar round :size="80" :src="battleInfo.ownClub?.logo || '/icons/xiaoyugan.png'" class="club-logo" />
           <div class="club-details">
-            <div class="club-name">{{ battleInfo.ownClub.serverId }}服 {{ battleInfo.ownClub?.name || "未知" }}</div>
-            <div class="club-stats">ID: {{ battleInfo.ownClub.id }}</div>
-            <div class="club-stats">{{ battleInfo.ownClub.memberCount }}人 | {{ battleInfo.ownClub.quenchNum }}红 | {{
-              formatPower(battleInfo.ownClub.power) }}</div>
-            <div class="club-stats announcement">{{ battleInfo.ownClub.announcement }}</div>
+            <div class="club-name">{{ battleInfo.ownClub?.serverId }}服 {{ battleInfo.ownClub?.name || "未知" }}</div>
+            <div class="club-stats">ID: {{ battleInfo.ownClub?.id }}</div>
+            <div class="club-stats">{{ battleInfo.ownClub?.memberCount }}人 | {{ battleInfo.ownClub?.quenchNum }}红 | {{
+              formatPower(battleInfo.ownClub?.power) }}</div>
+            <div class="club-stats announcement">{{ battleInfo.ownClub?.announcement }}</div>
           </div>
         </div>
 
         <!-- VS Badge -->
-        <div class="vs-badge">
+        <div class="vs-badge" v-if="battleInfo?.ownClub && battleInfo?.opponentClub">
           <span class="vs-text">VS</span>
         </div>
 
         <!-- Opponent Club (Right) -->
-        <div class="club-info opponent">
+        <div class="club-info opponent" v-if="battleInfo?.opponentClub">
           <n-avatar round :size="80" :src="battleInfo.opponentClub?.logo || '/icons/xiaoyugan.png'" class="club-logo" />
           <div class="club-details">
-            <div class="club-name">{{ battleInfo.opponentClub.serverId }}服 {{ battleInfo.opponentClub?.name || "未知" }}
+            <div class="club-name">{{ battleInfo.opponentClub?.serverId }}服 {{ battleInfo.opponentClub?.name || "未知" }}
             </div>
-            <div class="club-stats">ID: {{ battleInfo.opponentClub.id }}</div>
+            <div class="club-stats">ID: {{ battleInfo.opponentClub?.id }}</div>
             <div class="club-stats">
-              {{ battleInfo.opponentClub.memberCount }}人 | {{ battleInfo.opponentClub.quenchNum }}红 | {{
-                formatPower(battleInfo.opponentClub.power) }}
+              {{ battleInfo.opponentClub?.memberCount }}人 | {{ battleInfo.opponentClub?.quenchNum }}红 | {{
+                formatPower(battleInfo.opponentClub?.power) }}
             </div>
-            <div class="club-stats announcement">{{ battleInfo.opponentClub.announcement }}</div>
+            <div class="club-stats announcement">{{ battleInfo.opponentClub?.announcement }}</div>
           </div>
         </div>
       </div>
@@ -1156,10 +1156,15 @@ const fetchBattleInfo = async () => {
         loading.value = false;
         return;
       }
+      if (!club.value?.id) {
+        message.error("未获取到俱乐部信息，请检查Token是否已连接");
+        loading.value = false;
+        return;
+      }
       ownLegionId = club.value.id;
-      opponentLegionId = res.legions[0].id;
+      opponentLegionId = res.legions[0]?.id;
       if (ownLegionId === opponentLegionId) {
-        opponentLegionId = res.legions[1].id;
+        opponentLegionId = res.legions[1]?.id;
       }
       if (!opponentLegionId) {
         message.error("未获取到对战俱乐部ID");
@@ -1176,6 +1181,11 @@ const fetchBattleInfo = async () => {
       );
 
       // 2. Get Record Map
+      if (!club.value?.id) {
+        message.error("未获取到俱乐部信息，请检查Token是否已连接");
+        loading.value = false;
+        return;
+      }
       ownLegionId = club.value.id;
       const res = await tokenStore.sendMessageWithPromise(
         tokenId,
@@ -1190,7 +1200,7 @@ const fetchBattleInfo = async () => {
       }
       const record = res.enemyLegionMap[shortDate];
       if (record) {
-        opponentLegionId = record.id;
+        opponentLegionId = record?.id;
       } else {
         message.warning(`未找到 ${queryDate.value} 的对战记录`);
         loading.value = false;

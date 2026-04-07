@@ -95,7 +95,7 @@
           <div v-if="currentStyle === 'style1'" ref="exportDom" class="records-list style-1">
              <!-- 头部信息 -->
              <div class="style1-header">
-                <h2>{{ queryDate }} {{ club.name || '俱乐部' }}盐场周报</h2>
+                <h2>{{ queryDate }} {{ club?.name || '俱乐部' }}盐场周报</h2>
              </div>
              
              <div class="style1-content">
@@ -222,7 +222,7 @@
                 <div class="style2-title">
                    <span class="trophy-icon">🏆</span>
                    <div class="title-text">
-                      <h2>{{ club.name || '俱乐部' }} 盐场周报</h2>
+                      <h2>{{ club?.name || '俱乐部' }} 盐场周报</h2>
                       <div class="date-text">{{ queryDate }}</div>
                    </div>
                 </div>
