@@ -466,10 +466,10 @@ const isActiveRoute = (path) => {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding-top: 64px;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
   
   &.has-bottom-nav {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 20px));
   }
 }
 
@@ -480,7 +480,7 @@ const isActiveRoute = (path) => {
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0));
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 20px));
   background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -490,20 +490,20 @@ const isActiveRoute = (path) => {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  max-width: 400px;
+  max-width: 380px;
   margin: 0 auto;
-  padding: 8px;
+  padding: 6px 8px;
   background: rgba(241, 245, 249, 0.9);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
+  gap: 2px;
+  padding: 6px 12px;
   text-decoration: none;
   color: var(--text-tertiary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -519,8 +519,8 @@ const isActiveRoute = (path) => {
     .nav-icon-wrapper {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     
     .nav-label {
@@ -531,8 +531,8 @@ const isActiveRoute = (path) => {
 }
 
 .nav-icon-wrapper {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -542,7 +542,7 @@ const isActiveRoute = (path) => {
 }
 
 .nav-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   transition: all 0.3s;
 }
