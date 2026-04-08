@@ -122,24 +122,22 @@
               <div class="empty-icon">📱</div>
               <p>暂无其他账号</p>
             </div>
-            <div v-else class="token-grid">
+            <div v-else class="token-list">
               <div
                 v-for="token in otherTokens"
                 :key="token.id"
-                class="token-card-item"
+                class="token-list-item"
                 @click="selectToken(token)"
               >
-                <div class="card-content">
-                  <div class="token-avatar-small">
-                    <img v-if="token.avatar" :src="token.avatar" />
-                    <div v-else class="avatar-placeholder-small">
-                      {{ token.name?.charAt(0) || '?' }}
-                    </div>
+                <div class="token-avatar-small">
+                  <img v-if="token.avatar" :src="token.avatar" />
+                  <div v-else class="avatar-placeholder-small">
+                    {{ token.name?.charAt(0) || '?' }}
                   </div>
-                  <div class="token-info-compact">
-                    <div class="token-name-small">{{ getTokenDisplayName(token) }}</div>
-                    <div class="token-server-small">{{ formatServer(token.server) }}</div>
-                  </div>
+                </div>
+                <div class="token-info-compact">
+                  <div class="token-name-small">{{ getTokenDisplayName(token) }}</div>
+                  <div class="token-server-small">{{ formatServer(token.server) }}</div>
                 </div>
                 <div class="status-dot-small" :class="getConnectionStatus(token.id)"></div>
               </div>
@@ -806,7 +804,7 @@ const isActiveRoute = (path) => {
   flex-shrink: 0;
 }
 
-// 其他账号网格
+// 其他账号列表
 .other-tokens-section {
   flex: 1;
 }
@@ -815,50 +813,53 @@ const isActiveRoute = (path) => {
   text-align: center;
   padding: 40px 20px;
   color: var(--text-tertiary);
-  
+
   .empty-icon {
     font-size: 48px;
     margin-bottom: 12px;
   }
-  
+
   p {
     font-size: 14px;
     margin: 0;
   }
 }
 
-.token-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+.token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.token-card-item {
+.token-list-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px;
+  gap: 12px;
+  padding: 12px 16px;
   background: white;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-}
 
-.card-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
+  &:hover {
+    background: rgba(241, 245, 249, 0.8);
+    transform: translateX(4px);
+  }
+
+  &:active {
+    transform: translateX(0);
+  }
+
+  /* 深色主题适配 */
+  [data-theme="dark"] & {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(51, 65, 85, 0.9);
+    }
+  }
 }
 
 .token-avatar-small {
@@ -888,7 +889,9 @@ const isActiveRoute = (path) => {
 }
 
 .token-info-compact {
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .token-name-small {

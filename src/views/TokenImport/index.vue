@@ -1696,13 +1696,8 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .token-import-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-secondary);
   padding: var(--spacing-xl) 0;
-}
-
-/* 深色主题下的页面背景 */
-[data-theme="dark"] .token-import-page {
-  background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
 }
 
 .container {
@@ -1721,8 +1716,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-md);
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: var(--text-primary);
 }
 
 .header-top {
@@ -1737,9 +1731,8 @@ onUnmounted(() => {
 .theme-toggle {
   position: absolute;
   right: 0;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
 }
 
 .brand-logo {
@@ -1753,8 +1746,7 @@ onUnmounted(() => {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   margin: 0;
-  color: #ffffff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
 }
 
 .header-content p {
