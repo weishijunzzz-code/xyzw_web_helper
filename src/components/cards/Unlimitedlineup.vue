@@ -2041,6 +2041,14 @@ const applyLineup = async (lineup) => {
       const skillData = await fetchLatestData();
       const latestPearlMap = skillData.pearlMap || {};
 
+      // 获取当前已装备到武将身上的鱼珠ID集合
+      const equippedToHeroPearlIds = new Set();
+      for (const hero of Object.values(skillData.heroes || {})) {
+        if (hero.pearlId && hero.pearlId !== -1) {
+          equippedToHeroPearlIds.add(hero.pearlId);
+        }
+      }
+
       const processedPearlIds = new Set();
       const pearlIdsToHandle = targetHeroes
         .filter((h) => h.pearlId)
@@ -2076,11 +2084,28 @@ const applyLineup = async (lineup) => {
           continue;
         }
 
-        const holderPearlId = Object.keys(latestPearlMap).find((pid) => {
-          if (Number(pid) === pearlId) return false;
+        // 优先找：有目标技能、且未被装备到武将身上的鱼珠
+        const availablePearlId = Object.keys(latestPearlMap).find((pid) => {
+          const pidNum = Number(pid);
+          if (pidNum === pearlId) return false;
           const data = latestPearlMap[pid];
-          return data?.skillId === targetSkillId;
+          if (data?.skillId !== targetSkillId) return false;
+          if (equippedToHeroPearlIds.has(pidNum)) return false;
+          return true;
         });
+
+        // 其次找：已装备到其他武将身上的鱼珠
+        const equippedPearlId = Object.keys(latestPearlMap).find((pid) => {
+          const pidNum = Number(pid);
+          if (pidNum === pearlId) return false;
+          const data = latestPearlMap[pid];
+          if (data?.skillId !== targetSkillId) return false;
+          if (!equippedToHeroPearlIds.has(pidNum)) return false;
+          if (processedPearlIds.has(pidNum)) return false;
+          return true;
+        });
+
+        const holderPearlId = availablePearlId || equippedPearlId;
 
         if (holderPearlId && !processedPearlIds.has(Number(holderPearlId))) {
           try {
