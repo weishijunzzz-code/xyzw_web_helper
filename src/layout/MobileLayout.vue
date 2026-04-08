@@ -536,13 +536,16 @@ const isActiveRoute = (path) => {
   }
 
   /* 深色主题适配 */
-  :deep([data-theme="dark"]) {
-    .activity-calendar-btn,
-    .theme-settings .theme-toggle-btn {
-      background: rgba(30, 41, 59, 0.8);
-      border-color: rgba(255, 255, 255, 0.1);
-      color: var(--text-secondary);
-    }
+  :deep([data-theme="dark"] .activity-calendar-btn) {
+    background: rgba(51, 65, 85, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+  }
+
+  :deep([data-theme="dark"] .theme-settings .theme-toggle-btn) {
+    background: rgba(51, 65, 85, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
   }
 }
 
