@@ -275,6 +275,18 @@ const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 }
 
+// PC端路由到移动端路由的映射
+const pcToMobileRouteMap = {
+  'Dashboard': '/mobile/dashboard',
+  'GameFeatures': '/mobile/game-features',
+  'DailyTasks': '/mobile/daily-tasks',
+  'BatchDailyTasks': '/mobile/batch-daily-tasks',
+  'TaskScheduler': '/mobile/task-scheduler',
+  'LegionWar': '/mobile/legion-war',
+  'Profile': '/mobile/profile',
+  'TokenImport': '/mobile/tokens'
+}
+
 // 导航守卫
 router.beforeEach((to, from, next) => {
   const tokenStore = useTokenStore()
@@ -296,6 +308,15 @@ router.beforeEach((to, from, next) => {
     }
     next()
     return
+  }
+
+  // 移动端设备访问PC端路由时，自动重定向到移动端对应路由
+  if (isMobileDevice() && to.path.startsWith('/admin')) {
+    const mobileRoute = pcToMobileRouteMap[to.name]
+    if (mobileRoute) {
+      next(mobileRoute)
+      return
+    }
   }
 
   // PC端盐场时间检查
