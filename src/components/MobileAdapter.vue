@@ -19,44 +19,53 @@ const props = defineProps({
 
 <style scoped>
 .mobile-adapter {
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   overflow: auto;
   position: relative;
-  background: var(--bg-secondary, #f5f7fa);
-  -webkit-overflow-scrolling: touch;
+  background: #f5f7fa;
 }
 
 .scale-container {
-  width: 1920px;
+  width: 100vw;
+  min-height: 100vh;
+  overflow: visible;
   transform-origin: top left;
 }
 
-/* iPhone SE/mini 等小屏设备 */
 @media screen and (max-width: 375px) {
   .scale-container {
-    transform: scale(0.195);
+    transform: scale(0.42);
+    width: 238vw;
+    height: auto;
+    min-height: 500vh;
   }
 }
 
-/* iPhone 12/13/14 等标准屏 */
 @media screen and (min-width: 376px) and (max-width: 414px) {
   .scale-container {
-    transform: scale(0.216);
+    transform: scale(0.48);
+    width: 208vw;
+    height: auto;
+    min-height: 450vh;
   }
 }
 
-/* iPhone 14 Pro Max 等大屏 */
 @media screen and (min-width: 415px) and (max-width: 428px) {
   .scale-container {
-    transform: scale(0.223);
+    transform: scale(0.52);
+    width: 192vw;
+    height: auto;
+    min-height: 400vh;
   }
 }
 
-/* iPad 等平板设备 */
 @media screen and (min-width: 429px) and (max-width: 768px) {
   .scale-container {
-    transform: scale(0.4);
+    transform: scale(0.65);
+    width: 154vw;
+    height: auto;
+    min-height: 300vh;
   }
 }
 

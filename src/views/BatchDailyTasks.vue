@@ -6204,16 +6204,18 @@ const stopBatch = () => {
 <style scoped>
 .batch-daily-tasks {
   padding: 20px;
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .main-layout {
   display: flex;
   gap: 20px;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  height: auto;
+  overflow: visible;
 }
 
 .left-column {
@@ -6228,7 +6230,8 @@ const stopBatch = () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  height: 700px;
+  min-height: 400px;
+  height: auto;
 }
 
 .page-header {
@@ -6447,16 +6450,18 @@ const stopBatch = () => {
   }
 
   .log-container {
-    height: 300px;
-    min-height: 300px;
+    min-height: 150px;
+    height: auto;
+    max-height: 400px;
   }
 }
 
 @media (max-width: 768px) {
   .batch-daily-tasks {
     padding: 12px;
-    height: 100vh;
-    overflow-y: auto;
+    min-height: 100vh;
+    height: auto;
+    overflow-y: visible;
     overflow-x: hidden;
   }
 
@@ -6501,8 +6506,9 @@ const stopBatch = () => {
   }
 
   .log-container {
-    height: 300px;
-    min-height: 300px;
+    min-height: 150px;
+    height: auto;
+    max-height: 400px;
     flex: none !important;
   }
 

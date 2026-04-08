@@ -38,8 +38,6 @@
       <div class="header-right">
         <!-- 活动日历 -->
         <ActivityCalendarDropdown />
-        <!-- 主题切换 -->
-        <ThemeSettings />
         <slot name="header-right"></slot>
       </div>
     </header>
@@ -154,7 +152,6 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTokenStore } from '@/stores/tokenStore'
 import ActivityCalendarDropdown from '@/views/TaskScheduler/components/ActivityCalendarDropdown.vue'
-import ThemeSettings from '@/components/Common/ThemeSettings.vue'
 import {
   ArrowBack,
   ChevronDown,
@@ -508,44 +505,6 @@ const isActiveRoute = (path) => {
     .activity-badge {
       display: none !important;
     }
-  }
-
-  :deep(.theme-settings) {
-    .theme-toggle-btn {
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      border-radius: var(--radius-md);
-      background: rgba(241, 245, 249, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      color: var(--text-secondary);
-      transition: all 0.3s ease;
-
-      &:active {
-        transform: scale(0.95);
-        background: rgba(241, 245, 249, 1);
-      }
-
-      .n-icon {
-        font-size: 18px;
-      }
-    }
-  }
-
-  /* 深色主题适配 */
-  :deep([data-theme="dark"] .activity-calendar-btn) {
-    background: rgba(51, 65, 85, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: var(--text-secondary);
-  }
-
-  :deep([data-theme="dark"] .theme-settings .theme-toggle-btn) {
-    background: rgba(51, 65, 85, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: var(--text-secondary);
   }
 }
 
