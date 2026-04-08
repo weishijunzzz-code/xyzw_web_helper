@@ -36,6 +36,10 @@
       </div>
       
       <div class="header-right">
+        <!-- 活动日历 -->
+        <ActivityCalendarDropdown />
+        <!-- 主题切换 -->
+        <ThemeSettings />
         <slot name="header-right"></slot>
       </div>
     </header>
@@ -151,6 +155,8 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTokenStore } from '@/stores/tokenStore'
+import ActivityCalendarDropdown from '@/views/TaskScheduler/components/ActivityCalendarDropdown.vue'
+import ThemeSettings from '@/components/Common/ThemeSettings.vue'
 import {
   ArrowBack,
   ChevronDown,
@@ -306,6 +312,12 @@ const isActiveRoute = (path) => {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  /* 深色主题适配 */
+  [data-theme="dark"] & {
+    background: rgba(30, 41, 59, 0.9);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+  }
 }
 
 .header-left {
@@ -348,15 +360,25 @@ const isActiveRoute = (path) => {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  
+
   &:hover {
     background: rgba(241, 245, 249, 1);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
   }
-  
+
   &:active {
     transform: translateY(0);
+  }
+
+  /* 深色主题适配 */
+  [data-theme="dark"] & {
+    background: rgba(51, 65, 85, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(51, 65, 85, 1);
+    }
   }
 }
 
@@ -457,6 +479,73 @@ const isActiveRoute = (path) => {
   flex: 1;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+
+  /* 移动端适配：只显示图标，隐藏文字 */
+  :deep(.activity-calendar-btn) {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: var(--radius-md);
+    background: rgba(241, 245, 249, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+
+    &:active {
+      transform: scale(0.95);
+      background: rgba(241, 245, 249, 1);
+    }
+
+    .n-icon {
+      font-size: 18px;
+    }
+
+    /* 隐藏文字和小徽章 */
+    .btn-text,
+    .activity-badge {
+      display: none !important;
+    }
+  }
+
+  :deep(.theme-settings) {
+    .theme-toggle-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: var(--radius-md);
+      background: rgba(241, 245, 249, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+
+      &:active {
+        transform: scale(0.95);
+        background: rgba(241, 245, 249, 1);
+      }
+
+      .n-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  /* 深色主题适配 */
+  :deep([data-theme="dark"]) {
+    .activity-calendar-btn,
+    .theme-settings .theme-toggle-btn {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary);
+    }
+  }
 }
 
 // 主内容区域
@@ -484,6 +573,11 @@ const isActiveRoute = (path) => {
   background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+
+  /* 深色主题适配 */
+  [data-theme="dark"] & {
+    background: linear-gradient(to top, rgba(30, 41, 59, 0.95) 0%, rgba(30, 41, 59, 0.8) 100%);
+  }
 }
 
 .nav-container {
@@ -496,6 +590,11 @@ const isActiveRoute = (path) => {
   background: rgba(241, 245, 249, 0.9);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
+
+  /* 深色主题适配 */
+  [data-theme="dark"] & {
+    background: rgba(51, 65, 85, 0.9);
+  }
 }
 
 .nav-item {
