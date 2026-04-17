@@ -359,10 +359,9 @@ export function createTasksTower(deps) {
         });
 
         let count = 0;
-        const MAX_CLIMB = 100;
         let consecutiveFailures = 0;
 
-        while (currentEnergy > 0 && count < MAX_CLIMB && !shouldStop.value) {
+        while (currentEnergy > 0 && !shouldStop.value) {
           try {
             await tokenStore.sendMessageWithPromise(
               tokenId,
