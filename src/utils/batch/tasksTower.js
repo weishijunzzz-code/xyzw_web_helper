@@ -388,7 +388,7 @@ export function createTasksTower(deps) {
               type: "info",
             });
 
-            await new Promise((r) => setTimeout(r, 1500));
+            await new Promise((r) => setTimeout(r, 2500));
 
             const evotowerinfo2 = await tokenStore.sendMessageWithPromise(
               tokenId,
@@ -506,7 +506,7 @@ export function createTasksTower(deps) {
                   });
                   // 领取成功后重置失败计数
                   consecutiveFailures = 0;
-                  await new Promise((r) => setTimeout(r, 1500));
+                  await new Promise((r) => setTimeout(r, 2500));
                   continue; // 继续循环，不增加失败次数
                 }
               } catch (rewardErr) {

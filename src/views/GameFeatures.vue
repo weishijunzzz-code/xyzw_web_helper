@@ -221,7 +221,7 @@ const handleFeatureAction = async (featureType) => {
               message.success(`成功领取第${Math.floor(towerId / 10)}章通关奖励！`);
               
               // 等待后重新尝试挑战
-              await new Promise((r) => setTimeout(r, 1500));
+              await new Promise((r) => setTimeout(r, 2500));
               await tokenStore.sendMessageWithPromise(tokenId, "fight_starttower", {}, 10000);
               message.success("爬塔挑战成功");
             } else {
@@ -236,7 +236,7 @@ const handleFeatureAction = async (featureType) => {
         }
       }
       // 添加延迟避免请求过快
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 2500));
     },
   };
 
