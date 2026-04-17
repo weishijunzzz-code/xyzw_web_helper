@@ -471,7 +471,7 @@ export function createTasksTower(deps) {
             });
 
             // 检测是否可能是章节奖励未领取导致的错误
-            if (err.message && (err.message.includes("1500040") || err.message.includes("奖励") || err.message.includes("reward") || err.message.includes("章节"))) {
+            if (err.message && (err.message.includes("1500040") || err.message.includes("72500028") || err.message.includes("奖励") || err.message.includes("reward") || err.message.includes("章节"))) {
               addLog({
                 time: new Date().toLocaleTimeString(),
                 message: `${token.name} 检测到可能是章节奖励未领取，尝试领取...`,
