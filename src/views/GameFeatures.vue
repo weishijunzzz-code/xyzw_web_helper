@@ -194,7 +194,9 @@ const handleFeatureAction = async (featureType) => {
         message.success("爬塔挑战成功");
       } catch (err) {
         // 检测是否可能是章节奖励未领取导致的错误
-        if (err.message && (err.message.includes("1500040") || err.message.includes("72500028") || err.message.includes("奖励") || err.message.includes("reward") || err.message.includes("章节"))) {
+        // 检查错误代码: 1500040(上座塔), 72500028/12200020(怪异塔章节奖励)
+        const errorCode = err.serverErrorCode || err.code;
+        if (errorCode === 1500040 || errorCode === 72500028 || errorCode === 12200020) {
           message.warning("检测到可能是章节奖励未领取，尝试领取...");
           
           try {

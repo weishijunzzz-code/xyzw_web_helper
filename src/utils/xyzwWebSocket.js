@@ -45,6 +45,8 @@ const errorCodeMap = {
   200330: "无效的ID",
   1500040: "上座塔的奖励未领取",
   1500010: "已经全部通关",
+  72500028: "怪异塔章节奖励未领取",
+  12200020: "怪异塔奖励未领取",
 };
 
 // 事件节流定义表，根据实际需要调整命令和节流时间
@@ -1022,9 +1024,12 @@ export class XyzwWebSocketClient {
         const errorDesc =
           errorCodeMap[packet.code] || packet.hint || "未知错误";
 
-        promiseData.reject(
-          new Error(`服务器错误: ${packet.code} - ${errorDesc}`),
-        );
+        // 创建错误对象并保留错误代码
+        const error = new Error(`服务器错误: ${packet.code} - ${errorDesc}`);
+        error.code = packet.code;
+        error.serverErrorCode = packet.code;
+        error.errorDesc = errorDesc;
+        promiseData.reject(error);
       }
       return;
     }
@@ -1197,9 +1202,12 @@ export class XyzwWebSocketClient {
           const errorDesc =
             errorCodeMap[packet.code] || packet.hint || "未知错误";
 
-          promiseData.reject(
-            new Error(`服务器错误: ${packet.code} - ${errorDesc}`),
-          );
+          // 创建错误对象并保留错误代码
+          const error = new Error(`服务器错误: ${packet.code} - ${errorDesc}`);
+          error.code = packet.code;
+          error.serverErrorCode = packet.code;
+          error.errorDesc = errorDesc;
+          promiseData.reject(error);
         }
         break;
       }
