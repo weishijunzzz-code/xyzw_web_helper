@@ -388,7 +388,7 @@ export function createTasksTower(deps) {
               type: "info",
             });
 
-            await new Promise((r) => setTimeout(r, 500));
+            await new Promise((r) => setTimeout(r, 1500));
 
             const evotowerinfo2 = await tokenStore.sendMessageWithPromise(
               tokenId,
