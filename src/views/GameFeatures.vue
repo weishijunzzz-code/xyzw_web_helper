@@ -186,11 +186,55 @@ const handleFeatureAction = async (featureType) => {
       message.info("执行俱乐部签到...");
       tokenStore.sendMessage(tokenId, "legion_signin");
     },
-    "tower-challenge": () => {
+    "tower-challenge": async () => {
       message.info("开始爬塔挑战...");
-      // 关键业务：只提示 UI，不打印冗余日志
-      // 实际请求体: {"ack":0,"body":{},"cmd":"fight_starttower","seq":XX,"time":TIMESTAMP}
-      tokenStore.sendMessage(tokenId, "fight_starttower");
+      try {
+        // 尝试发送挑战命令
+        await tokenStore.sendMessageWithPromise(tokenId, "fight_starttower", {}, 10000);
+        message.success("爬塔挑战成功");
+      } catch (err) {
+        // 检测是否可能是章节奖励未领取导致的错误
+        if (err.message && (err.message.includes("1500040") || err.message.includes("奖励") || err.message.includes("reward") || err.message.includes("章节"))) {
+          message.warning("检测到可能是章节奖励未领取，尝试领取...");
+          
+          try {
+            // 获取怪异塔信息
+            const evotowerinfo = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "evotower_getinfo",
+              {},
+              5000,
+            );
+            const towerId = evotowerinfo?.evoTower?.towerId || 0;
+            const floor = (towerId % 10) + 1;
+            
+            // 如果在第1层（刚通关），尝试领取章节奖励
+            if (floor === 1 && towerId > 0) {
+              await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "evotower_claimreward",
+                {},
+                5000,
+              );
+              message.success(`成功领取第${Math.floor(towerId / 10)}章通关奖励！`);
+              
+              // 等待后重新尝试挑战
+              await new Promise((r) => setTimeout(r, 1500));
+              await tokenStore.sendMessageWithPromise(tokenId, "fight_starttower", {}, 10000);
+              message.success("爬塔挑战成功");
+            } else {
+              throw err; // 如果不是奖励问题，抛出原错误
+            }
+          } catch (rewardErr) {
+            message.error(`处理失败: ${rewardErr.message}`);
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
+      // 添加延迟避免请求过快
+      await new Promise((r) => setTimeout(r, 1500));
     },
   };
 

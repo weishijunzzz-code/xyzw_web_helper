@@ -470,6 +470,52 @@ export function createTasksTower(deps) {
               type: "warning",
             });
 
+            // 检测是否可能是章节奖励未领取导致的错误
+            if (err.message && (err.message.includes("1500040") || err.message.includes("奖励") || err.message.includes("reward") || err.message.includes("章节"))) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 检测到可能是章节奖励未领取，尝试领取...`,
+                type: "warning",
+              });
+
+              try {
+                // 获取当前塔信息
+                const evotowerinfoReward = await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "evotower_getinfo",
+                  {},
+                  5000,
+                );
+                const towerId = evotowerinfoReward?.evoTower?.towerId || 0;
+                const floor = (towerId % 10) + 1;
+
+                // 如果在第1层（刚通关），尝试领取章节奖励
+                if (floor === 1 && towerId > 0) {
+                  await tokenStore.sendMessageWithPromise(
+                    tokenId,
+                    "evotower_claimreward",
+                    {},
+                    5000,
+                  );
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} 成功领取第${Math.floor(towerId / 10)}章通关奖励！`,
+                    type: "success",
+                  });
+                  // 领取成功后重置失败计数
+                  consecutiveFailures = 0;
+                  await new Promise((r) => setTimeout(r, 1500));
+                  continue; // 继续循环，不增加失败次数
+                }
+              } catch (rewardErr) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `领取章节奖励失败: ${rewardErr.message}`,
+                  type: "error",
+                });
+              }
+            }
+
             if (consecutiveFailures >= 3) {
               addLog({
                 time: new Date().toLocaleTimeString(),
