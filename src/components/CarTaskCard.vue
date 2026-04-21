@@ -273,7 +273,8 @@ const claimCar = async (carId) => {
 
       // 收车后自动升级赛车科技
       console.log("收车成功，开始升级赛车科技...");
-      await upgradeCarResearch(tokenId, 0);
+      const currentLevel = await getCarResearchLevel(tokenId);
+      await upgradeCarResearch(tokenId, currentLevel);
 
       // 刷新车辆列表
       await getCarList();

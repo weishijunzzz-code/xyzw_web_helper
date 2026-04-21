@@ -845,6 +845,25 @@ const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
   }
 };
 
+// 获取当前赛车科技等级
+const getCarResearchLevel = async (tokenId) => {
+  try {
+    const res = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "car_getrolecar",
+      {},
+      5000,
+    );
+    const roleCar = res?.body?.roleCar || res?.roleCar || res?.body?.rolecar || res?.rolecar;
+    const researchLevel = roleCar?.research?.[1] || 0;
+    console.log(`[getCarResearchLevel] 获取科技等级: ${researchLevel}`);
+    return researchLevel;
+  } catch (error) {
+    console.error("[getCarResearchLevel] 获取科技等级失败:", error.message);
+    return 0;
+  }
+};
+
 const canClaim = (car) => {
   const t = Number(car?.sendAt || 0);
   if (!t) return false;
@@ -885,7 +904,8 @@ const claimCar = async (car) => {
     
     // 收车后自动升级赛车科技
     console.log("[claimCar] 收车成功，开始升级赛车科技...");
-    await upgradeCarResearch(token.id, 0);
+    const currentLevel = await getCarResearchLevel(token.id);
+    await upgradeCarResearch(token.id, currentLevel);
     console.log("[claimCar] 赛车科技升级完成");
   } catch (e) {
     message.error("收车失败：" + (e.message || "未知错误"));
@@ -957,7 +977,8 @@ const claimAllCars = async () => {
     
     // 所有车辆收完后，最后升级一次科技
     console.log("[claimAllCars] 所有车辆收完，最后升级科技...");
-    await upgradeCarResearch(token.id, 0);
+    const finalLevel = await getCarResearchLevel(token.id);
+    await upgradeCarResearch(token.id, finalLevel);
     console.log("[claimAllCars] 科技升级完成");
     
     await fetchCarInfo();
