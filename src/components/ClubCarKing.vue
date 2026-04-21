@@ -213,6 +213,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useMessage, NCard, NThing, NAvatar, NSpace, NButton, NTag, NGrid, NGi, NIcon, NModal, NSelect, NSpin, NEmpty, NStatistic } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
 import { CarSport, Refresh, Flash, ArrowUpCircle, Person, Ticket } from "@vicons/ionicons5";
+import { CarresearchItem } from "@/utils/batch/constants.js";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
@@ -758,6 +759,92 @@ const sendCar = async (car) => {
 
 // 计算是否可收车：已发车且超过4小时
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+
+// 升级赛车科技方法
+const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
+  try {
+    console.log(`[upgradeCarResearch] 开始升级赛车科技，初始等级: ${initialLevel}`);
+    
+    // 获取当前科技等级和零件数量
+    const roleRes = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+      5000,
+    );
+    let refreshpieces = Number(
+      roleRes?.role?.items?.[35009]?.quantity || 0,
+    );
+    let refreshlevel = initialLevel;
+    
+    console.log(`[upgradeCarResearch] 当前零件数量: ${refreshpieces}, 科技等级: ${refreshlevel}`);
+
+    // 循环升级科技
+    let upgradeCount = 0;
+    while (
+      refreshlevel < CarresearchItem.length &&
+      refreshpieces >= CarresearchItem[refreshlevel]
+    ) {
+      const cost = CarresearchItem[refreshlevel];
+      console.log(`[upgradeCarResearch] 尝试升级: 等级 ${refreshlevel} -> ${refreshlevel + 1}, 消耗: ${cost}, 拥有: ${refreshpieces}`);
+      
+      try {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "car_research",
+          { researchId: 1 },
+          5000,
+        );
+        refreshlevel++;
+        upgradeCount++;
+
+        // 更新零件数量
+        const updatedRoleRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "role_getroleinfo",
+          {},
+          5000,
+        );
+        refreshpieces = Number(
+          updatedRoleRes?.role?.items?.[35009]?.quantity || 0,
+        );
+
+        console.log(`[upgradeCarResearch] ✅ 升级成功，当前等级: ${refreshlevel}, 剩余零件: ${refreshpieces}`);
+        await new Promise((r) => setTimeout(r, 300));
+      } catch (e) {
+        console.error(`[upgradeCarResearch] ❌ 升级失败:`, e.message);
+        break;
+      }
+    }
+    
+    if (upgradeCount === 0) {
+      console.log(`[upgradeCarResearch] ⚠️ 没有进行任何升级，原因: 零件不足或已达最高等级`);
+    } else {
+      console.log(`[upgradeCarResearch] ✅ 共升级 ${upgradeCount} 次，最终等级: ${refreshlevel}`);
+    }
+
+    // 尝试领取改装升级累计奖励
+    try {
+      const rewardRes = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "car_claimpartconsumereward",
+        {},
+        5000,
+      );
+      if (rewardRes && rewardRes.reward) {
+        console.log("[upgradeCarResearch] ✅ 领取改装升级累计奖励成功");
+      }
+    } catch (e) {
+      // 忽略错误
+    }
+
+    return refreshlevel;
+  } catch (error) {
+    console.error("[upgradeCarResearch] ❌ 升级赛车科技失败:", error.message);
+    return initialLevel;
+  }
+};
+
 const canClaim = (car) => {
   const t = Number(car?.sendAt || 0);
   if (!t) return false;
@@ -795,6 +882,11 @@ const claimCar = async (car) => {
       };
     }
     message.success("收车完成");
+    
+    // 收车后自动升级赛车科技
+    console.log("[claimCar] 收车成功，开始升级赛车科技...");
+    await upgradeCarResearch(token.id, 0);
+    console.log("[claimCar] 赛车科技升级完成");
   } catch (e) {
     message.error("收车失败：" + (e.message || "未知错误"));
   }
@@ -852,13 +944,22 @@ const claimAllCars = async () => {
   if (!token || !isConnected.value)
     return message.warning("请先选择 Token 并建立连接");
   try {
+    console.log("[claimAllCars] 开始一键收车...");
     const claimables = (carList.value || []).filter((c) => canClaim(c));
+    console.log(`[claimAllCars] 可收车辆数量: ${claimables.length}`);
+    
     for (const c of claimables) {
       try {
         await claimCar(c);
       } catch (_) {}
       await new Promise((r) => setTimeout(r, 300));
     }
+    
+    // 所有车辆收完后，最后升级一次科技
+    console.log("[claimAllCars] 所有车辆收完，最后升级科技...");
+    await upgradeCarResearch(token.id, 0);
+    console.log("[claimAllCars] 科技升级完成");
+    
     await fetchCarInfo();
     message.success("一键收车完成");
   } catch (e) {

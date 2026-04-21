@@ -291,6 +291,8 @@ const claimCar = async (carId) => {
 // 升级赛车科技方法
 const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
   try {
+    console.log(`[upgradeCarResearch] 开始升级赛车科技，初始等级: ${initialLevel}`);
+    
     // 获取当前科技等级和零件数量
     const roleRes = await tokenStore.sendMessageWithPromise(
       tokenId,
@@ -302,12 +304,18 @@ const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
       roleRes?.role?.items?.[35009]?.quantity || 0,
     );
     let refreshlevel = initialLevel;
+    
+    console.log(`[upgradeCarResearch] 当前零件数量: ${refreshpieces}, 科技等级: ${refreshlevel}`);
 
     // 循环升级科技
+    let upgradeCount = 0;
     while (
       refreshlevel < CarresearchItem.length &&
       refreshpieces >= CarresearchItem[refreshlevel]
     ) {
+      const cost = CarresearchItem[refreshlevel];
+      console.log(`[upgradeCarResearch] 尝试升级: 等级 ${refreshlevel} -> ${refreshlevel + 1}, 消耗: ${cost}, 拥有: ${refreshpieces}`);
+      
       try {
         await tokenStore.sendMessageWithPromise(
           tokenId,
@@ -316,6 +324,7 @@ const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
           5000,
         );
         refreshlevel++;
+        upgradeCount++;
 
         // 更新零件数量
         const updatedRoleRes = await tokenStore.sendMessageWithPromise(
@@ -328,12 +337,18 @@ const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
           updatedRoleRes?.role?.items?.[35009]?.quantity || 0,
         );
 
-        console.log(`车辆改装升级成功，当前等级: ${refreshlevel}`);
+        console.log(`[upgradeCarResearch] ✅ 升级成功，当前等级: ${refreshlevel}, 剩余零件: ${refreshpieces}`);
         await new Promise((r) => setTimeout(r, 300));
       } catch (e) {
-        console.error("车辆改装升级失败:", e.message);
+        console.error(`[upgradeCarResearch] ❌ 升级失败:`, e.message);
         break;
       }
+    }
+    
+    if (upgradeCount === 0) {
+      console.log(`[upgradeCarResearch] ⚠️ 没有进行任何升级，原因: 零件不足或已达最高等级`);
+    } else {
+      console.log(`[upgradeCarResearch] ✅ 共升级 ${upgradeCount} 次，最终等级: ${refreshlevel}`);
     }
 
     // 尝试领取改装升级累计奖励
@@ -345,7 +360,7 @@ const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
         5000,
       );
       if (rewardRes && rewardRes.reward) {
-        console.log("领取改装升级累计奖励成功");
+        console.log("[upgradeCarResearch] ✅ 领取改装升级累计奖励成功");
       }
     } catch (e) {
       // 忽略错误
@@ -353,7 +368,7 @@ const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
 
     return refreshlevel;
   } catch (error) {
-    console.error("升级赛车科技失败:", error.message);
+    console.error("[upgradeCarResearch] ❌ 升级赛车科技失败:", error.message);
     return initialLevel;
   }
 };
@@ -411,19 +426,34 @@ const getCarResearchLevel = async (tokenId) => {
 const claimAllCars = async () => {
   const tokenId = tokenStore.selectedToken.id;
   const status = tokenStore.getWebSocketStatus(tokenId);
+  console.log(`[claimAllCars] 开始一键收车，Token状态: ${status}`);
+  
   if (status === "connected") {
     try {
       // 获取初始科技等级
+      console.log(`[claimAllCars] 获取初始科技等级...`);
       let currentResearchLevel = await getCarResearchLevel(tokenId);
+      console.log(`[claimAllCars] 初始科技等级: ${currentResearchLevel}`);
 
       // 筛选出所有可收菜的车辆
       const claimableCars = sortedCarList.value.filter(
         (car) => car.status === "claimable",
       );
+      console.log(`[claimAllCars] 可收车辆数量: ${claimableCars.length}`);
+
+      if (claimableCars.length === 0) {
+        console.log(`[claimAllCars] ⚠️ 没有可收的车辆`);
+        // 即使没有可收的车，也尝试升级科技（可能之前有零件）
+        await upgradeCarResearch(tokenId, currentResearchLevel);
+        return;
+      }
 
       // 遍历所有可收菜的车辆并执行收车操作
-      for (const car of claimableCars) {
+      for (let i = 0; i < claimableCars.length; i++) {
+        const car = claimableCars[i];
         try {
+          console.log(`[claimAllCars] 正在收车 ${i + 1}/${claimableCars.length}: ${car.id}`);
+          
           // 构建收车命令参数
           const params = { carId: car.id };
           // 发送收车命令
@@ -432,34 +462,38 @@ const claimAllCars = async () => {
             "car_claim",
             params,
           );
-          console.log(`收车成功: ${car.id}`);
+          console.log(`[claimAllCars] ✅ 收车成功: ${car.id}`);
 
           // 每收一辆车后尝试升级科技
+          console.log(`[claimAllCars] 收车后升级科技...`);
           currentResearchLevel = await upgradeCarResearch(
             tokenId,
             currentResearchLevel,
           );
+          console.log(`[claimAllCars] 当前科技等级更新为: ${currentResearchLevel}`);
 
           // 为了避免请求过于频繁，可以添加一个小的延迟
           await new Promise((resolve) => setTimeout(resolve, 300));
         } catch (error) {
-          console.error(`收车失败 ${car.id}:`, error);
+          console.error(`[claimAllCars] ❌ 收车失败 ${car.id}:`, error);
           // 继续收其他车辆，不中断整个过程
         }
       }
 
       // 最后再尝试一次升级（收取所有车辆后可能累积了更多零件）
+      console.log(`[claimAllCars] 所有车辆收完，最终升级科技...`);
       await upgradeCarResearch(tokenId, currentResearchLevel);
 
       // 最后统一刷新一次车辆列表
+      console.log(`[claimAllCars] 刷新车辆列表...`);
       await getCarList();
 
-      console.log("一键收车完成");
+      console.log(`[claimAllCars] ✅ 一键收车完成`);
     } catch (error) {
-      console.error("一键收车过程中发生错误:", error);
+      console.error(`[claimAllCars] ❌ 一键收车过程中发生错误:`, error);
     }
   } else {
-    console.log("WebSocket未连接，无法一键收车");
+    console.log(`[claimAllCars] ❌ WebSocket未连接，无法一键收车`);
   }
 };
 
