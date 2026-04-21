@@ -82,6 +82,7 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import { g_utils } from "@/utils/bonProtocol.js";
+import { CarresearchItem } from "@/utils/batch/constants.js";
 
 // 车辆数据处理工具函数
 // 根据color值返回颜色名称
@@ -270,6 +271,10 @@ const claimCar = async (carId) => {
 
       console.log("收车命令返回结果:", result);
 
+      // 收车后自动升级赛车科技
+      console.log("收车成功，开始升级赛车科技...");
+      await upgradeCarResearch(tokenId, 0);
+
       // 刷新车辆列表
       await getCarList();
 
@@ -280,6 +285,76 @@ const claimCar = async (carId) => {
     }
   } else {
     console.log("WebSocket未连接，无法收车");
+  }
+};
+
+// 升级赛车科技方法
+const upgradeCarResearch = async (tokenId, initialLevel = 0) => {
+  try {
+    // 获取当前科技等级和零件数量
+    const roleRes = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+      5000,
+    );
+    let refreshpieces = Number(
+      roleRes?.role?.items?.[35009]?.quantity || 0,
+    );
+    let refreshlevel = initialLevel;
+
+    // 循环升级科技
+    while (
+      refreshlevel < CarresearchItem.length &&
+      refreshpieces >= CarresearchItem[refreshlevel]
+    ) {
+      try {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "car_research",
+          { researchId: 1 },
+          5000,
+        );
+        refreshlevel++;
+
+        // 更新零件数量
+        const updatedRoleRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "role_getroleinfo",
+          {},
+          5000,
+        );
+        refreshpieces = Number(
+          updatedRoleRes?.role?.items?.[35009]?.quantity || 0,
+        );
+
+        console.log(`车辆改装升级成功，当前等级: ${refreshlevel}`);
+        await new Promise((r) => setTimeout(r, 300));
+      } catch (e) {
+        console.error("车辆改装升级失败:", e.message);
+        break;
+      }
+    }
+
+    // 尝试领取改装升级累计奖励
+    try {
+      const rewardRes = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "car_claimpartconsumereward",
+        {},
+        5000,
+      );
+      if (rewardRes && rewardRes.reward) {
+        console.log("领取改装升级累计奖励成功");
+      }
+    } catch (e) {
+      // 忽略错误
+    }
+
+    return refreshlevel;
+  } catch (error) {
+    console.error("升级赛车科技失败:", error.message);
+    return initialLevel;
   }
 };
 
@@ -316,12 +391,31 @@ const sendCar = async (carId) => {
   }
 };
 
+// 获取当前科技等级
+const getCarResearchLevel = async (tokenId) => {
+  try {
+    const res = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "car_getrolecar",
+      {},
+      5000,
+    );
+    return res?.roleCar?.research?.[1] || 0;
+  } catch (error) {
+    console.error("获取科技等级失败:", error.message);
+    return 0;
+  }
+};
+
 // 一键收车方法
 const claimAllCars = async () => {
   const tokenId = tokenStore.selectedToken.id;
   const status = tokenStore.getWebSocketStatus(tokenId);
   if (status === "connected") {
     try {
+      // 获取初始科技等级
+      let currentResearchLevel = await getCarResearchLevel(tokenId);
+
       // 筛选出所有可收菜的车辆
       const claimableCars = sortedCarList.value.filter(
         (car) => car.status === "claimable",
@@ -330,13 +424,33 @@ const claimAllCars = async () => {
       // 遍历所有可收菜的车辆并执行收车操作
       for (const car of claimableCars) {
         try {
-          await claimCar(car.id);
+          // 构建收车命令参数
+          const params = { carId: car.id };
+          // 发送收车命令
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "car_claim",
+            params,
+          );
+          console.log(`收车成功: ${car.id}`);
+
+          // 每收一辆车后尝试升级科技
+          currentResearchLevel = await upgradeCarResearch(
+            tokenId,
+            currentResearchLevel,
+          );
+
           // 为了避免请求过于频繁，可以添加一个小的延迟
           await new Promise((resolve) => setTimeout(resolve, 300));
         } catch (error) {
+          console.error(`收车失败 ${car.id}:`, error);
           // 继续收其他车辆，不中断整个过程
         }
       }
+
+      // 最后再尝试一次升级（收取所有车辆后可能累积了更多零件）
+      await upgradeCarResearch(tokenId, currentResearchLevel);
+
       // 最后统一刷新一次车辆列表
       await getCarList();
 

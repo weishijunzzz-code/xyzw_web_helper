@@ -117,7 +117,7 @@ export function createTasksLegacy(deps) {
   /**
    * 增强版批量赠送功法残卷（含完善的验证和错误处理）
    * @param {boolean} isScheduledTask - 是否为定时任务
-   * @param {number|null} targetQuantity - 目标赠送数量（null则使用giftQuantity.value）
+   * @param {number|null} targetQuantity - 目标赠送数量（null则使用giftQuantity.value，-1表示全部数量）
    */
   const batchLegacyGiftSendEnhanced = async (isScheduledTask = false, targetQuantity = null) => {
     if (selectedTokens.value.length === 0) {
@@ -133,7 +133,9 @@ export function createTasksLegacy(deps) {
       : securityPassword.value;
 
     // 使用传入的目标数量或默认的giftQuantity
+    // targetQuantity 为 null 时使用 giftQuantity.value
     const targetGiftQuantity = targetQuantity !== null ? targetQuantity : (giftQuantity.value || 0);
+    const useMaxQuantity = targetQuantity === null; // null 表示使用最大数量模式
 
     const giftConfig = {
       recipientId: Number(recipientId),
@@ -142,6 +144,7 @@ export function createTasksLegacy(deps) {
       quantity: Math.min(targetGiftQuantity, 9999) || 0, // 第一批赠送数量
       serverName: recipientInfo.value?.serverName || "",
       name: recipientInfo.value?.name || "",
+      useMaxQuantity, // 是否使用最大数量模式
     };
 
     if (!isScheduledTask) {
@@ -150,7 +153,8 @@ export function createTasksLegacy(deps) {
         return;
       }
 
-      if (giftConfig.quantity <= 0 || giftConfig.quantity > 9999) {
+      // 非最大数量模式下需要验证数量
+      if (!useMaxQuantity && (giftConfig.quantity <= 0 || giftConfig.quantity > 9999)) {
         message.error("赠送数量必须在1-9999之间");
         return;
       }
@@ -188,8 +192,12 @@ export function createTasksLegacy(deps) {
           // 获取实际拥有的功法残卷数量
           const actualCount = roleInfo?.role?.items?.[giftConfig.itemId]?.quantity || 0;
 
+          // 根据模式确定实际赠送数量
+          // 最大数量模式：赠送全部拥有的数量
+          const actualTargetQuantity = giftConfig.useMaxQuantity ? actualCount : giftConfig.targetQuantity;
+
           // 计算分批赠送列表
-          const giftBatches = calculateGiftBatches(giftConfig.targetQuantity, actualCount);
+          const giftBatches = calculateGiftBatches(actualTargetQuantity, actualCount);
           const totalBatches = giftBatches.length;
           const totalGiftCount = giftBatches.reduce((sum, batch) => sum + batch, 0);
 
@@ -204,9 +212,11 @@ export function createTasksLegacy(deps) {
             break;
           }
 
+          // 根据模式显示不同的日志信息
+          const modeText = giftConfig.useMaxQuantity ? "【最大数量模式】" : "";
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `=== ${token.name} 计划赠送${totalGiftCount}个功法残卷，分${totalBatches}次完成（当前拥有: ${actualCount}个）===`,
+            message: `=== ${token.name} ${modeText}计划赠送${totalGiftCount}个功法残卷，分${totalBatches}次完成（当前拥有: ${actualCount}个）===`,
             type: "info",
           });
 

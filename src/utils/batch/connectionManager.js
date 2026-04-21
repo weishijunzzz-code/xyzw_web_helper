@@ -5,6 +5,9 @@
 // 全局连接队列控制 - 限制并发连接数
 export const connectionQueue = { active: 0 };
 
+// 槽位等待超时时间（毫秒）
+const SLOT_WAIT_TIMEOUT = 30000; // 30秒
+
 /**
  * 创建连接管理器
  * @param {object} options - 配置选项
@@ -15,13 +18,25 @@ export const connectionQueue = { active: 0 };
  */
 export function createConnectionManager({ tokenStore, batchSettings, addLog }) {
   /**
-   * 等待连接槽位
+   * 等待连接槽位（带超时机制）
+   * @param {number} timeout - 超时时间（毫秒）
+   * @returns {Promise<boolean>} - 是否成功获取槽位
    */
-  const waitForConnectionSlot = async () => {
+  const waitForConnectionSlot = async (timeout = SLOT_WAIT_TIMEOUT) => {
+    const start = Date.now();
     while (connectionQueue.active >= batchSettings.maxActive) {
+      if (Date.now() - start > timeout) {
+        throw new Error(`等待连接槽位超时（${timeout}ms），当前活跃连接: ${connectionQueue.active}/${batchSettings.maxActive}`);
+      }
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `等待连接槽位... (${connectionQueue.active}/${batchSettings.maxActive})`,
+        type: "info",
+      });
       await new Promise((r) => setTimeout(r, 1000));
     }
     connectionQueue.active++;
+    return true;
   };
 
   /**
@@ -34,22 +49,55 @@ export function createConnectionManager({ tokenStore, batchSettings, addLog }) {
   };
 
   /**
-   * 等待连接建立
+   * 等待连接建立（增强版，带状态检测）
    * @param {string} tokenId - Token ID
    * @param {number} timeout - 超时时间
+   * @param {string} tokenName - Token名称（用于日志）
    */
-  const waitForConnection = async (tokenId, timeout = batchSettings.connectionTimeout) => {
+  const waitForConnection = async (tokenId, timeout = batchSettings.connectionTimeout, tokenName = "") => {
     const start = Date.now();
+    let lastStatus = "";
+    let sameStatusCount = 0;
+    const MAX_SAME_STATUS_COUNT = 20; // 最多允许连续20次（10秒）相同状态
+    
     while (Date.now() - start < timeout) {
       const status = tokenStore.getWebSocketStatus(tokenId);
+      
+      // 检测连接状态是否长时间无变化（可能是卡住了）
+      if (status === lastStatus) {
+        sameStatusCount++;
+        if (sameStatusCount >= MAX_SAME_STATUS_COUNT) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${tokenName} 连接状态长时间未变化 (${status})，可能卡住了`,
+            type: "warning",
+          });
+          return false;
+        }
+      } else {
+        sameStatusCount = 0;
+        lastStatus = status;
+      }
+      
       if (status === "connected") return true;
+      
+      // 如果状态是 error 或 disconnected，直接返回失败
+      if (status === "error" || status === "disconnected") {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${tokenName} 连接状态异常: ${status}`,
+          type: "warning",
+        });
+        return false;
+      }
+      
       await new Promise((r) => setTimeout(r, 500));
     }
     return false;
   };
 
   /**
-   * 确保连接建立
+   * 确保连接建立（增强版）
    * @param {string} tokenId - Token ID
    * @param {object} tokens - Tokens列表
    * @param {number} maxRetries - 最大重试次数
@@ -62,54 +110,96 @@ export function createConnectionManager({ tokenStore, batchSettings, addLog }) {
 
     let status = tokenStore.getWebSocketStatus(tokenId);
     let connected = status === "connected";
+    let slotAcquired = false;
 
     if (!connected) {
-      // 等待连接槽位，限制并发连接数
-      await waitForConnectionSlot();
+      try {
+        // 等待连接槽位，限制并发连接数（带超时）
+        await waitForConnectionSlot();
+        slotAcquired = true;
+      } catch (slotError) {
+        throw new Error(`获取连接槽位失败: ${slotError.message}`);
+      }
 
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+        message: `${latestToken.name} 正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
         type: "info",
       });
 
-      tokenStore.createWebSocketConnection(
-        tokenId,
-        latestToken.token,
-        latestToken.wsUrl
-      );
-      connected = await waitForConnection(tokenId);
+      let retryCount = 0;
+      let lastError = null;
 
-      if (!connected && maxRetries > 0) {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `连接超时，尝试重连...`,
-          type: "warning",
-        });
+      while (retryCount <= maxRetries && !connected) {
+        try {
+          // 关闭现有连接（如果有）
+          tokenStore.closeWebSocketConnection(tokenId);
+          
+          // 等待一小段时间确保连接完全关闭
+          await new Promise((r) => setTimeout(r, 500));
 
-        tokenStore.closeWebSocketConnection(tokenId);
-        await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+          // 获取最新的token数据（可能已被刷新）
+          const currentToken = tokens.find((t) => t.id === tokenId);
+          if (!currentToken) {
+            throw new Error(`Token不存在: ${tokenId}`);
+          }
 
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `正在重连...`,
-          type: "info",
-        });
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${currentToken.name} ${retryCount > 0 ? `第${retryCount}次重试` : "发起连接"}...`,
+            type: "info",
+          });
 
-        const refreshedToken = tokens.find((t) => t.id === tokenId);
-        tokenStore.createWebSocketConnection(
-          tokenId,
-          refreshedToken.token,
-          refreshedToken.wsUrl
-        );
+          await tokenStore.createWebSocketConnection(
+            tokenId,
+            currentToken.token,
+            currentToken.wsUrl
+          );
+          
+          // 等待连接建立
+          connected = await waitForConnection(
+            tokenId, 
+            batchSettings.connectionTimeout,
+            currentToken.name
+          );
 
-        connected = await waitForConnection(tokenId);
+          if (connected) {
+            break; // 连接成功，跳出重试循环
+          }
+
+          lastError = new Error("连接超时");
+          retryCount++;
+
+          if (retryCount <= maxRetries) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${currentToken.name} 连接失败，${batchSettings.reconnectDelay}ms后重试...`,
+              type: "warning",
+            });
+            await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+          }
+        } catch (error) {
+          lastError = error;
+          retryCount++;
+          
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${latestToken.name} 连接异常: ${error.message}${retryCount <= maxRetries ? "，准备重试..." : ""}`,
+            type: "warning",
+          });
+
+          if (retryCount <= maxRetries) {
+            await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+          }
+        }
       }
 
       if (!connected) {
         // 连接失败，释放槽位
-        releaseConnectionSlot();
-        throw new Error("连接失败 (重试后仍超时)");
+        if (slotAcquired) {
+          releaseConnectionSlot();
+        }
+        throw new Error(`连接失败: ${lastError?.message || "重试后仍无法连接"}`);
       }
     }
 
@@ -161,6 +251,23 @@ export function createConnectionManager({ tokenStore, batchSettings, addLog }) {
     });
   };
 
+  /**
+   * 强制重置连接队列（用于紧急停止）
+   */
+  const forceResetQueue = () => {
+    const oldActive = connectionQueue.active;
+    connectionQueue.active = 0;
+    return oldActive;
+  };
+
+  /**
+   * 获取当前队列状态
+   */
+  const getQueueStatus = () => ({
+    active: connectionQueue.active,
+    maxActive: batchSettings.maxActive,
+  });
+
   return {
     connectionQueue,
     waitForConnectionSlot,
@@ -168,6 +275,8 @@ export function createConnectionManager({ tokenStore, batchSettings, addLog }) {
     waitForConnection,
     ensureConnection,
     closeConnection,
+    forceResetQueue,
+    getQueueStatus,
   };
 }
 

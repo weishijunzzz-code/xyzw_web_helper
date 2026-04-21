@@ -88,6 +88,20 @@
                 </template>
                 导出图片
               </n-button>
+              <n-button
+                size="small"
+                type="warning"
+                :loading="sendingReviveInfo"
+                @click="sendReviveInfo"
+                :disabled="!validData || !isEntireBattlefield"
+              >
+                <template #icon>
+                  <n-icon>
+                    <ChatbubbleOutline />
+                  </n-icon>
+                </template>
+                发送复活信息
+              </n-button>
             </div>
           </div>
         </div>
@@ -176,6 +190,7 @@ import {
   MapOutline,
   RefreshOutline,
   ImageOutline,
+  ChatbubbleOutline,
 } from "@vicons/ionicons5";
 import { allianceincludes } from "@/utils/clubWarrankUtils";
 import { isLegionWarAccessible } from "@/utils/clubBattleUtils";
@@ -206,6 +221,7 @@ let resizeHandler = null;
 const isJoined = isEntireBattlefield; // alias for compatibility if needed, but we use isEntireBattlefield in template
 
 const exporting = ref(false);
+const sendingReviveInfo = ref(false);
 
 const exportImage = async () => {
   const element = document.querySelector(
@@ -235,6 +251,25 @@ const exportImage = async () => {
     message.error("导出失败");
   } finally {
     exporting.value = false;
+  }
+};
+
+// 发送各俱乐部免费复活信息到战队频道
+const sendReviveInfo = async () => {
+  if (!validData.value || !isEntireBattlefield.value) {
+    message.warning("请先进入战场并获取数据");
+    return;
+  }
+
+  sendingReviveInfo.value = true;
+  try {
+    const count = await legionWarStore.sendReviveInfoToLegion(message);
+    message.success(`成功发送${count}条复活信息到战队频道`);
+  } catch (error) {
+    console.error("发送复活信息失败:", error);
+    message.error(error.message || "发送失败");
+  } finally {
+    sendingReviveInfo.value = false;
   }
 };
 

@@ -233,6 +233,68 @@ export const useLegionWarStore = defineStore("legionWar", () => {
     }
   };
 
+  /**
+   * 发送各俱乐部免费复活信息到战队频道
+   * @param {Function} message - naive-ui 的 message 实例
+   */
+  const sendReviveInfoToLegion = async (message) => {
+    if (!validData.value || !validData.value.legionInfo) {
+      throw new Error("暂无战场数据，请先获取数据");
+    }
+
+    if (!tokenStore.selectedToken) {
+      throw new Error("请先选择一个Token");
+    }
+
+    const legions = Object.values(validData.value.legionInfo);
+    if (legions.length === 0) {
+      throw new Error("未获取到俱乐部信息");
+    }
+
+    // 构建消息列表（每10个俱乐部一条消息，分两条发送）
+    const messageList = [];
+    for (let i = 0; i < 2; i++) {
+      let msg = "";
+      for (let j = 0; j < 10; j++) {
+        const index = j + i * 10;
+        if (index >= legions.length) break;
+        
+        const legion = legions[index];
+        if (j !== 0) msg += "\n";
+        msg += `${legion.name}:剩${150 - (legion.reviveCount || 0)}`;
+      }
+      if (msg) messageList.push(msg);
+    }
+
+    const tokenId = tokenStore.selectedToken.id;
+    const sendInterval = 1500;
+
+    for (let i = 0; i < messageList.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, sendInterval));
+      
+      try {
+        await tokenStore.sendMessageToLegion(tokenId, messageList[i]);
+        message.success(`第${i + 1}条消息发送成功`);
+      } catch (error) {
+        console.error(`发送第${i + 1}条消息失败`, error);
+        // 如果是频繁发送错误，等待更长时间后重试一次
+        if (error.message && error.message.includes("频繁")) {
+          await new Promise((resolve) => setTimeout(resolve, sendInterval * 2));
+          try {
+            await tokenStore.sendMessageToLegion(tokenId, messageList[i]);
+            message.success(`第${i + 1}条消息重试成功`);
+          } catch (retryError) {
+            message.error(`第${i + 1}条消息发送失败`);
+          }
+        } else {
+          message.error(`第${i + 1}条消息发送失败: ${error.message || "未知错误"}`);
+        }
+      }
+    }
+
+    return messageList.length;
+  };
+
   return {
     // State
     isConnected,
@@ -248,5 +310,6 @@ export const useLegionWarStore = defineStore("legionWar", () => {
     disconnect,
     refreshData,
     fetchLegionDetail,
+    sendReviveInfoToLegion,
   };
 });

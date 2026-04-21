@@ -1440,8 +1440,13 @@
               :max="999999"
               :step="1"
               placeholder="请输入目标赠送数量"
+              :disabled="useMaxQuantity"
             />
-            <div class="setting-hint">系统会自动分批赠送（每批最多9999个）</div>
+            <div class="setting-hint">
+              <n-checkbox v-model:checked="useMaxQuantity" size="small">
+                赠送最大数量（一键清仓）
+              </n-checkbox>
+            </div>
           </div>
         </div>
 
@@ -3581,6 +3586,7 @@ const recipientInfo = ref(null);
 const isQueryingRecipient = ref(false);
 const giftQuantity = ref(10);
 const giftTargetQuantity = ref(10000); // 目标赠送数量，默认10000
+const useMaxQuantity = ref(false); // 是否赠送最大数量（一键清仓）
 const securityPassword = ref(""); // 安全密码
 // 头像加载状态
 const isAvatarLoading = ref(false);
@@ -4845,14 +4851,31 @@ const executeScheduledTask = async (task) => {
       }
     });
 
-    // Wait for all tasks to complete
-    await Promise.all(taskPromises);
+    // Wait for all tasks to complete（带超时控制）
+    const SCHEDULED_TASK_TIMEOUT = 300000; // 定时任务最多执行5分钟
+    try {
+      await Promise.race([
+        Promise.all(taskPromises),
+        new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`定时任务执行超时（${SCHEDULED_TASK_TIMEOUT / 1000}秒）`));
+          }, SCHEDULED_TASK_TIMEOUT);
+        }),
+      ]);
 
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `=== 定时任务执行完成: ${task.name} ===`,
-      type: "success",
-    });
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务执行完成: ${task.name} ===`,
+        type: "success",
+      });
+    } catch (timeoutError) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务执行超时: ${task.name} - ${timeoutError.message} ===`,
+        type: "error",
+      });
+      message.error(`定时任务执行超时: ${task.name}`);
+    }
   } catch (error) {
     addLog({
       time: new Date().toLocaleTimeString(),
@@ -5091,13 +5114,15 @@ const confirmLegacyGift = async () => {
     return;
   }
 
-  if (!giftTargetQuantity.value || giftTargetQuantity.value <= 0) {
+  // 如果不是最大数量模式，需要验证目标数量
+  if (!useMaxQuantity.value && (!giftTargetQuantity.value || giftTargetQuantity.value <= 0)) {
     message.error("请输入有效的目标赠送数量");
     return;
   }
 
-  // 调用增强版批量赠送功能，传入目标赠送数量
-  await batchLegacyGiftSendEnhanced(false, giftTargetQuantity.value);
+  // 调用增强版批量赠送功能
+  // 参数：是否为定时任务=false，目标数量（useMaxQuantity模式下为null表示全部）
+  await batchLegacyGiftSendEnhanced(false, useMaxQuantity.value ? null : giftTargetQuantity.value);
 
   // 关闭模态框
   showLegacyGiftModal.value = false;
@@ -5789,27 +5814,85 @@ const clearLogs = () => {
   message.success("日志已清空");
 };
 
+// 全局连接队列控制 - 限制并发连接数
+const connectionQueue = { active: 0 };
+// 槽位等待超时时间（毫秒）
+const SLOT_WAIT_TIMEOUT = 30000; // 30秒
+
+/**
+ * 等待连接建立（增强版，带状态检测）
+ * @param {string} tokenId - Token ID
+ * @param {number} timeout - 超时时间
+ * @param {string} tokenName - Token名称（用于日志）
+ */
 const waitForConnection = async (
   tokenId,
   timeout = batchSettings.connectionTimeout,
+  tokenName = "",
 ) => {
   const start = Date.now();
+  let lastStatus = "";
+  let sameStatusCount = 0;
+  const MAX_SAME_STATUS_COUNT = 20; // 最多允许连续20次（10秒）相同状态
+
   while (Date.now() - start < timeout) {
     const status = tokenStore.getWebSocketStatus(tokenId);
+
+    // 检测连接状态是否长时间无变化（可能是卡住了）
+    if (status === lastStatus) {
+      sameStatusCount++;
+      if (sameStatusCount >= MAX_SAME_STATUS_COUNT) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${tokenName} 连接状态长时间未变化 (${status})，可能卡住了`,
+          type: "warning",
+        });
+        return false;
+      }
+    } else {
+      sameStatusCount = 0;
+      lastStatus = status;
+    }
+
     if (status === "connected") return true;
+
+    // 如果状态是 error 或 disconnected，直接返回失败
+    if (status === "error" || status === "disconnected") {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${tokenName} 连接状态异常: ${status}`,
+        type: "warning",
+      });
+      return false;
+    }
+
     await new Promise((r) => setTimeout(r, 500));
   }
   return false;
 };
 
-// 全局连接队列控制 - 限制并发连接数
-const connectionQueue = { active: 0 };
-
-const waitForConnectionSlot = async () => {
+/**
+ * 等待连接槽位（带超时机制）
+ * @param {number} timeout - 超时时间（毫秒）
+ * @returns {Promise<boolean>} - 是否成功获取槽位
+ */
+const waitForConnectionSlot = async (timeout = SLOT_WAIT_TIMEOUT) => {
+  const start = Date.now();
   while (connectionQueue.active >= batchSettings.maxActive) {
+    if (Date.now() - start > timeout) {
+      throw new Error(
+        `等待连接槽位超时（${timeout}ms），当前活跃连接: ${connectionQueue.active}/${batchSettings.maxActive}`,
+      );
+    }
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `等待连接槽位... (${connectionQueue.active}/${batchSettings.maxActive})`,
+      type: "info",
+    });
     await new Promise((r) => setTimeout(r, 1000));
   }
   connectionQueue.active++;
+  return true;
 };
 
 const releaseConnectionSlot = () => {
@@ -5818,6 +5901,11 @@ const releaseConnectionSlot = () => {
   }
 };
 
+/**
+ * 确保连接建立（增强版）
+ * @param {string} tokenId - Token ID
+ * @param {number} maxRetries - 最大重试次数
+ */
 const ensureConnection = async (tokenId, maxRetries = 2) => {
   const latestToken = tokens.value.find((t) => t.id === tokenId);
   if (!latestToken) {
@@ -5826,54 +5914,100 @@ const ensureConnection = async (tokenId, maxRetries = 2) => {
 
   let status = tokenStore.getWebSocketStatus(tokenId);
   let connected = status === "connected";
+  let slotAcquired = false;
 
   if (!connected) {
-    // 等待连接槽位，限制并发连接数
-    await waitForConnectionSlot();
+    try {
+      // 等待连接槽位，限制并发连接数（带超时）
+      await waitForConnectionSlot();
+      slotAcquired = true;
+    } catch (slotError) {
+      throw new Error(`获取连接槽位失败: ${slotError.message}`);
+    }
 
     addLog({
       time: new Date().toLocaleTimeString(),
-      message: `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+      message: `${latestToken.name} 正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
       type: "info",
     });
 
-    tokenStore.createWebSocketConnection(
-      tokenId,
-      latestToken.token,
-      latestToken.wsUrl,
-    );
-    connected = await waitForConnection(tokenId);
+    let retryCount = 0;
+    let lastError = null;
 
-    if (!connected && maxRetries > 0) {
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `连接超时，尝试重连...`,
-        type: "warning",
-      });
+    while (retryCount <= maxRetries && !connected) {
+      try {
+        // 关闭现有连接（如果有）
+        tokenStore.closeWebSocketConnection(tokenId);
 
-      tokenStore.closeWebSocketConnection(tokenId);
-      await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+        // 等待一小段时间确保连接完全关闭
+        await new Promise((r) => setTimeout(r, 500));
 
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `正在重连...`,
-        type: "info",
-      });
+        // 获取最新的token数据（可能已被刷新）
+        const currentToken = tokens.value.find((t) => t.id === tokenId);
+        if (!currentToken) {
+          throw new Error(`Token不存在: ${tokenId}`);
+        }
 
-      const refreshedToken = tokens.value.find((t) => t.id === tokenId);
-      tokenStore.createWebSocketConnection(
-        tokenId,
-        refreshedToken.token,
-        refreshedToken.wsUrl,
-      );
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${currentToken.name} ${retryCount > 0 ? `第${retryCount}次重试` : "发起连接"}...`,
+          type: "info",
+        });
 
-      connected = await waitForConnection(tokenId);
+        await tokenStore.createWebSocketConnection(
+          tokenId,
+          currentToken.token,
+          currentToken.wsUrl,
+        );
+
+        // 等待连接建立
+        connected = await waitForConnection(
+          tokenId,
+          batchSettings.connectionTimeout,
+          currentToken.name,
+        );
+
+        if (connected) {
+          break; // 连接成功，跳出重试循环
+        }
+
+        lastError = new Error("连接超时");
+        retryCount++;
+
+        if (retryCount <= maxRetries) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${currentToken.name} 连接失败，${batchSettings.reconnectDelay}ms后重试...`,
+            type: "warning",
+          });
+          await new Promise((r) =>
+            setTimeout(r, batchSettings.reconnectDelay),
+          );
+        }
+      } catch (error) {
+        lastError = error;
+        retryCount++;
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${latestToken.name} 连接异常: ${error.message}${retryCount <= maxRetries ? "，准备重试..." : ""}`,
+          type: "warning",
+        });
+
+        if (retryCount <= maxRetries) {
+          await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+        }
+      }
     }
 
     if (!connected) {
       // 连接失败，释放槽位
-      releaseConnectionSlot();
-      throw new Error("连接失败 (重试后仍超时)");
+      if (slotAcquired) {
+        releaseConnectionSlot();
+      }
+      throw new Error(
+        `连接失败: ${lastError?.message || "重试后仍无法连接"}`,
+      );
     }
   }
 
@@ -6179,8 +6313,25 @@ const startBatch = async () => {
     }
   });
 
-  // 等待所有任务完成
-  await Promise.all(taskPromises);
+  // 等待所有任务完成（带超时控制）
+  const BATCH_TIMEOUT = selectedTokens.value.length * 60000; // 每个Token最多60秒
+  try {
+    await Promise.race([
+      Promise.all(taskPromises),
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`批量任务执行超时（${BATCH_TIMEOUT / 1000}秒），部分任务可能未完成`));
+        }, BATCH_TIMEOUT);
+      }),
+    ]);
+  } catch (timeoutError) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: timeoutError.message,
+      type: "error",
+    });
+    message.error(timeoutError.message);
+  }
 
   // 等待所有任务完成后再继续
   await new Promise((r) => setTimeout(r, 1000));
@@ -6193,11 +6344,34 @@ const startBatch = async () => {
 
 const stopBatch = () => {
   shouldStop.value = true;
+  
+  // 强制重置连接队列（防止卡死）
+  const activeCount = connectionQueue.active;
+  if (activeCount > 0) {
+    connectionQueue.active = 0;
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `强制释放 ${activeCount} 个连接槽位`,
+      type: "warning",
+    });
+  }
+  
+  // 关闭所有WebSocket连接
+  selectedTokens.value.forEach((tokenId) => {
+    try {
+      tokenStore.closeWebSocketConnection(tokenId);
+    } catch (e) {
+      // 忽略关闭错误
+    }
+  });
+  
   addLog({
     time: new Date().toLocaleTimeString(),
     message: "正在停止...",
     type: "warning",
   });
+  
+  message.info("批量任务已停止");
 };
 </script>
 
