@@ -177,6 +177,24 @@ export function createTasksArena(deps) {
           }
         }
         await new Promise((r) => setTimeout(r, delayConfig.battle));
+        
+        // 领取通行证奖励
+        try {
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "activity_recyclewarorderrewardclaim",
+            { actId: 1 },
+            5000,
+          );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 领取通行证奖励成功`,
+            type: "success",
+          });
+        } catch (e) {
+          // 忽略领取失败，可能没有可领取的奖励
+        }
+        
         if (Isswitching) {
           await tokenStore.sendMessageWithPromise(
             tokenId,
@@ -465,57 +483,89 @@ export function createTasksArena(deps) {
           });
         }
         
-        // 自动领取鱼竿累计奖励
-        try {
-           const roleRes = await tokenStore.sendMessageWithPromise(
-             tokenId,
-             "role_getroleinfo",
-             {},
-             5000,
-           );
-           const currentRole = roleRes?.role || roleRes?.data?.role;
-           if (currentRole) {
+        // 自动领取鱼竿累计奖励（添加延迟等待服务器更新积分）
+        await new Promise((r) => setTimeout(r, 1000));
+        
+        let exchangeCount = 0;
+        let retryCount = 0;
+        const maxRetry = 3;
+        
+        while (retryCount < maxRetry && !shouldStop.value) {
+          try {
+            const roleRes = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "role_getroleinfo",
+              {},
+              5000,
+            );
+            const currentRole = roleRes?.role || roleRes?.data?.role;
+            if (currentRole) {
               const points = currentRole.statistics?.["artifact:point"] || 0;
-              const exchangeCount = Math.floor(points / 20);
+              exchangeCount = Math.floor(points / 20);
               
               if (exchangeCount > 0) {
-                 addLog({
-                    time: new Date().toLocaleTimeString(),
-                    message: `${token.name} 检测到鱼竿累计使用 ${points}，开始领取 ${exchangeCount} 次累计奖励`,
-                    type: "info",
-                 });
-                 
-                 for (let k = 0; k < exchangeCount && !shouldStop.value; k++) {
-                    try {
-                       await tokenStore.sendMessageWithPromise(
-                         tokenId,
-                         "artifact_exchange",
-                         {},
-                         3000
-                       );
-                       await new Promise((r) => setTimeout(r, 500)); 
-                    } catch (err) {
-                       addLog({
-                          time: new Date().toLocaleTimeString(),
-                          message: `${token.name} 领取累计奖励失败 (第${k+1}次): ${err.message}`,
-                          type: "warning",
-                       });
-                       break;
-                    }
-                 }
-                 addLog({
-                    time: new Date().toLocaleTimeString(),
-                    message: `${token.name} 累计奖励领取结束`,
-                    type: "success",
-                 });
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 检测到钓鱼积分 ${points}，可领取 ${exchangeCount} 次金鱼竿奖励`,
+                  type: "info",
+                });
+                break;
+              } else if (retryCount < maxRetry - 1) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 当前积分 ${points}，等待服务器更新... (${retryCount + 1}/${maxRetry})`,
+                  type: "info",
+                });
               }
-           }
-        } catch (e) {
-           addLog({
+            }
+          } catch (e) {
+            addLog({
               time: new Date().toLocaleTimeString(),
-              message: `${token.name} 检查累计奖励失败: ${e.message}`,
+              message: `${token.name} 获取角色信息失败: ${e.message}`,
               type: "warning",
-           });
+            });
+          }
+          
+          retryCount++;
+          if (retryCount < maxRetry) {
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
+        
+        if (exchangeCount > 0 && !shouldStop.value) {
+          let successCount = 0;
+          for (let k = 0; k < exchangeCount && !shouldStop.value; k++) {
+            try {
+              await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "artifact_exchange",
+                {},
+                3000
+              );
+              successCount++;
+              await new Promise((r) => setTimeout(r, 500));
+            } catch (err) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 领取金鱼竿奖励失败 (第${k+1}次): ${err.message}`,
+                type: "warning",
+              });
+              break;
+            }
+          }
+          if (successCount > 0) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 成功领取 ${successCount} 个金鱼竿奖励`,
+              type: "success",
+            });
+          }
+        } else if (retryCount >= maxRetry) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 无可领取的钓鱼积分奖励`,
+            type: "info",
+          });
         }
 
         tokenStatus.value[tokenId] = "completed";

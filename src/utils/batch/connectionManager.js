@@ -362,19 +362,28 @@ export const calculateMonthProgress = () => {
 };
 
 /**
- * 竞技场目标ID选择
+ * 竞技场目标ID选择 - 选择排名最低（最容易打）的对手
  * @param {object} targets - 目标列表
  * @returns {number|null} - 目标ID
  */
 export const pickArenaTargetId = (targets) => {
-  const candidate =
-    targets?.rankList?.[0] ||
-    targets?.roleList?.[0] ||
-    targets?.targets?.[0] ||
-    targets?.targetList?.[0] ||
-    targets?.list?.[0];
+  if (!targets) return null;
 
-  if (candidate?.roleId) return candidate.roleId;
-  if (candidate?.id) return candidate.id;
-  return targets?.roleId || targets?.id;
+  // 获取角色列表
+  const getRoleList = () => {
+    if (Array.isArray(targets)) return targets;
+    return targets?.roleList || targets?.rankList || targets?.targets || targets?.targetList || targets?.list || [];
+  };
+
+  const roleList = getRoleList();
+
+  if (roleList.length === 0) {
+    return targets?.roleId || targets?.id || targets?.targetId;
+  }
+
+  // 选择排名最低（数值最大）的对手
+  const sortedByRank = [...roleList].sort((a, b) => (b.rank || 0) - (a.rank || 0));
+  const target = sortedByRank[0];
+
+  return target?.roleId || target?.id || target?.targetId;
 };

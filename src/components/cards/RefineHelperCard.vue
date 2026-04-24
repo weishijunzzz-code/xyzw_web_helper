@@ -109,6 +109,35 @@
             </div>
           </div>
 
+          <!-- 箱子周白玉达标进度 -->
+          <div v-if="weekInfo.isBoxWeek" class="box-week-progress">
+            <div class="progress-header">
+              <span class="progress-title">🎯 箱子周 - 白玉达标进度</span>
+              <n-button size="tiny" @click="fetchJadeProgress">刷新</n-button>
+            </div>
+            <div class="progress-content">
+              <div class="progress-bar-container">
+                <n-progress
+                  type="line"
+                  :percentage="jadeProgress.percentage"
+                  :color="jadeProgress.isCompleted ? '#52c41a' : '#1890ff'"
+                  :height="12"
+                />
+              </div>
+              <div class="progress-info">
+                <span>当前: {{ jadeProgress.current.toLocaleString() }}</span>
+                <span v-if="!jadeProgress.isCompleted">
+                  下一档: {{ jadeProgress.nextTarget.toLocaleString() }} (还需: {{ jadeProgress.needed.toLocaleString() }})
+                </span>
+                <span v-else class="completed">✓ 已全部完成</span>
+              </div>
+              <div class="progress-levels">
+                <span>已完成: {{ jadeProgress.completedLevels }} / {{ jadeProgress.totalLevels }} 档</span>
+                <span v-if="jadeProgress.remainingLevels > 0">剩余: {{ jadeProgress.remainingLevels }} 档</span>
+              </div>
+            </div>
+          </div>
+
           <!-- 密码验证区域 -->
           <div class="password-section">
             <div class="password-info" v-if="!isPasswordValidated">
@@ -179,6 +208,46 @@
             </n-button>
             <div class="count-info">
               已淬炼: <strong>{{ quenchCount }}</strong>
+            </div>
+          </div>
+
+          <!-- 指定白玉数量淬炼 -->
+          <div class="jade-quench-section">
+            <h4>指定白玉数量淬炼</h4>
+            <div class="selected-target-info">
+              <n-tag v-if="selectedHeroId && selectedPart" type="success" size="small">
+                当前目标: {{ heroes.find(h => h.id === selectedHeroId)?.name }} - {{ partMap[selectedPart] }}
+              </n-tag>
+              <n-tag v-else type="warning" size="small">
+                ⚠️ 请先选择武将和装备部位
+              </n-tag>
+            </div>
+            <div class="jade-quench-form">
+              <div class="form-item">
+                <span class="form-label">目标白玉消耗:</span>
+                <n-input-number
+                  v-model:value="targetJadeCount"
+                  :min="1"
+                  :step="100"
+                  size="small"
+                  style="width: 120px"
+                ></n-input-number>
+              </div>
+              <n-button
+                type="info"
+                size="small"
+                :disabled="state.isRunning"
+                @click="startJadeQuench"
+              >
+                开始消耗
+              </n-button>
+              <div class="jade-quench-info">
+                <span>已消耗: {{ consumedJade }}</span>
+                <span>剩余目标: {{ Math.max(0, targetJadeCount - consumedJade) }}</span>
+              </div>
+            </div>
+            <div class="jade-quench-tip">
+              <n-tag type="warning" size="small">说明: 在消耗目标数量白玉前，所有红色和橙色淬炼都会跳过继续淬炼</n-tag>
             </div>
           </div>
 
@@ -257,7 +326,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useMessage } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
@@ -286,17 +355,156 @@ const isPasswordValidated = ref(false);
 const passwordError = ref('');
 const isVerifying = ref(false);
 
+// 指定白玉数量淬炼相关
+const targetJadeCount = ref(1000);
+const consumedJade = ref(0);
+const initialJadeCount = ref(0);
+
+// 箱子周信息
+const weekInfo = ref({
+  isBoxWeek: false,
+  current: ''
+});
+
+// 白玉达标进度
+const jadeProgress = ref({
+  current: 0,
+  target: 0,
+  nextTarget: 0,
+  needed: 0,
+  percentage: 0,
+  isCompleted: false,
+  completedLevels: 0,
+  remainingLevels: 0,
+  totalLevels: 0
+});
+
 // 状态
 const state = ref({
   isRunning: false,
   continuousQuenching: false,
   autoQuenching: false,
+  jadeQuenching: false,
   stopRequested: false,
 });
 
 // WebSocket相关
 let continuousTimer = null;
 let autoTimer = null;
+let jadeTimer = null;
+let keepAliveTimer = null;
+
+// 检测是否为箱子周
+const isBoxWeek = () => {
+  const now = new Date();
+  const start = new Date('2025-12-12T12:00:00');
+  const weekDuration = 7 * 24 * 60 * 60 * 1000;
+  const cycleDuration = 3 * weekDuration;
+
+  const elapsed = now - start;
+  const cyclePosition = elapsed % cycleDuration;
+
+  if (cyclePosition < weekDuration) {
+    return { isBoxWeek: false, current: '黑市周' };
+  } else if (cyclePosition < 2 * weekDuration) {
+    return { isBoxWeek: false, current: '招募周' };
+  } else {
+    return { isBoxWeek: true, current: '宝箱周' };
+  }
+};
+
+// 获取白玉达标进度
+const fetchJadeProgress = async () => {
+  const connected = await ensureConnection();
+  if (!connected) return;
+
+  const token = tokenStore.selectedToken;
+  const tokenId = token.id;
+
+  try {
+    const actResult = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "activity_get",
+      {},
+      10000,
+    );
+
+    const act = actResult?.activity || actResult?.body?.activity || actResult;
+    const myTotalInfo = act?.myTotalInfo || {};
+    const activityConfig = act?.activity || [];
+
+    const jadeActivity = activityConfig.find(a => a.id === 10);
+    const rewards = jadeActivity?.data?.rewards || [];
+    const totalLevels = rewards.length;
+    const maxPoints = rewards.slice(-1)[0]?.num || 1500000;
+
+    const jadeProgressData = myTotalInfo?.['10'] || {};
+    const currentPoints = Number(jadeProgressData?.num || 0);
+
+    let nextTarget = 0;
+    let completedLevels = 0;
+    let needed = 0;
+
+    for (let i = 0; i < rewards.length; i++) {
+      if (currentPoints >= rewards[i].num) {
+        completedLevels++;
+      } else {
+        nextTarget = rewards[i].num;
+        needed = nextTarget - currentPoints;
+        break;
+      }
+    }
+
+    const remainingLevels = totalLevels - completedLevels;
+    const isCompleted = completedLevels >= totalLevels;
+
+    jadeProgress.value = {
+      current: currentPoints,
+      target: maxPoints,
+      nextTarget: nextTarget || maxPoints,
+      needed: isCompleted ? 0 : needed,
+      percentage: maxPoints > 0 ? Math.min(100, (currentPoints / maxPoints) * 100) : 0,
+      isCompleted: isCompleted,
+      completedLevels: completedLevels,
+      remainingLevels: remainingLevels,
+      totalLevels: totalLevels
+    };
+  } catch (error) {
+    console.error('获取白玉达标进度失败:', error);
+  }
+};
+
+// 确保WebSocket连接
+const ensureConnection = async () => {
+  const token = tokenStore.selectedToken;
+  if (!token) {
+    message.warning("请先选择Token");
+    return false;
+  }
+
+  const tokenId = token.id;
+  const status = tokenStore.getWebSocketStatus(tokenId);
+
+  if (status === "connected") {
+    return true;
+  }
+
+  message.warning("WebSocket未连接，正在尝试重连...");
+  try {
+    await tokenStore.connectWebSocket(tokenId);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const newStatus = tokenStore.getWebSocketStatus(tokenId);
+    if (newStatus === "connected") {
+      message.success("重连成功");
+      return true;
+    }
+    message.error("重连失败，请手动刷新页面");
+    return false;
+  } catch (error) {
+    message.error(`重连失败: ${error.message}`);
+    return false;
+  }
+};
 
 // 属性映射
 const attrMap = {
@@ -368,8 +576,20 @@ const refreshHeroes = async () => {
   const tokenId = token.id;
   const status = tokenStore.getWebSocketStatus(tokenId);
   if (status !== "connected") {
-    message.error("WebSocket未连接，无法刷新阵容");
-    return;
+    message.warning("WebSocket未连接，正在尝试重连...");
+    try {
+      await tokenStore.connectWebSocket(tokenId);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const newStatus = tokenStore.getWebSocketStatus(tokenId);
+      if (newStatus !== "connected") {
+        message.error("重连失败，请手动刷新页面");
+        return;
+      }
+      message.success("重连成功");
+    } catch (error) {
+      message.error(`重连失败: ${error.message}`);
+      return;
+    }
   }
 
   loading.value = true;
@@ -394,6 +614,12 @@ const refreshHeroes = async () => {
     const heroList = buildHeroList(teamData, heroData);
     heroes.value = heroList;
     allHeroesData.value = heroData;
+
+    // 更新箱子周信息并获取白玉进度
+    weekInfo.value = isBoxWeek();
+    if (weekInfo.value.isBoxWeek) {
+      await fetchJadeProgress();
+    }
 
     message.success("阵容刷新成功");
   } catch (error) {
@@ -775,7 +1001,7 @@ const startAutoQuench = () => {
 };
 
 // 执行淬炼
-const executeQuench = async () => {
+const executeQuench = async (skipHighQuality = false) => {
   const token = tokenStore.selectedToken;
   if (!token) {
     message.warning("请先选择Token");
@@ -862,7 +1088,7 @@ const executeQuench = async () => {
       quenchId: 0,
       quenches: currentEquip.quenches,
       seed: seedFromConfirm,
-      skipOrange: false,
+      skipOrange: skipHighQuality,
     };
 
     // 发送淬炼请求（设置更长的超时时间，淬炼操作可能较慢）
@@ -998,10 +1224,103 @@ const checkTargetAttr = (result) => {
   });
 };
 
+// 保持连接活性
+const startKeepAlive = () => {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+  }
+
+  keepAliveTimer = setInterval(async () => {
+    const token = tokenStore.selectedToken;
+    if (!token) return;
+
+    const tokenId = token.id;
+    const status = tokenStore.getWebSocketStatus(tokenId);
+
+    if (status !== "connected") {
+      console.log("检测到连接断开，尝试重连...");
+      try {
+        await tokenStore.connectWebSocket(tokenId);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const newStatus = tokenStore.getWebSocketStatus(tokenId);
+        if (newStatus === "connected") {
+          console.log("重连成功，继续淬炼");
+        }
+      } catch (error) {
+        console.error("重连失败:", error);
+      }
+    }
+  }, 5000);
+};
+
+// 指定白玉数量淬炼
+const startJadeQuench = () => {
+  if (!selectedHeroId.value || !selectedPart.value) {
+    message.warning("请先选择武将和装备部位");
+    return;
+  }
+
+  if (jadeCount.value < targetJadeCount.value) {
+    message.warning(`白玉数量不足，当前只有 ${jadeCount.value} 白玉`);
+    return;
+  }
+
+  state.value.jadeQuenching = true;
+  state.value.isRunning = true;
+  initialJadeCount.value = jadeCount.value;
+  consumedJade.value = 0;
+
+  startKeepAlive();
+  message.info(`开始消耗 ${targetJadeCount.value} 白玉，红橙属性将跳过`);
+
+  const jadeQuench = async () => {
+    if (!state.value.jadeQuenching) return;
+
+    const remainingJade = jadeCount.value;
+    if (remainingJade <= 0 || consumedJade.value >= targetJadeCount.value) {
+      message.success(`已完成目标，共消耗 ${consumedJade.value} 白玉`);
+      stopQuench();
+      return;
+    }
+
+    const connected = await ensureConnection();
+    if (!connected) {
+      message.warning("连接断开，正在重连...");
+      jadeTimer = setTimeout(jadeQuench, 2000);
+      return;
+    }
+
+    try {
+      const result = await executeQuench(true);
+
+      if (!result) {
+        jadeTimer = setTimeout(jadeQuench, 1000);
+        return;
+      }
+
+      consumedJade.value = initialJadeCount.value - jadeCount.value;
+
+      if (quenchCount.value % 100 === 0 && quenchCount.value > 0) {
+        await fetchJadeProgress();
+        message.info(`已淬炼 ${quenchCount.value} 次，白玉达标进度: ${jadeProgress.value.current}/${jadeProgress.value.target}`);
+      }
+
+      const randomDelay = Math.floor(Math.random() * 150) + delay.value;
+      jadeTimer = setTimeout(jadeQuench, randomDelay);
+    } catch (error) {
+      message.error(`白玉淬炼失败: ${error.message}`);
+      jadeTimer = setTimeout(jadeQuench, 2000);
+    }
+  };
+
+  jadeQuench();
+};
+
 // 停止淬炼
 const stopQuench = () => {
   state.value.continuousQuenching = false;
   state.value.autoQuenching = false;
+  state.value.jadeQuenching = false;
   state.value.isRunning = false;
 
   if (continuousTimer) {
@@ -1014,14 +1333,30 @@ const stopQuench = () => {
     autoTimer = null;
   }
 
+  if (jadeTimer) {
+    clearTimeout(jadeTimer);
+    jadeTimer = null;
+  }
+
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+
   message.success("淬炼已停止");
 };
 
 // 重置淬炼次数
 const resetCount = () => {
   quenchCount.value = 0;
+  consumedJade.value = 0;
   message.success("已清零");
 };
+
+// 组件挂载时初始化
+onMounted(() => {
+  weekInfo.value = isBoxWeek();
+});
 </script>
 
 <style scoped lang="scss">
@@ -1425,5 +1760,86 @@ h4 {
 .form-label {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+}
+
+.box-week-progress {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 87, 34, 0.1) 100%);
+  border-radius: var(--border-radius-medium);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.progress-title {
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.progress-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.progress-bar-container {
+  width: 100%;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.progress-info .completed {
+  color: #52c41a;
+  font-weight: var(--font-weight-medium);
+}
+
+.progress-levels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--spacing-xs);
+}
+
+.jade-quench-section {
+  padding: var(--spacing-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-medium);
+  margin-bottom: var(--spacing-md);
+}
+
+.selected-target-info {
+  margin-bottom: var(--spacing-sm);
+}
+
+.jade-quench-form {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-sm);
+}
+
+.jade-quench-info {
+  display: flex;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.jade-quench-tip {
+  margin-top: var(--spacing-xs);
 }
 </style>
