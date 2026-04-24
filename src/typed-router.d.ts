@@ -47,5 +47,7 @@ declare module 'vue-router/auto-routes' {
     '/TokenImport/wechatTokenToBin': RouteRecordInfo<'/TokenImport/wechatTokenToBin', '/TokenImport/wechatTokenToBin', Record<never, never>, Record<never, never>>,
     '/TokenImport/wxqrcode': RouteRecordInfo<'/TokenImport/wxqrcode', '/TokenImport/wxqrcode', Record<never, never>, Record<never, never>>,
     '/TokenImport/wxqrcode-mobile': RouteRecordInfo<'/TokenImport/wxqrcode-mobile', '/TokenImport/wxqrcode-mobile', Record<never, never>, Record<never, never>>,
+    '/Unauthorized': RouteRecordInfo<'/Unauthorized', '/Unauthorized', Record<never, never>, Record<never, never>>,
+    '/UserManagement': RouteRecordInfo<'/UserManagement', '/UserManagement', Record<never, never>, Record<never, never>>,
   }
 }

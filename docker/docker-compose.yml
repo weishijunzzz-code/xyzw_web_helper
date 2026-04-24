@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: xyzw-backend
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123456}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/xyzw_auth.db}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-xyzw-internal-api-key-2024}
+    volumes:
+      - backend-data:/app/data
+    ports:
+      - "5000:5000"
+    networks:
+      - xyzw-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: xyzw-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - xyzw-network
+
+  task-worker:
+    build:
+      context: ../task-worker
+      dockerfile: Dockerfile
+    container_name: xyzw-task-worker
+    restart: unless-stopped
+    environment:
+      - FLASK_API_URL=http://backend:5000/api/v1
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-xyzw-internal-api-key-2024}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - TASK_CHECK_INTERVAL=${TASK_CHECK_INTERVAL:-1}
+      - MAX_CONCURRENT_TASKS=${MAX_CONCURRENT_TASKS:-5}
+    depends_on:
+      - backend
+    networks:
+      - xyzw-network
+
+volumes:
+  backend-data:
+
+networks:
+  xyzw-network:
+    driver: bridge

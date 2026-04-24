@@ -1,0 +1,22 @@
+{
+  "name": "xyzw-task-worker",
+  "version": "2.2.0",
+  "description": "XYZW定时任务执行服务",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node test/test.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "node-cron": "^3.0.3",
+    "winston": "^3.11.0",
+    "ws": "^8.14.2",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

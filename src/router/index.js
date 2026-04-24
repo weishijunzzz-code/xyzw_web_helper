@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import * as autoRoutes from "vue-router/auto-routes";
 import { useTokenStore } from '@/stores/tokenStore'
+import { useAuthStore } from '@/stores/auth'
 import { isNowInLegionWarTime } from "@/utils/clubBattleUtils"
 
 // 安全的动态导入包装器，处理 chunk 加载失败
@@ -121,6 +122,16 @@ const my_routes = [
           requiresToken: true
         }
       },
+      {
+        path: 'user-management',
+        name: 'UserManagement',
+        component: safeImport(() => import('@/views/UserManagement.vue')),
+        meta: {
+          title: '用户管理',
+          requiresToken: true,
+          requiresAdmin: true
+        }
+      },
       // 增加自动路由引用
       ...generatedRoutes,
     ]
@@ -214,15 +225,26 @@ const my_routes = [
       }
     ]
   },
-  // 兼容旧路由，重定向到新的token管理页面
+  // 认证相关路由
   {
     path: '/login',
-    redirect: '/tokens'
+    name: 'Login',
+    component: safeImport(() => import('@/views/Login.vue')),
+    meta: { title: '登录', public: true }
   },
   {
     path: '/register',
-    redirect: '/tokens'
+    name: 'Register',
+    component: safeImport(() => import('@/views/Register.vue')),
+    meta: { title: '注册', public: true }
   },
+  {
+    path: '/unauthorized',
+    name: 'Unauthorized',
+    component: safeImport(() => import('@/views/Unauthorized.vue')),
+    meta: { title: '等待授权', public: true }
+  },
+  // 兼容旧路由
   {
     path: '/game-roles',
     redirect: '/tokens'
@@ -288,11 +310,42 @@ const pcToMobileRouteMap = {
 }
 
 // 导航守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const tokenStore = useTokenStore()
+  const authStore = useAuthStore()
 
   // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - XYZW 游戏管理系统` : 'XYZW 游戏管理系统'
+
+  // 公开页面不需要认证
+  if (to.meta.public) {
+    next()
+    return
+  }
+
+  // 检查认证状态
+  const accessToken = localStorage.getItem('accessToken')
+  if (accessToken && !authStore.authorizationChecked) {
+    await authStore.initAuth()
+  }
+
+  // 检查是否需要管理员权限
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    next('/admin/dashboard')
+    return
+  }
+
+  // 检查是否需要认证
+  if (to.meta.requiresAuth) {
+    if (!authStore.isAuthenticated) {
+      next('/login')
+      return
+    }
+    if (!authStore.isAuthorized) {
+      next('/unauthorized')
+      return
+    }
+  }
 
   // 移动端路由检查
   if (to.path.startsWith('/mobile')) {

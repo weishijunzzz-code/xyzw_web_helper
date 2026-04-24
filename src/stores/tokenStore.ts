@@ -1405,6 +1405,13 @@ export const useTokenStore = defineStore("tokens", () => {
     });
   };
 
+  // 重新初始化（用于后端同步后）
+  const reinitIfNeeded = async () => {
+    tokenLogger.info("检查是否需要重新初始化Token Store");
+    // 可以在这里添加从后端同步后的初始化逻辑
+    return true;
+  };
+
   // 初始化
   const initTokenStore = () => {
     // // 恢复数据
@@ -1601,6 +1608,7 @@ export const useTokenStore = defineStore("tokens", () => {
     cleanExpiredTokens,
     upgradeTokenToPermanent,
     initTokenStore,
+    reinitIfNeeded,
 
     //游戏内发送消息方法
     sendMessageToLegion,
