@@ -204,6 +204,7 @@ export function registerDefaultCommands(reg) {
     .register("legion_resetresearch")
 
     .register("legion_getinfobyid")
+    .register("legion_applyjoin")
     .register("legion_getarearank")
     .register("saltroad_getsaltroadwartotalrank")
     .register("legionwar_getgoldmonthwarrank")

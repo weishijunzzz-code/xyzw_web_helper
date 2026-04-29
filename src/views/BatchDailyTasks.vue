@@ -334,6 +334,13 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="showBatchJoinClubModal"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  批量加入俱乐部
+                </n-button>
+                <n-button
+                  size="small"
                   @click="batchStudy"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -1681,6 +1688,53 @@
           style="text-align: center; padding: 24px; color: var(--color-text-tertiary)"
         >
           暂无定时任务
+        </div>
+      </div>
+    </n-modal>
+
+    <!-- 批量加入俱乐部弹窗 -->
+    <n-modal
+      v-model:show="showBatchJoinClubModalVisible"
+      preset="card"
+      title="批量加入俱乐部"
+      style="width: 90%; max-width: 500px"
+    >
+      <div style="padding: 16px">
+        <div style="margin-bottom: 16px">
+          <label style="display: block; margin-bottom: 8px; font-weight: 500">
+            俱乐部ID
+          </label>
+          <n-input
+            v-model:value="batchJoinClubId"
+            placeholder="请输入俱乐部ID（纯数字）"
+            :allow-input="(value) => /^\d*$/.test(value)"
+          />
+        </div>
+        <div style="margin-bottom: 16px">
+          <label style="display: block; margin-bottom: 8px; font-weight: 500">
+            申请理由（可选）
+          </label>
+          <n-input
+            v-model:value="batchJoinClubReason"
+            type="textarea"
+            placeholder="填写申请理由"
+            :maxlength="50"
+            show-count
+            :rows="2"
+          />
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px">
+          <n-button @click="showBatchJoinClubModalVisible = false">
+            取消
+          </n-button>
+          <n-button
+            type="primary"
+            @click="batchJoinClub"
+            :disabled="!batchJoinClubId || isRunning"
+            :loading="isRunning"
+          >
+            开始执行
+          </n-button>
         </div>
       </div>
     </n-modal>
@@ -3713,6 +3767,177 @@ const executeWarguessStoreBuyWithConfig = () => {
 const scheduledTasks = ref([]); // List of all scheduled tasks
 const showTaskModal = ref(false); // Control the visibility of the add/edit task modal
 const showTasksModal = ref(false); // Control the visibility of the tasks list modal
+
+// 批量加入俱乐部相关
+const showBatchJoinClubModalVisible = ref(false);
+const batchJoinClubId = ref('');
+const batchJoinClubReason = ref('');
+
+// 显示批量加入俱乐部弹窗
+const showBatchJoinClubModal = () => {
+  batchJoinClubId.value = '';
+  batchJoinClubReason.value = '';
+  showBatchJoinClubModalVisible.value = true;
+};
+
+// 批量加入俱乐部
+const batchJoinClub = async () => {
+  if (!batchJoinClubId.value || selectedTokens.value.length === 0) {
+    message.warning('请选择账号并输入俱乐部ID');
+    return;
+  }
+
+  isRunning.value = true;
+  const results = [];
+
+  for (let i = 0; i < selectedTokens.value.length; i++) {
+    const tokenId = selectedTokens.value[i];
+    const token = tokenStore.gameTokens?.find((t) => t.id === tokenId);
+    if (!token) continue;
+
+    try {
+      // 检查WebSocket连接状态
+      const wsStatus = tokenStore.getWebSocketStatus(tokenId);
+      if (wsStatus !== 'connected') {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} WebSocket未连接，尝试建立连接...`,
+          type: 'info',
+        });
+        
+        try {
+          const token = tokenStore.gameTokens?.find((t) => t.id === tokenId);
+          if (!token) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token?.name || tokenId} 未找到Token信息`,
+              type: 'error',
+            });
+            results.push({ tokenId, success: false, message: '未找到Token信息' });
+            continue;
+          }
+          await tokenStore.createWebSocketConnection(tokenId, token.token, token.wsUrl);
+          // 等待连接建立
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const newStatus = tokenStore.getWebSocketStatus(tokenId);
+          if (newStatus !== 'connected') {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} WebSocket连接失败，跳过`,
+              type: 'error',
+            });
+            results.push({ tokenId, success: false, message: 'WebSocket连接失败' });
+            continue;
+          }
+        } catch (error) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} WebSocket连接失败: ${error.message || '未知错误'}`,
+            type: 'error',
+          });
+          results.push({ tokenId, success: false, message: 'WebSocket连接失败' });
+          continue;
+        }
+      }
+
+      // 检查是否已加入俱乐部
+      console.log(`${token.name} 开始检查俱乐部信息...`);
+      let clubInfo;
+      try {
+        clubInfo = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_getinfo",
+          {},
+          5000
+        );
+        console.log(`${token.name} 俱乐部信息:`, clubInfo);
+      } catch (e) {
+        console.log(`${token.name} 获取俱乐部信息失败:`, e.message);
+        // 获取失败说明可能未加入俱乐部，继续申请
+        clubInfo = null;
+      }
+
+      if (clubInfo && (clubInfo.legionId || clubInfo.id || (clubInfo.info && clubInfo.info.id))) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 已加入俱乐部，跳过`,
+          type: 'info',
+        });
+        results.push({ tokenId, success: false, message: '已加入俱乐部' });
+        continue;
+      }
+
+      console.log(`${token.name} 未加入俱乐部，开始申请...`);
+
+      // 发送加入申请
+      let response;
+      try {
+        response = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_applyjoin",
+          {
+            legionId: Number(batchJoinClubId.value),
+            applyReason: batchJoinClubReason.value.trim(),
+          },
+          10000
+        );
+      } catch (e) {
+        console.log(`${token.name} 申请加入请求失败:`, e.message);
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 申请加入请求失败: ${e.message || '未知错误'}`,
+          type: 'error',
+        });
+        results.push({ tokenId, success: false, message: e.message });
+        continue;
+      }
+
+      console.log(`${token.name} 申请加入响应:`, response);
+
+      // 处理响应
+      const errorCode = response?.error || response?.code || response?.ret;
+      console.log(`${token.name} 错误码:`, errorCode, typeof errorCode);
+      
+      if (errorCode === 0 || errorCode === undefined || errorCode === null) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 申请加入俱乐部成功`,
+          type: 'success',
+        });
+        results.push({ tokenId, success: true, message: '申请成功' });
+      } else {
+        const errorMsg = response?.msg || response?.message || `错误码: ${errorCode}`;
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 申请加入失败: ${errorMsg}`,
+          type: 'error',
+        });
+        results.push({ tokenId, success: false, message: errorMsg });
+      }
+    } catch (error) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 申请加入失败: ${error.message || '未知错误'}`,
+        type: 'error',
+      });
+      results.push({ tokenId, success: false, message: error.message });
+    }
+
+    // 添加延迟避免请求过快
+    if (i < selectedTokens.value.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  isRunning.value = false;
+  showBatchJoinClubModalVisible.value = false;
+
+  // 统计结果
+  const successCount = results.filter((r) => r.success).length;
+  const failCount = results.length - successCount;
+  message.success(`批量加入俱乐部完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+};
 const editingTask = ref(null); // Currently editing task
 const taskForm = reactive({
   name: "", // Task name

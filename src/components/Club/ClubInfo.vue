@@ -15,7 +15,101 @@
         <n-empty description="暂无俱乐部" />
         <div class="actions">
           <n-button size="small" @click="refreshClub">刷新</n-button>
+          <n-button type="primary" size="small" @click="showJoinClubModal">
+            加入俱乐部
+          </n-button>
         </div>
+
+        <!-- 加入俱乐部弹窗 -->
+        <n-modal
+          v-model:show="showJoinDialog"
+          title="加入俱乐部"
+          :mask-closable="true"
+          :show-close-button="true"
+          :close-on-esc="true"
+          preset="card"
+          :show-footer="false"
+          :style="{ width: '600px', maxHeight: '80vh' }"
+          :content-style="{ padding: '0', maxHeight: 'calc(80vh - 60px)', overflow: 'auto' }"
+        >
+          <div class="join-club-container">
+            <!-- 搜索区域 -->
+            <div class="search-section">
+              <n-input-group>
+                <n-input
+                  v-model:value="searchKeyword"
+                  placeholder="输入俱乐部ID搜索（纯数字）"
+                  @keyup.enter="searchLegion"
+                />
+                <n-button type="primary" @click="searchLegion" :loading="loadingSearch">
+                  搜索
+                </n-button>
+              </n-input-group>
+            </div>
+
+            <!-- 搜索结果列表 -->
+            <div v-if="loadingSearch" class="loading">
+              <n-spin size="small" />
+              <span style="margin-left: 8px">正在搜索...</span>
+            </div>
+            <div v-else-if="searchResults.length === 0 && hasSearched" class="empty-result">
+              <n-empty description="未找到匹配的俱乐部" />
+            </div>
+            <div v-else-if="searchResults.length > 0" class="search-results">
+              <div
+                v-for="legion in searchResults"
+                :key="legion.legionId || legion.id"
+                class="legion-item"
+                :class="{ selected: selectedLegionId === (legion.legionId || legion.id) }"
+                @click="selectLegion(legion.legionId || legion.id)"
+              >
+                <div class="legion-info">
+                  <div class="legion-header">
+                    <n-avatar
+                      :size="40"
+                      :src="legion.logo || '/icons/xiaoyugan.png'"
+                    />
+                    <div class="legion-details">
+                      <div class="legion-name">{{ legion.name }}</div>
+                      <div class="legion-meta">
+                        <n-tag size="tiny" :bordered="false">ID: {{ legion.legionId || legion.id }}</n-tag>
+                        <n-tag size="tiny" :bordered="false" type="info">等级: {{ legion.level || 1 }}</n-tag>
+                        <n-tag size="tiny" :bordered="false" type="success">成员: {{ legion.memberCnt || legion.memberCount || 0 }}/{{ legion.maxMember || 30 }}</n-tag>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="legion.announcement || legion.notice" class="legion-notice">
+                    公告: {{ legion.announcement || legion.notice }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 申请理由和提交 -->
+            <div v-if="selectedLegionId" class="apply-section">
+              <n-divider />
+              <div class="selected-legion-info">
+                <n-tag type="success" size="small">
+                  已选择俱乐部ID: {{ selectedLegionId }}
+                </n-tag>
+              </div>
+              <n-input
+                v-model:value="applyReason"
+                type="textarea"
+                placeholder="填写申请理由（可选）"
+                :maxlength="50"
+                show-count
+                :rows="2"
+              />
+              <div class="apply-actions">
+                <n-button @click="cancelJoin">取消</n-button>
+                <n-button type="primary" @click="applyJoinLegion" :loading="applying">
+                  提交申请
+                </n-button>
+              </div>
+            </div>
+          </div>
+        </n-modal>
       </div>
       <div v-else>
         <div class="toolbar">
@@ -1410,6 +1504,16 @@ const applyList = ref([]);
 // 选择状态
 const hoveredItemId = ref(null);
 
+// 加入俱乐部相关
+const showJoinDialog = ref(false);
+const searchKeyword = ref('');
+const searchResults = ref([]);
+const loadingSearch = ref(false);
+const hasSearched = ref(false);
+const selectedLegionId = ref(null);
+const applyReason = ref('');
+const applying = ref(false);
+
 // 处理申请列表响应
 const handleApplyListResp = (session) => {
   // 从session对象中提取响应内容
@@ -1547,6 +1651,173 @@ const signInLegion = () => {
   tokenStore.sendMessage(token.id, "legion_signin");
   tokenStore.sendMessage(token.id, "role_getroleinfo");
   message.info("俱乐部签到");
+};
+
+// 显示加入俱乐部弹窗
+const showJoinClubModal = () => {
+  console.log('点击加入俱乐部按钮');
+  showJoinDialog.value = true;
+  console.log('showJoinDialog 设置为:', showJoinDialog.value);
+  // 重置状态
+  searchKeyword.value = '';
+  searchResults.value = [];
+  hasSearched.value = false;
+  selectedLegionId.value = null;
+  applyReason.value = '';
+};
+
+// 搜索俱乐部
+const searchLegion = async () => {
+  const token = tokenStore.selectedToken;
+  if (!token) {
+    message.warning("请先选择Token");
+    return;
+  }
+
+  if (!searchKeyword.value.trim()) {
+    message.warning("请输入搜索关键词");
+    return;
+  }
+
+  loadingSearch.value = true;
+  hasSearched.value = true;
+  searchResults.value = [];
+
+  try {
+    // 尝试用ID搜索（如果是纯数字）
+    const isIdSearch = /^\d+$/.test(searchKeyword.value.trim());
+    
+    let response;
+    
+    if (isIdSearch) {
+      // 通过ID获取俱乐部信息
+      response = await tokenStore.sendMessageWithPromise(
+        token.id,
+        "legion_getinfobyid",
+        { legionId: Number(searchKeyword.value.trim()) },
+        10000
+      );
+    } else {
+      // 获取推荐俱乐部列表（游戏内通常没有名称搜索，先获取推荐列表）
+      response = await tokenStore.sendMessageWithPromise(
+        token.id,
+        "legion_recommend",
+        {},
+        10000
+      );
+    }
+
+    // 处理搜索结果
+    console.log('搜索响应数据:', response);
+    
+    if (response) {
+      let results = [];
+      
+      // 处理不同响应格式
+      if (Array.isArray(response)) {
+        results = response;
+      } else if (Array.isArray(response.legionList)) {
+        results = response.legionList;
+      } else if (Array.isArray(response.list)) {
+        results = response.list;
+      } else if (Array.isArray(response.data)) {
+        results = response.data;
+      } else if (response.legionData) {
+        // legion_getinfobyid 返回格式 {legionData: {...}}
+        results = [response.legionData];
+      } else if (response.legionId || response.id) {
+        // 单个结果
+        results = [response];
+      } else if (response.info) {
+        results = [response.info];
+      }
+
+      // 过滤掉无效的俱乐部
+      searchResults.value = results.filter(legion => 
+        legion && (legion.legionId || legion.id) && legion.name
+      );
+
+      if (searchResults.value.length === 0) {
+        message.info("未找到匹配的俱乐部");
+      } else {
+        message.success(`找到 ${searchResults.value.length} 个俱乐部`);
+      }
+    } else {
+      message.info("未找到匹配的俱乐部");
+    }
+  } catch (error) {
+    message.error("搜索俱乐部失败: " + (error.message || "未知错误"));
+    console.error("搜索俱乐部出错:", error);
+  } finally {
+    loadingSearch.value = false;
+  }
+};
+
+// 选择俱乐部
+const selectLegion = (legionId) => {
+  selectedLegionId.value = legionId;
+};
+
+// 取消加入
+const cancelJoin = () => {
+  selectedLegionId.value = null;
+  applyReason.value = '';
+};
+
+// 申请加入俱乐部
+const applyJoinLegion = async () => {
+  const token = tokenStore.selectedToken;
+  if (!token || !selectedLegionId.value) return;
+
+  applying.value = true;
+
+  try {
+    const response = await tokenStore.sendMessageWithPromise(
+      token.id,
+      "legion_applyjoin",
+      {
+        legionId: Number(selectedLegionId.value),
+        applyReason: applyReason.value.trim()
+      },
+      10000
+    );
+
+    // 处理响应
+    handleApplyJoinResp(response);
+  } catch (error) {
+    message.error("申请加入失败: " + (error.message || "未知错误"));
+    console.error("申请加入出错:", error);
+  } finally {
+    applying.value = false;
+  }
+};
+
+// 处理申请加入响应
+const handleApplyJoinResp = (response) => {
+  if (!response) {
+    message.error("申请加入失败: 无响应");
+    return;
+  }
+
+  // 检查错误码
+  const errorCode = response.error || response.code || response.ret;
+  
+  if (errorCode === 0 || errorCode === undefined || errorCode === null) {
+    // 成功
+    message.success("申请已提交，请等待审核");
+    // 关闭弹窗
+    showJoinDialog.value = false;
+    // 重置状态
+    selectedLegionId.value = null;
+    applyReason.value = '';
+    searchResults.value = [];
+    searchKeyword.value = '';
+    hasSearched.value = false;
+  } else {
+    // 失败，显示错误信息
+    const errorMsg = response.msg || response.message || `错误码: ${errorCode}`;
+    message.error("申请加入失败: " + errorMsg);
+  }
 };
 
 // 兼容不同服务端字段：从 info.info 和顶层 info 以及 statistics 中聚合
@@ -2149,5 +2420,121 @@ const formatNumber = (num) => {
       grid-template-columns: 1fr;
     }
   }
+}
+
+/* 加入俱乐部弹窗样式 */
+.join-club-container {
+  padding: 16px;
+}
+
+.search-section {
+  margin-bottom: 16px;
+}
+
+.empty-result {
+  padding: 30px 0;
+}
+
+.search-results {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+}
+
+.legion-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-tertiary);
+  }
+
+  &.selected {
+    background: var(--primary-color-light);
+    border-left: 3px solid var(--primary-color);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.legion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legion-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legion-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legion-name {
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.legion-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.legion-notice {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  word-break: break-word;
+  line-height: 1.4;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.apply-section {
+  margin-top: 16px;
+}
+
+.selected-legion-info {
+  margin-bottom: 12px;
+}
+
+.apply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* 滚动条样式 */
+.search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-results::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 </style>
