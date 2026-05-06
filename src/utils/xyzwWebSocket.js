@@ -329,6 +329,9 @@ export function registerDefaultCommands(reg) {
     .register("collection_claimfreereward")
     .register("collection_goodslist")
 
+      // 扭蛋相关
+      .register("gacha_drawreward", { num: 1, isGroup: false })
+
     // 车辆相关
     .register("car_getrolecar")
     .register("car_refresh", { carId: 0 })
