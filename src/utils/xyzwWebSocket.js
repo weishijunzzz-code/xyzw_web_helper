@@ -250,6 +250,7 @@ export function registerDefaultCommands(reg) {
     .register("mergebox_claimcostprogress", { actType: 1 })
     .register("mergebox_claimmergeprogress", { actType: 1 })
     .register("evotower_claimtask", { taskId: 1 })
+    .register("evotower_claimlegiontask", { taskId: 1 })
 
     // 瓶子机器人
     .register("bottlehelper_claim")
@@ -324,13 +325,18 @@ export function registerDefaultCommands(reg) {
     .register("warguess_storebuy") // 助威商店购买
     .register("legion_payloadsignup") // 蟠桃报名
     .register("activity_buystoregoods", { activityId: 9, goodsIndex: 0, buyNum: 1 }) // 江湖黑市购买
+    .register("activity_claimrolluppack", { id: 17 }) // 周一免费礼包
+    .register("pkroom_getfightroominfo")
+    .register("pkroom_getfightroomhistory", { date: "2026/05" })
+    .register("pkroom_appoint")
 
     // 珍宝阁相关
     .register("collection_claimfreereward")
     .register("collection_goodslist")
 
-      // 扭蛋相关
-      .register("gacha_drawreward", { num: 1, isGroup: false })
+    // 扭蛋相关
+    .register("gacha_getinfo")
+    .register("gacha_drawreward", { num: 1, isGroup: false })
 
     // 车辆相关
     .register("car_getrolecar")
@@ -1141,6 +1147,17 @@ export class XyzwWebSocketClient {
       towers_getinforesp: "towers_getinfo",
       towers_startresp: "towers_start",
       towers_fightresp: "towers_fight",
+      // 扭蛋相关响应映射
+      gacha_getinforesp: "gacha_getinfo",
+      gacha_drawrewardresp: "gacha_drawreward",
+      // PK房间相关响应映射
+      pkroom_getfightroominforesp: "pkroom_getfightroominfo",
+      pkroom_getfightroomhistoryresp: "pkroom_getfightroomhistory",
+      pkroom_appointresp: "pkroom_appoint",
+      // 怪异塔军团任务响应映射
+      evotower_claimlegiontaskresp: "evotower_claimlegiontask",
+      // 十殿礼包领取响应映射
+      activity_claimrolluppackresp: "activity_claimrolluppack",
       // 特殊响应映射 - 有些命令有独立响应，有些用同步响应
       task_claimdailyrewardresp: "task_claimdailyreward",
       task_claimweekrewardresp: "task_claimweekreward",
@@ -1168,6 +1185,11 @@ export class XyzwWebSocketClient {
         "artifact_exchange",
         "hero_exchange",
         "hero_rebirth",
+        "pkroom_getfightroominfo",
+        "pkroom_getfightroomhistory",
+        "pkroom_appoint",
+        "evotower_claimlegiontask",
+        "activity_claimrolluppack",
       ],
     };
 

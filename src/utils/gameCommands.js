@@ -694,6 +694,22 @@ export class GameCommands {
   }
 
   /**
+   * 领取周一免费礼包
+   */
+  activity_claimrolluppack(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        id: 17,
+        ...params,
+      }),
+      cmd: "activity_claimrolluppack",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
    * 江湖黑市购买商品（旧命令，已废弃）
    */
   activity_shopbuygoods(ack = 0, seq = 0, params = {}) {
@@ -797,6 +813,68 @@ export class GameCommands {
         ...params,
       }),
       cmd: "book_claimstarreward",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * PK房间预约
+   */
+  pkroom_appoint(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "pkroom_appoint",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取PK房间信息
+   */
+  pkroom_getfightroominfo(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "pkroom_getfightroominfo",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取PK房间历史
+   */
+  pkroom_getfightroomhistory(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        date: "2026/05",
+        ...params,
+      }),
+      cmd: "pkroom_getfightroomhistory",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 领取怪异塔军团任务奖励
+   */
+  evotower_claimlegiontask(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        taskId: 1,
+        ...params,
+      }),
+      cmd: "evotower_claimlegiontask",
       seq,
       time: Date.now(),
     };

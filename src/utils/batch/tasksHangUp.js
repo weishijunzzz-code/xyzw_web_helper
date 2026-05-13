@@ -387,6 +387,68 @@ export function createTasksHangUp(deps) {
   };
 
   /**
+   * 一键盐场报名
+   */
+  const batchLegionWarSignUp = async () => {
+    if (selectedTokens.value.length === 0) return;
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始盐场报名: ${token.name} ===`,
+          type: "info",
+        });
+        await ensureConnection(tokenId);
+        if (shouldStop.value) return;
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_signup",
+          {},
+          5000,
+        );
+        await new Promise((r) => setTimeout(r, 500));
+        tokenStatus.value[tokenId] = "completed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 盐场报名已完成 ===`,
+          type: "success",
+        });
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 盐场报名失败: ${error.message || "未知错误"}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量盐场报名结束");
+  };
+
+  /**
    * 月赛助威
    * @param {number} legionId - 俱乐部ID
    * @param {number} guessCoin - 竞猜币数量
@@ -549,6 +611,7 @@ export function createTasksHangUp(deps) {
     batchAddHangUpTime,
     batchStudy,
     batchclubsign,
+    batchLegionWarSignUp,
     batchWarGuessCheer,
   };
 }

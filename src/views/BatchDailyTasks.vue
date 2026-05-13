@@ -334,6 +334,13 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="batchLegionWarSignUp"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键盐场报名
+                </n-button>
+                <n-button
+                  size="small"
                   @click="showBatchJoinClubModal"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -406,6 +413,20 @@
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
                   一键领取珍宝阁
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="activity_claimrolluppack"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键领取周一礼包
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="batchGachaDrawReward"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键免费扭蛋
                 </n-button>
                 <n-button
                   size="small"
@@ -508,7 +529,7 @@
                   :disabled="
                     isRunning ||
                     selectedTokens.length === 0 ||
-                    !isWeirdTowerActivityOpen
+                    !isWeirdTowerItemsAvailable
                   "
                 >
                   一键使用怪异塔道具
@@ -519,7 +540,7 @@
                   :disabled="
                     isRunning ||
                     selectedTokens.length === 0 ||
-                    !isWeirdTowerActivityOpen
+                    !isWeirdTowerItemsAvailable
                   "
                 >
                   一键怪异塔合成
@@ -530,7 +551,7 @@
                   :disabled="
                     isRunning ||
                     selectedTokens.length === 0 ||
-                    !isWeirdTowerActivityOpen
+                    !isWeirdTowerItemsAvailable
                   "
                 >
                   一键领取怪异塔免费道具
@@ -604,6 +625,20 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="batchClaimRollUpPack"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键领取十殿礼包
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="pkroomAppoint"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  预约PK房间
+                </n-button>
+                <n-button
+                  size="small"
                   @click="legionStoreBuySkinCoins"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -626,6 +661,13 @@
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
                   批量功法残卷赠送
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="batchLegacyBeginHangup"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  开始功法挂机修炼
                 </n-button>
               </n-space>
             </n-tab-pane>
@@ -3221,6 +3263,28 @@ const isWeirdTowerActivityOpen = computed(() => {
   return true;
 });
 
+const isWeirdTowerItemsAvailable = computed(() => {
+  const now = new Date();
+  const day = now.getDay();
+  const hour = now.getHours();
+  const currentWeek = getCurrentActivityWeek.value;
+
+  // 情况1：当前是黑市周，正常开放
+  if (currentWeek === "黑市周") {
+    if (day === 5) {
+      return hour >= 12;
+    }
+    return true;
+  }
+
+  // 情况2：当前是招募周，周五12:00之前还可以使用道具和合成、领取免费道具
+  if (currentWeek === "招募周" && day === 5 && hour < 12) {
+    return true;
+  }
+
+  return false;
+});
+
 // 获取本月第四个周日的日期
 const getFourthSundayOfMonth = () => {
   const now = new Date();
@@ -3967,6 +4031,7 @@ const taskGroupDefinitions = [
       "batchClaimCars",
       "store_purchase",
       "collection_claimfreereward",
+      "batchGachaDrawReward",
       "batchGenieSweep",
     ],
   },
@@ -4002,6 +4067,8 @@ const taskGroupDefinitions = [
       "batchFish",
       "batchRecruit",
       "legion_storebuygoods",
+      "batchClaimRollUpPack",
+      "pkroomAppoint",
     ],
   },
   {
@@ -5027,17 +5094,24 @@ const executeScheduledTask = async (task) => {
       }
 
       if (
-        [
-          "climbWeirdTower",
-          "batchUseItems",
-          "batchMergeItems",
-          "batchClaimFreeEnergy",
-        ].includes(taskName) &&
+        taskName === "climbWeirdTower" &&
         !isWeirdTowerActivityOpen.value
       ) {
         addLog({
           time: new Date().toLocaleTimeString(),
           message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在怪异塔开放时间)`,
+          type: "warning",
+        });
+        return;
+      }
+      
+      if (
+        ["batchUseItems", "batchMergeItems", "batchClaimFreeEnergy"].includes(taskName) &&
+        !isWeirdTowerItemsAvailable.value
+      ) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在怪异塔道具使用时间)`,
           type: "warning",
         });
         return;
@@ -6326,6 +6400,7 @@ const {
   batchAddHangUpTime,
   batchStudy,
   batchclubsign,
+  batchLegionWarSignUp,
   batchWarGuessCheer,
 } = tasksHangUp;
 
@@ -6359,6 +6434,9 @@ const {
   batchGenieSweep,
   batchTopUpBoxWeekWithoutClaim,
   batchTopUpBoxWeekWithClaim,
+  batchClaimRollUpPack,
+  pkroomAppoint,
+  batchGachaDrawReward,
 } = tasksItem;
 
 const tasksDungeon = createTasksDungeon(createTaskDeps());
@@ -6374,12 +6452,13 @@ const {
   legionStoreBuySkinCoins,
   store_purchase,
   collection_claimfreereward,
+  activity_claimrolluppack,
   activityShopBuy,
   executeWarguessStoreBuy,
 } = tasksStore;
 
 const tasksLegacy = createTasksLegacy(createTaskDeps());
-const { batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
+const { batchLegacyClaim, batchLegacyGiftSendEnhanced, batchLegacyBeginHangup } = tasksLegacy;
 
 // 任务函数映射表（替代 eval 的安全方案）
 const taskFunctionMap = {
@@ -6388,6 +6467,7 @@ const taskFunctionMap = {
   batchAddHangUpTime,
   batchStudy,
   batchclubsign,
+  batchLegionWarSignUp,
   batchWarGuessCheer,
   // Bottle tasks
   resetBottles,
@@ -6411,6 +6491,9 @@ const taskFunctionMap = {
   batchClaimStarRewards,
   batchClaimPeachTasks,
   batchGenieSweep,
+  batchClaimRollUpPack,
+  pkroomAppoint,
+  batchGachaDrawReward,
   // Dungeon tasks
   batchbaoku13,
   batchbaoku45,
@@ -6425,11 +6508,13 @@ const taskFunctionMap = {
   legionStoreBuySkinCoins,
   store_purchase,
   collection_claimfreereward,
+  activity_claimrolluppack,
   activityShopBuy,
   executeWarguessStoreBuy,
   // Legacy tasks
   batchLegacyClaim,
   batchLegacyGiftSendEnhanced,
+  batchLegacyBeginHangup,
   // Box week tasks
   batchTopUpBoxWeekWithoutClaim,
   batchTopUpBoxWeekWithClaim,

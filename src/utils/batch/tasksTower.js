@@ -639,6 +639,33 @@ export function createTasksTower(deps) {
           });
         }
 
+        await new Promise((r) => setTimeout(r, 500));
+
+        for (let taskId = 1; taskId <= 10; taskId++) {
+          if (shouldStop.value)
+            break;
+
+          try {
+            const result = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "evotower_claimlegiontask",
+              { taskId },
+              5000,
+            );
+
+            await new Promise((r) => setTimeout(r, 500));
+
+            if (result && !result.error) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== ${token.name} 俱乐部任务${taskId}领取成功`,
+                type: "success",
+              });
+            }
+          } catch (e) {
+          }
+        }
+
         tokenStatus.value[tokenId] = "completed";
       } catch (error) {
         console.error(error);

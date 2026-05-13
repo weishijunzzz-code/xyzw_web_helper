@@ -117,6 +117,24 @@
             <!-- 申请列表按钮 -->
             <n-button v-if="canKick" size="small" @click="getApplyList">申请列表</n-button>
             <n-button size="small" @click="refreshClub">刷新</n-button>
+            <n-button
+              v-if="canKick"
+              size="small"
+              :type="legionWarSignedUp ? 'success' : 'primary'"
+              :disabled="legionWarSignedUp"
+              @click="signupLegionWar"
+            >
+              {{ legionWarSignedUp ? '已报名盐场' : '盐场报名' }}
+            </n-button>
+            <n-button
+              v-if="canKick"
+              size="small"
+              :type="peachSignedUp ? 'success' : 'primary'"
+              :disabled="peachSignedUp"
+              @click="signupPeach"
+            >
+              {{ peachSignedUp ? '已报名蟠桃' : '蟠桃报名' }}
+            </n-button>
           </n-space>
         </div>
 
@@ -1616,6 +1634,19 @@ const handleApplyListResp = (session) => {
 onMounted(() => {
   // 监听申请列表响应事件（已改为Promise直接处理，不再监听）
   // $emit.on("legion_applylistresp", handleApplyListResp);
+
+  // 获取角色信息以更新报名状态
+  const token = tokenStore.selectedToken;
+  if (token) {
+    tokenStore.sendMessage(token.id, "role_getroleinfo");
+  }
+});
+
+// 监听选中token变化，获取角色信息更新报名状态
+watch(() => tokenStore.selectedToken, (newToken) => {
+  if (newToken) {
+    tokenStore.sendMessage(newToken.id, "role_getroleinfo");
+  }
 });
 
 watch(activeTab, (val) => {
@@ -1651,6 +1682,92 @@ const signInLegion = () => {
   tokenStore.sendMessage(token.id, "legion_signin");
   tokenStore.sendMessage(token.id, "role_getroleinfo");
   message.info("俱乐部签到");
+};
+
+// 盐场报名状态
+const legionWarSignedUp = computed(() => {
+  const ts = Number(
+    tokenStore.gameData?.roleInfo?.role?.statisticsTime?.["legion:signup"] ||
+      0,
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todaySec = Math.floor(today.getTime() / 1000);
+  return ts > todaySec;
+});
+
+// 盐场报名
+const signupLegionWar = async () => {
+  const token = tokenStore.selectedToken;
+  if (!token || legionWarSignedUp.value) return;
+
+  try {
+    // 先发送报名请求并等待响应
+    await tokenStore.sendMessageWithPromise(
+      token.id,
+      "legion_signup",
+      {},
+      10000
+    );
+
+    // 报名成功后再获取角色信息更新状态（使用 sendGetRoleInfo 确保正确更新）
+    await tokenStore.sendGetRoleInfo(token.id);
+
+    message.success("盐场报名成功");
+  } catch (error) {
+    // 即使报名失败（如已报名），也获取角色信息更新状态
+    await tokenStore.sendGetRoleInfo(token.id);
+    
+    // 如果错误信息包含"已经报名"，显示成功提示
+    if (error.message && error.message.includes("已经报名")) {
+      message.success("已报名盐场");
+    } else {
+      message.error("盐场报名失败: " + (error.message || "未知错误"));
+    }
+  }
+};
+
+// 蟠桃报名状态
+const peachSignedUp = computed(() => {
+  const ts = Number(
+    tokenStore.gameData?.roleInfo?.role?.statisticsTime?.["legion:payload:signup"] ||
+      0,
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todaySec = Math.floor(today.getTime() / 1000);
+  return ts > todaySec;
+});
+
+// 蟠桃报名
+const signupPeach = async () => {
+  const token = tokenStore.selectedToken;
+  if (!token || peachSignedUp.value) return;
+
+  try {
+    // 先发送报名请求并等待响应
+    await tokenStore.sendMessageWithPromise(
+      token.id,
+      "legion_payloadsignup",
+      {},
+      10000
+    );
+
+    // 报名成功后再获取角色信息更新状态（使用 sendGetRoleInfo 确保正确更新）
+    await tokenStore.sendGetRoleInfo(token.id);
+
+    message.success("蟠桃报名成功");
+  } catch (error) {
+    // 即使报名失败（如已报名），也获取角色信息更新状态
+    await tokenStore.sendGetRoleInfo(token.id);
+    
+    // 如果错误信息包含"已经报名"，显示成功提示
+    if (error.message && error.message.includes("已经报名")) {
+      message.success("已报名蟠桃");
+    } else {
+      message.error("蟠桃报名失败: " + (error.message || "未知错误"));
+    }
+  }
 };
 
 // 显示加入俱乐部弹窗
@@ -1868,6 +1985,9 @@ const refreshClub = () => {
   const token = tokenStore.selectedToken;
   if (!token) return;
   tokenStore.sendMessage(token.id, "legion_getinfo");
+  
+  // 同时刷新角色信息以更新报名状态
+  tokenStore.sendMessage(token.id, "role_getroleinfo");
   
   // 如果当前在成员页，也刷新阵容信息
   if (activeTab.value === "members") {

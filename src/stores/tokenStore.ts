@@ -463,6 +463,12 @@ export const useTokenStore = defineStore("tokens", () => {
       if (cmd === "role_getroleinforesp") {
         syncRandomSeedFromStatistics(tokenId, body, client);
 
+        // 保存角色信息到 gameData
+        if (body) {
+          gameData.value.roleInfo = body;
+          gameData.value.lastUpdated = new Date().toISOString();
+        }
+
         // 更新头像
         if (body?.role?.headImg) {
           const token = gameTokens.value.find((t) => t.id === tokenId);
