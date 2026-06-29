@@ -432,7 +432,8 @@ export function createTasksLegacy(deps) {
    * 批量开始功法挂机修炼
    */
   const batchLegacyBeginHangup = async () => {
-    if (selectedTokens.value.length === 0) return;
+    if (selectedTokens.value.length === 0)
+      return;
     isRunning.value = true;
     shouldStop.value = false;
 
@@ -441,7 +442,8 @@ export function createTasksLegacy(deps) {
     });
 
     const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+      if (shouldStop.value)
+        return;
       tokenStatus.value[tokenId] = "running";
 
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -459,10 +461,10 @@ export function createTasksLegacy(deps) {
           type: "info",
         });
         await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "legacy_getinfo",
-          {},
-          5000,
+            tokenId,
+            "legacy_getinfo",
+            {},
+            5000,
         );
 
         addLog({
@@ -471,10 +473,10 @@ export function createTasksLegacy(deps) {
           type: "info",
         });
         const legacyBeginHangUpResp = await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "legacy_beginhangup",
-          {},
-          5000,
+            tokenId,
+            "legacy_beginhangup",
+            {},
+            5000,
         );
         addLog({
           time: new Date().toLocaleTimeString(),

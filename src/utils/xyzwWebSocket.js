@@ -12,6 +12,7 @@ import { wsLogger, gameLogger } from "./logger.js";
  * 用于将服务器返回的错误码转换为可读的错误描述
  */
 const errorCodeMap = {
+  12400160: "功法模块相关错误",
   700010: "任务未达成完成条件",
   1400010: "没有购买该月卡,不能领取每日奖励",
   12000116: "今日已领取免费奖励",
@@ -349,8 +350,9 @@ export function registerDefaultCommands(reg) {
     .register("car_claimpartconsumereward")
 
     // 功法
-    .register("legacy_getinfo")
-    .register("legacy_claimhangup")
+      .register("legacy_getinfo")
+      .register("legacy_claimhangup")
+      .register("legacy_beginhangup")
     // 功法残卷赠送
     .register("legacy_gift_getlist")
     .register("legacy_gift_send", { recipientId: 0, itemId: 0, quantity: 0 })
@@ -1141,6 +1143,7 @@ export class XyzwWebSocketClient {
       // 功法相关响应映射
       legacy_getinforesp: "legacy_getinfo",
       legacy_claimhangupresp: "legacy_claimhangup",
+      legacy_beginhangupresp: "legacy_beginhangup",
       legacy_sendgiftresp: "legacy_sendgift",
       legacy_getgiftsresp: "legacy_getgifts",
       // 换皮闯关相关响应映射

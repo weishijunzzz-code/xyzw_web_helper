@@ -1,0 +1,223 @@
+// ============================================
+// 移动端统一样式入口（合并自 mobile.scss + mobile-optimized.scss + mobile-fix.scss）
+//
+// 分节顺序：tokens → utilities → layout → forms/lists/modals → naive-ui 覆盖 → 安全区
+// 红线参考：.claude/CLAUDE.md §3.1, Plan/01-模块A-基础设施层.md §3.2.5
+// ============================================
+@use "./breakpoints" as bp;
+
+/* ==================== 1. 工具类（全端可用） ==================== */
+.tt-min      { min-height: var(--touch-target-min); min-width: var(--touch-target-min); }
+.tt-comfort  { min-height: var(--touch-target-comfort); }
+.scrollable-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.scrollable-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.safe-area-top    { padding-top: var(--safe-top); }
+.safe-area-bottom { padding-bottom: var(--safe-bottom); }
+.safe-area-left   { padding-left: var(--safe-left); }
+.safe-area-right  { padding-right: var(--safe-right); }
+
+/* ==================== 2. 设备显隐 ==================== */
+@include bp.mobile {
+  .desktop-only { display: none !important; }
+  body { -webkit-tap-highlight-color: transparent; }
+}
+
+@include bp.desktop {
+  .mobile-only { display: none !important; }
+}
+
+/* ==================== 3. 移动端布局适配 ==================== */
+@include bp.mobile {
+  html { font-size: 14px; }
+
+  .page-container,
+  .dashboard-container { padding: 8px; }
+
+  .cards-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  // 移动端隐藏 PC 侧栏 / 顶部菜单（待 AppLayout 上线后可移除）
+  .sidebar,
+  .side-menu,
+  .nav-sidebar { display: none !important; }
+}
+
+/* ==================== 4. 移动端表单与列表 ==================== */
+@include bp.mobile {
+  .target-input-row,
+  .config-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .preset-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+
+    .n-button { width: 100%; }
+  }
+
+  // 表格横向滚动 + 提示
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    table { min-width: 600px; }
+  }
+}
+
+/* ==================== 5. 移动端弹窗 / 抽屉 ==================== */
+@include bp.mobile {
+  .n-modal {
+    width: 95vw !important;
+    max-width: 95vw !important;
+  }
+
+  .n-drawer {
+    width: 85vw !important;
+  }
+}
+
+/* ==================== 6. 移动端通用卡片（业务可选） ==================== */
+.mobile-card {
+  margin: 12px;
+  border-radius: var(--radius-2xl);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+
+  .card-header { padding: 16px; border-bottom: 1px solid var(--color-border-default); }
+  .card-body   { padding: 16px; }
+  .card-footer {
+    padding: 12px 16px;
+    background: var(--color-bg-secondary);
+    display: flex;
+    gap: 8px;
+  }
+}
+
+/* ==================== 7. 移动端按钮（业务可选） ==================== */
+.mobile-btn {
+  min-height: var(--touch-target-comfort);
+  padding: 12px 24px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-xl);
+  border: none;
+  cursor: pointer;
+  transition: all var(--motion-base) var(--ease-standard);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:active { transform: scale(0.98); opacity: 0.9; }
+
+  &.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
+    color: var(--color-text-inverse);
+  }
+  &.btn-secondary { background: var(--color-bg-secondary); color: var(--color-text-primary); }
+  &.btn-ghost     { background: transparent; color: var(--color-primary-600); border: 1px solid var(--color-primary-600); }
+  &.btn-block     { width: 100%; }
+}
+
+/* ==================== 8. 浮动按钮 FAB（业务可选） ==================== */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + var(--bottom-nav-h) + var(--safe-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
+  color: var(--color-text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  border: none;
+  cursor: pointer;
+  transition: all var(--motion-slow) var(--ease-emphasized);
+  z-index: var(--z-app-bar);
+
+  &:active { transform: scale(0.95); }
+}
+
+/* ==================== 9. 手势 utility ==================== */
+.swipeable   { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.swipeable-x { touch-action: pan-x; user-select: none; -webkit-user-select: none; }
+
+/* ==================== 10. 防误触（Plan/07 §3.4） ==================== */
+@include bp.mobile {
+  // 防止双击缩放 / 300ms 延迟
+  * { touch-action: manipulation; }
+
+  // 长按不弹出系统菜单（输入框除外）
+  :not(input):not(textarea) {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  // 底部主操作按钮与系统手势区保留安全间距
+  .safe-bottom-area {
+    padding-bottom: var(--safe-bottom);
+    margin-bottom: calc(var(--safe-bottom) * -1);
+  }
+}
+
+/* ==================== 11. Naive UI 移动端覆盖 ==================== */
+@include bp.mobile {
+  .n-button:not(.n-button--text) { min-height: var(--touch-target-min); }
+  .n-input .n-input__input-el    { min-height: var(--touch-target-min); }
+  .n-checkbox                    { min-height: var(--touch-target-min); }
+  .n-radio                       { min-height: var(--touch-target-min); }
+}
+
+/* ==================== 12. 路由转场动画（iOS 风格 push/pop） ==================== */
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: transform var(--motion-base) var(--ease-emphasized),
+              opacity   var(--motion-base) var(--ease-emphasized);
+}
+.slide-left-enter-from  { transform: translateX(100%);  opacity: 0; }
+.slide-left-leave-to    { transform: translateX(-30%);  opacity: 0; }
+.slide-right-enter-from { transform: translateX(-100%); opacity: 0; }
+.slide-right-leave-to   { transform: translateX(30%);   opacity: 0; }
+
+/* ==================== 12. reduce-motion 适配 ==================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==================== 13. 横屏（部分场景隐藏底栏） ==================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-only-bottom-nav { display: none; }
+}
+
+/* ==================== 14. 键盘弹出适配（Plan/09 §3.3） ==================== */
+// Capacitor 键盘弹出时为 document.body 添加 .keyboard-visible 类，
+// 暴露 --keyboard-h CSS 变量供业务页面消费。
+@include bp.mobile {
+  body.keyboard-visible {
+    .fixed-bottom,
+    .action-bar-mobile {
+      padding-bottom: calc(var(--safe-bottom) + var(--keyboard-h, 0px));
+      transition: padding-bottom var(--motion-base) var(--ease-standard);
+    }
+  }
+}

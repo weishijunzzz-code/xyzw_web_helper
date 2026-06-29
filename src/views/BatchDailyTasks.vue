@@ -4074,7 +4074,7 @@ const taskGroupDefinitions = [
   {
     name: "legacy",
     label: "功法",
-    tasks: ["batchLegacyClaim", "batchLegacyGiftSendEnhanced"],
+    tasks: ["batchLegacyClaim", "batchLegacyGiftSendEnhanced", "batchLegacyBeginHangup"],
   },
   {
     name: "monthly",

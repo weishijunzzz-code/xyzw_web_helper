@@ -1,0 +1,28 @@
+// ============================================
+// 全局断点系统（唯一来源）
+// 修改这里 = 修改全工程
+// 红线：禁止裸写 @media (max-width: ...)
+// 参考: .claude/CLAUDE.md §3.1, Plan/01-模块A-基础设施层.md
+// ============================================
+
+$bp-sm: 480px;   // 小屏手机
+$bp-md: 768px;   // 大屏手机 / 竖屏平板（移动端上限）
+$bp-lg: 1024px;  // 横屏平板 / 小桌面（桌面端下限）
+$bp-xl: 1440px;  // 大桌面
+
+// SCSS Mixin（推荐用法）
+@mixin mobile  { @media (max-width: #{$bp-md - 1px}) { @content; } }
+@mixin tablet  { @media (min-width: #{$bp-md}) and (max-width: #{$bp-lg - 1px}) { @content; } }
+@mixin desktop { @media (min-width: #{$bp-lg}) { @content; } }
+
+// 精细断点（按需使用）
+@mixin lt-sm { @media (max-width: #{$bp-sm - 1px}) { @content; } }
+@mixin gt-lg { @media (min-width: #{$bp-xl}) { @content; } }
+
+// 暴露为 CSS 变量（运行时可用）
+:root {
+  --bp-sm: #{$bp-sm};
+  --bp-md: #{$bp-md};
+  --bp-lg: #{$bp-lg};
+  --bp-xl: #{$bp-xl};
+}
