@@ -4,6 +4,7 @@ import { getTowerActId } from "../towerActId.js";
  * 爬塔类任务
  * 包含: climbTower, climbWeirdTower, batchClaimFreeEnergy
  */
+import { normalizeWeirdTowerMaxClimb } from "../towerClimbLimit.js";
 
 /**
  * 创建爬塔类任务执行器
@@ -27,6 +28,7 @@ export function createTasksTower(deps) {
     currentRunningTokenId,
     currentSettings,
     loadSettings,
+    weirdTowerMaxClimb,
   } = deps;
 
   /**
@@ -361,9 +363,18 @@ export function createTasksTower(deps) {
         });
 
         let count = 0;
+        const MAX_CLIMB = normalizeWeirdTowerMaxClimb(
+          weirdTowerMaxClimb?.value ?? weirdTowerMaxClimb,
+        );
         let consecutiveFailures = 0;
 
-        while (currentEnergy > 0 && !shouldStop.value) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 本次最多爬怪异塔 ${MAX_CLIMB} 次`,
+          type: "info",
+        });
+
+        while (currentEnergy > 0 && count < MAX_CLIMB && !shouldStop.value) {
           try {
             await tokenStore.sendMessageWithPromise(
               tokenId,
@@ -390,7 +401,7 @@ export function createTasksTower(deps) {
               type: "info",
             });
 
-            await new Promise((r) => setTimeout(r, 2500));
+            await new Promise((r) => setTimeout(r, 500));
 
             const evotowerinfo2 = await tokenStore.sendMessageWithPromise(
               tokenId,
@@ -471,54 +482,6 @@ export function createTasksTower(deps) {
               message: `战斗出错: ${err.message} (重试 ${consecutiveFailures}/3)`,
               type: "warning",
             });
-
-            // 检测是否可能是章节奖励未领取导致的错误
-            // 检查错误代码: 1500040(上座塔), 72500028/12200020(怪异塔章节奖励)
-            const errorCode = err.serverErrorCode || err.code;
-            if (errorCode === 1500040 || errorCode === 72500028 || errorCode === 12200020) {
-              addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `${token.name} 检测到可能是章节奖励未领取，尝试领取...`,
-                type: "warning",
-              });
-
-              try {
-                // 获取当前塔信息
-                const evotowerinfoReward = await tokenStore.sendMessageWithPromise(
-                  tokenId,
-                  "evotower_getinfo",
-                  {},
-                  5000,
-                );
-                const towerId = evotowerinfoReward?.evoTower?.towerId || 0;
-                const floor = (towerId % 10) + 1;
-
-                // 如果在第1层（刚通关），尝试领取章节奖励
-                if (floor === 1 && towerId > 0) {
-                  await tokenStore.sendMessageWithPromise(
-                    tokenId,
-                    "evotower_claimreward",
-                    {},
-                    5000,
-                  );
-                  addLog({
-                    time: new Date().toLocaleTimeString(),
-                    message: `${token.name} 成功领取第${Math.floor(towerId / 10)}章通关奖励！`,
-                    type: "success",
-                  });
-                  // 领取成功后重置失败计数
-                  consecutiveFailures = 0;
-                  await new Promise((r) => setTimeout(r, 2500));
-                  continue; // 继续循环，不增加失败次数
-                }
-              } catch (rewardErr) {
-                addLog({
-                  time: new Date().toLocaleTimeString(),
-                  message: `领取章节奖励失败: ${rewardErr.message}`,
-                  type: "error",
-                });
-              }
-            }
 
             if (consecutiveFailures >= 3) {
               addLog({
@@ -639,33 +602,6 @@ export function createTasksTower(deps) {
             message: `===  ${token.name} 暂无免费道具可领取`,
             type: "success",
           });
-        }
-
-        await new Promise((r) => setTimeout(r, 500));
-
-        for (let taskId = 1; taskId <= 10; taskId++) {
-          if (shouldStop.value)
-            break;
-
-          try {
-            const result = await tokenStore.sendMessageWithPromise(
-              tokenId,
-              "evotower_claimlegiontask",
-              { taskId },
-              5000,
-            );
-
-            await new Promise((r) => setTimeout(r, 500));
-
-            if (result && !result.error) {
-              addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `=== ${token.name} 俱乐部任务${taskId}领取成功`,
-                type: "success",
-              });
-            }
-          } catch (e) {
-          }
         }
 
         tokenStatus.value[tokenId] = "completed";
