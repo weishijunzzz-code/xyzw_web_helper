@@ -397,7 +397,14 @@ export function registerDefaultCommands(reg) {
     .register("towers_fight")
 
     //发送游戏内消息
-    .register("system_sendchatmessage");
+    .register("system_sendchatmessage")
+      // 盐杯竞猜
+    .register("saltcup26_getbetinfo")
+    .register("saltcup26_placebet", { matchId: "", pick: 0 })
+
+    // 换皮闯关领奖
+    .register("activity_startactegame", { actId: 0 });
+
   registry.commands.set(
     "fight_startareaarena",
     (ack = 0, seq = 0, params = {}) => {
@@ -1146,6 +1153,10 @@ export class XyzwWebSocketClient {
       legacy_beginhangupresp: "legacy_beginhangup",
       legacy_sendgiftresp: "legacy_sendgift",
       legacy_getgiftsresp: "legacy_getgifts",
+      // 盐杯竞猜响应映射
+      saltcup26_getbetinforesp: "saltcup26_getbetinfo",
+      saltcup26_placebetresp: "saltcup26_placebet",
+      activity_takeegamerewardresp: "activity_startactegame",
       // 换皮闯关相关响应映射
       towers_getinforesp: "towers_getinfo",
       towers_startresp: "towers_start",
