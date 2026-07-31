@@ -583,9 +583,15 @@ const startScanMonitoring = () => {
   isScanning.value = true;
   startTime.value = Date.now();
 
-  scanInterval.value = setInterval(() => {
-    checkScanStatus();
-  }, 1000);
+  // 使用递归 setTimeout 代替 setInterval，等请求完成后再发下一次，避免并发
+  const poll = async () => {
+    if (!isScanning.value) return;
+    await checkScanStatus();
+    if (isScanning.value) {
+      scanInterval.value = setTimeout(poll, 2000);
+    }
+  };
+  poll();
 };
 
 /**
@@ -612,7 +618,8 @@ const checkScanStatus = async () => {
 
     // 使用 apiConfig 获取请求头
     const headers = getApiHeaders('weixin');
-    headers['Cache-Control'] = 'no-cache';
+    headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    headers['Pragma'] = 'no-cache';
 
     // 使用原生 HTTP 请求绕过 CORS
     let text = '';
@@ -653,8 +660,13 @@ const checkScanStatus = async () => {
         }
       }
 
-      // 408 → 已过期
+      // 408 是微信长轮询等待中（正常状态），继续轮询，不要重置二维码
       if (text.includes("window.wx_errcode=408")) {
+        return;
+      }
+
+      // 400=二维码过期，402=拒绝，这些真正的错误才重置
+      if (text.includes("window.wx_errcode=400") || text.includes("window.wx_errcode=402")) {
         updateStatus("二维码已过期，请重新生成", "error");
         stopScanMonitoring();
         resetQRCode();
@@ -678,7 +690,7 @@ const checkScanStatus = async () => {
 const stopScanMonitoring = () => {
   isScanning.value = false;
   if (scanInterval.value) {
-    clearInterval(scanInterval.value);
+    clearTimeout(scanInterval.value);
     scanInterval.value = null;
   }
 };

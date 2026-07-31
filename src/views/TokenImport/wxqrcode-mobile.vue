@@ -246,9 +246,15 @@ const startScanMonitoring = () => {
   isScanning.value = true;
   startTime.value = Date.now();
 
-  scanInterval.value = setInterval(() => {
-    checkScanStatus();
-  }, 1000);
+  // 使用递归 setTimeout 代替 setInterval，等请求完成后再发下一次，避免并发
+  const poll = async () => {
+    if (!isScanning.value) return;
+    await checkScanStatus();
+    if (isScanning.value) {
+      scanInterval.value = setTimeout(poll, 2000);
+    }
+  };
+  poll();
 };
 
 // 检查扫码状态
@@ -267,7 +273,14 @@ const checkScanStatus = async () => {
     const url = `/api/weixin/connect/l/qrconnect?uuid=${qrcodeUUID.value}&f=url&_=${Date.now()}`;
     console.log('[checkScanStatus] Checking:', url);
 
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+      cache: 'no-store',
+    });
     if (!res.ok) {
       console.log('[checkScanStatus] Fetch failed:', res.status);
       return;
@@ -292,7 +305,11 @@ const checkScanStatus = async () => {
         console.error('[checkScanStatus] 405 but no code found');
       }
     } else if (text.includes("window.wx_errcode=408")) {
-      console.log('[checkScanStatus] Got 408 - QR expired');
+      // 408 是微信长轮询等待中（正常状态），继续轮询，不要重置二维码
+      console.log('[checkScanStatus] 408 - 等待扫码中，继续轮询');
+      return;
+    } else if (text.includes("window.wx_errcode=400") || text.includes("window.wx_errcode=402")) {
+      console.log('[checkScanStatus] Got expired code');
       updateStatus("二维码已过期，请重新生成", "error");
       stopScanMonitoring();
       resetQRCode();
@@ -311,7 +328,7 @@ const checkScanStatus = async () => {
 const stopScanMonitoring = () => {
   isScanning.value = false;
   if (scanInterval.value) {
-    clearInterval(scanInterval.value);
+    clearTimeout(scanInterval.value);
     scanInterval.value = null;
   }
 };
