@@ -476,6 +476,52 @@ export function createTasksTower(deps) {
               // 忽略刷新失败
             }
           } catch (err) {
+            // 处理怪异塔章节奖励未领取错误 (72500028 / 12200020)
+            if (err.message && (err.message.includes("72500028") || err.message.includes("12200020"))) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 怪异塔章节奖励未领取，尝试自动领取...`,
+                type: "warning",
+              });
+
+              try {
+                await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "evotower_claimreward",
+                  {},
+                  5000,
+                );
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 成功领取怪异塔章节奖励`,
+                  type: "success",
+                });
+              } catch (claimErr) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 领取章节奖励失败: ${claimErr.message}`,
+                  type: "warning",
+                });
+              }
+
+              await new Promise((r) => setTimeout(r, 2000));
+
+              try {
+                const evotowerinfoRefresh = await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "evotower_getinfo",
+                  {},
+                  5000,
+                );
+                currentEnergy = evotowerinfoRefresh?.evoTower?.energy || 0;
+              } catch (e) {
+                // 忽略刷新失败
+              }
+
+              consecutiveFailures = 0;
+              continue;
+            }
+
             consecutiveFailures++;
             addLog({
               time: new Date().toLocaleTimeString(),
