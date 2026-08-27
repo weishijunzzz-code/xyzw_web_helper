@@ -34,6 +34,7 @@ declare module 'vue-router/auto-routes' {
     '/mobile/MobileTokens': RouteRecordInfo<'/mobile/MobileTokens', '/mobile/MobileTokens', Record<never, never>, Record<never, never>>,
     '/NotFound': RouteRecordInfo<'/NotFound', '/NotFound', Record<never, never>, Record<never, never>>,
     '/Profile': RouteRecordInfo<'/Profile', '/Profile', Record<never, never>, Record<never, never>>,
+    '/PushingLevels': RouteRecordInfo<'/PushingLevels', '/PushingLevels', Record<never, never>, Record<never, never>>,
     '/Register': RouteRecordInfo<'/Register', '/Register', Record<never, never>, Record<never, never>>,
     '/TaskScheduler/': RouteRecordInfo<'/TaskScheduler/', '/TaskScheduler', Record<never, never>, Record<never, never>>,
     '/TokenImport/': RouteRecordInfo<'/TokenImport/', '/TokenImport', Record<never, never>, Record<never, never>>,
