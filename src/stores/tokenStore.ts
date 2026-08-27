@@ -986,6 +986,7 @@ export const useTokenStore = defineStore("tokens", () => {
       "fight_startboss",
       "fight_startlegionboss",
       "fight_startdungeon",
+      "fight_level",
     ];
     if (battleCommands.includes(cmd)) {
       const battleVersion = gameData.value.battleVersion;

@@ -51,6 +51,16 @@
             <span>批量日常</span>
           </router-link>
           <router-link
+            to="/admin/PushingLevels"
+            class="nav-item"
+            active-class="active"
+          >
+            <n-icon>
+              <ArrowUpCircle />
+            </n-icon>
+            <span>主线推关</span>
+          </router-link>
+          <router-link
             to="/admin/task-scheduler"
             class="nav-item"
             active-class="active"
@@ -117,7 +127,7 @@
                   </n-icon>
                 </div>
               </template>
-              
+
               <div class="token-dropdown-panel">
                 <!-- 搜索框 -->
                 <div class="token-search">
@@ -132,7 +142,7 @@
                     </template>
                   </n-input>
                 </div>
-                
+
                 <!-- 分组标签 -->
                 <div class="token-group-tabs">
                   <n-space size="small">
@@ -148,7 +158,7 @@
                     </n-tag>
                   </n-space>
                 </div>
-                
+
                 <!-- Token列表 -->
                 <div class="token-list" v-if="filteredTokens.length > 0">
                   <div
@@ -178,12 +188,12 @@
                     </n-icon>
                   </div>
                 </div>
-                
+
                 <!-- 空状态 -->
                 <div v-else class="token-empty">
                   <n-empty description="没有找到Token" size="small" />
                 </div>
-                
+
                 <!-- 底部操作 -->
                 <div class="token-actions">
                   <n-button text size="small" @click="router.push('/tokens')">
@@ -270,6 +280,16 @@
           <span>批量日常</span>
         </router-link>
         <router-link
+          to="/admin/PushingLevels"
+          class="drawer-item"
+          @click="isMobileMenuOpen = false"
+        >
+          <n-icon>
+            <ArrowUpCircle />
+          </n-icon>
+          <span>主线推关</span>
+        </router-link>
+        <router-link
           to="/admin/task-scheduler"
           class="drawer-item"
           @click="isMobileMenuOpen = false"
@@ -289,9 +309,9 @@
           </n-icon>
           <span>消息测试</span>
         </router-link>
-        <router-link 
-          to="/admin/legion-war" 
-          class="drawer-item" 
+        <router-link
+          to="/admin/legion-war"
+          class="drawer-item"
           v-if="isNowInLegionWarTime()"
           @click="isMobileMenuOpen = false"
         >
@@ -331,7 +351,7 @@
     </n-drawer>
     <!-- 面包屑导航 -->
     <BreadcrumbNav v-if="!isMobile" />
-    
+
     <div class="main" :class="{ 'has-bottom-nav': isMobile }">
       <router-view v-slot="{ Component, route }">
         <PageTransition :name="route.meta.transition || 'fade-slide'">
@@ -389,6 +409,7 @@ import {
   Refresh,
   TimerOutline,
   BugOutline,
+  ArrowUpCircle,
 } from "@vicons/ionicons5";
 import { isNativePlatform } from "@/utils/capacitor";
 
@@ -440,16 +461,16 @@ const filteredTokens = computed(() => {
   } else if (selectedGroup.value === 'offline') {
     tokens = tokens.filter(t => !isTokenOnline(t.id));
   }
-  
+
   // 按搜索词过滤
   if (tokenSearchQuery.value.trim()) {
     const query = tokenSearchQuery.value.toLowerCase();
-    tokens = tokens.filter(t => 
+    tokens = tokens.filter(t =>
       t.name?.toLowerCase().includes(query) ||
       t.server?.toLowerCase().includes(query)
     );
   }
-  
+
   return tokens;
 });
 
@@ -508,7 +529,7 @@ const bottomNavItems = computed(() => {
       label: '批量'
     }
   ];
-  
+
   // 盐场时间显示实时盐场入口
   if (isNowInLegionWarTime()) {
     items.splice(4, 0, {
@@ -517,7 +538,7 @@ const bottomNavItems = computed(() => {
       label: '盐场'
     });
   }
-  
+
   return items;
 });
 
@@ -741,10 +762,10 @@ loadDebugState();
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    
+
     .token-chevron {
       transition: transform var(--transition-fast);
-      
+
       &.is-open {
         transform: rotate(180deg);
       }
@@ -797,7 +818,7 @@ loadDebugState();
 
 .token-item-avatar {
   position: relative;
-  
+
   .token-status {
     position: absolute;
     bottom: 0;
@@ -807,7 +828,7 @@ loadDebugState();
     border-radius: 50%;
     background: var(--text-tertiary);
     border: 2px solid var(--bg-primary);
-    
+
     &.is-online {
       background: var(--success-color);
     }
@@ -903,6 +924,10 @@ loadDebugState();
     flex: 0 0 auto;
   }
 
+  .nav-container {
+    height: 56px;
+  }
+
   .brand-logo {
     display: none;
   }
@@ -989,16 +1014,16 @@ loadDebugState();
   text-decoration: none;
   transition: all var(--transition-fast);
   min-height: 44px; // 触摸区域最小高度
-  
+
   &:hover,
   &.active {
     color: var(--primary-color);
   }
-  
+
   &.active {
     background: var(--primary-color-light);
   }
-  
+
   .n-icon {
     font-size: 20px;
   }
@@ -1014,7 +1039,7 @@ loadDebugState();
   .mobile-bottom-nav {
     display: flex;
   }
-  
+
   .main.has-bottom-nav {
     padding-bottom: 56px; // 为底部导航栏留出空间
   }

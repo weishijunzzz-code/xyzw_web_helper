@@ -483,19 +483,19 @@
                   一键购买梦境商品
                 </n-button>
               </n-space>
-              <n-popselect
+                <n-popselect
                   :value="footballPick"
                   :options="footballPickOptions"
                   trigger="click"
                   @update:value="onFootballPickChange"
-              >
-                <n-button
+                >
+                  <n-button
                     size="small"
                     :disabled="isRunning || selectedTokens.length === 0"
-                >
-                  一键竞猜({{ footballPickLabel }})
-                </n-button>
-              </n-popselect>
+                  >
+                    一键竞猜({{ footballPickLabel }})
+                  </n-button>
+                </n-popselect>
             </n-tab-pane>
             <n-tab-pane name="baoku" tab="宝库">
               <n-space>
@@ -3895,7 +3895,7 @@ const batchJoinClub = async () => {
           message: `${token.name} WebSocket未连接，尝试建立连接...`,
           type: 'info',
         });
-        
+
         try {
           const token = tokenStore.gameTokens?.find((t) => t.id === tokenId);
           if (!token) {
@@ -3910,7 +3910,7 @@ const batchJoinClub = async () => {
           await tokenStore.createWebSocketConnection(tokenId, token.token, token.wsUrl);
           // 等待连接建立
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
           const newStatus = tokenStore.getWebSocketStatus(tokenId);
           if (newStatus !== 'connected') {
             addLog({
@@ -3989,7 +3989,7 @@ const batchJoinClub = async () => {
       // 处理响应
       const errorCode = response?.error || response?.code || response?.ret;
       console.log(`${token.name} 错误码:`, errorCode, typeof errorCode);
-      
+
       if (errorCode === 0 || errorCode === undefined || errorCode === null) {
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -5131,7 +5131,7 @@ const executeScheduledTask = async (task) => {
         });
         return;
       }
-      
+
       if (
         ["batchUseItems", "batchMergeItems", "batchClaimFreeEnergy"].includes(taskName) &&
         !isWeirdTowerItemsAvailable.value
@@ -5440,15 +5440,8 @@ const confirmLegacyGift = async () => {
     return;
   }
 
-  // 如果不是最大数量模式，需要验证目标数量
-  if (!useMaxQuantity.value && (!giftTargetQuantity.value || giftTargetQuantity.value <= 0)) {
-    message.error("请输入有效的目标赠送数量");
-    return;
-  }
-
   // 调用增强版批量赠送功能
-  // 参数：是否为定时任务=false，目标数量（useMaxQuantity模式下为null表示全部）
-  await batchLegacyGiftSendEnhanced(false, useMaxQuantity.value ? null : giftTargetQuantity.value);
+  await batchLegacyGiftSendEnhanced();
 
   // 关闭模态框
   showLegacyGiftModal.value = false;
@@ -6597,6 +6590,8 @@ const startBatch = async () => {
     while (retryCount <= MAX_RETRIES && !success) {
       if (shouldStop.value) break;
 
+      const token = tokens.value.find((t) => t.id === tokenId);
+
       try {
         if (retryCount === 0) {
           addLog({
@@ -6700,7 +6695,7 @@ const startBatch = async () => {
 
 const stopBatch = () => {
   shouldStop.value = true;
-  
+
   // 强制重置连接队列（防止卡死）
   const activeCount = connectionQueue.active;
   if (activeCount > 0) {
@@ -6711,7 +6706,7 @@ const stopBatch = () => {
       type: "warning",
     });
   }
-  
+
   // 关闭所有WebSocket连接
   selectedTokens.value.forEach((tokenId) => {
     try {
@@ -6720,13 +6715,13 @@ const stopBatch = () => {
       // 忽略关闭错误
     }
   });
-  
+
   addLog({
     time: new Date().toLocaleTimeString(),
     message: "正在停止...",
     type: "warning",
   });
-  
+
   message.info("批量任务已停止");
 };
 </script>

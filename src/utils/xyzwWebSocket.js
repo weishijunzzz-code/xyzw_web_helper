@@ -97,15 +97,17 @@ export class CommandRegistry {
   }
 
   /** 注册命令 */
-  register(cmd, defaultBody = {}) {
+  register(cmd, defaultBody = {}, options = {}) {
     this.commands.set(cmd, (ack = 0, seq = 0, params = {}) => ({
       cmd,
       ack,
       seq,
       time: Date.now(),
-      body: this.encoder?.bon?.encode
-        ? this.encoder.bon.encode({ ...defaultBody, ...params })
-        : { ...defaultBody, ...params },
+      body: options.rawBody
+        ? { ...defaultBody, ...params }
+        : this.encoder?.bon?.encode
+          ? this.encoder.bon.encode({ ...defaultBody, ...params })
+          : { ...defaultBody, ...params },
     }));
     return this;
   }
@@ -156,6 +158,7 @@ export function registerDefaultCommands(reg) {
     .register("system_getdatabundlever", { isAudit: false })
     .register("system_buygold", { buyNum: 1 })
     .register("system_claimhangupreward")
+    .register("system_hangupupgrade", { upgradeNum: 1 })
     .register("system_signinreward")
     .register("system_mysharecallback", { isSkipShareCard: true, type: 2 })
     .register("system_custom", { key: "", value: 0 })
@@ -175,11 +178,14 @@ export function registerDefaultCommands(reg) {
     .register("item_openbox", { itemId: 2001, number: 10 })
     .register("item_batchclaimboxpointreward")
     .register("item_openpack")
+    .register("item_consume")
     .register("rank_getserverrank")
 
     // 竞技场
     .register("arena_startarea")
     .register("fight_startlevel") // 获取 battleVersion
+    .register("fight_calcleveltime") // 计算主线关卡战斗时长
+    .register("fight_level", {}, { rawBody: true }) // 结算主线关卡
     .register("arena_getareatarget", { refresh: false })
     .register("arena_getarearank")
 
@@ -398,13 +404,13 @@ export function registerDefaultCommands(reg) {
 
     //发送游戏内消息
     .register("system_sendchatmessage")
-      // 盐杯竞猜
+
+    // 盐杯竞猜
     .register("saltcup26_getbetinfo")
     .register("saltcup26_placebet", { matchId: "", pick: 0 })
 
     // 换皮闯关领奖
     .register("activity_startactegame", { actId: 0 });
-
   registry.commands.set(
     "fight_startareaarena",
     (ack = 0, seq = 0, params = {}) => {
@@ -1068,12 +1074,17 @@ export class XyzwWebSocketClient {
       legion_getarearankresp: "legion_getarearank",
       legionwar_getgoldmonthwarrankresp: "legionwar_getgoldmonthwarrank",
       nightmare_getroleinforesp: "nightmare_getroleinfo",
+      fight_startlevelresp: "fight_startlevel",
+      fight_calcleveltimeresp: "fight_calcleveltime",
+      fight_levelresp: "fight_level",
       studyresp: "study_startgame",
       role_getroleinforesp: "role_getroleinfo",
       hero_recruitresp: "hero_recruit",
       friend_batchresp: "friend_batch",
       system_claimhanguprewardresp: "system_claimhangupreward",
+      system_hangupupgraderesp: "system_hangupupgrade",
       item_openboxresp: ["item_openbox", "item_batchclaimboxpointreward"],
+      item_consumeresp: "item_consume",
       bottlehelper_claimresp: "bottlehelper_claim",
       bottlehelper_startresp: "bottlehelper_start",
       bottlehelper_stopresp: "bottlehelper_stop",

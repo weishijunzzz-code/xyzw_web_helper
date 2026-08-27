@@ -121,6 +121,15 @@ const my_routes = [
           requiresToken: true
         }
       },
+      {
+        path: 'PushingLevels',
+        name: 'PushingLevels',
+        component: safeImport(() => import('@/views/PushingLevels.vue')),
+        meta: {
+          title: '主线推关',
+          requiresToken: true
+        }
+      },
       // 增加自动路由引用
       ...generatedRoutes,
     ]
@@ -258,7 +267,7 @@ router.afterEach((to, from) => {
   // 根据路由深度决定过渡方向
   const toDepth = to.path.split('/').length
   const fromDepth = from.path.split('/').length
-  
+
   if (toDepth > fromDepth) {
     to.meta.transition = 'slide-left'
   } else if (toDepth < fromDepth) {
