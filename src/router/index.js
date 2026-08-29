@@ -204,6 +204,15 @@ const my_routes = [
         }
       },
       {
+        path: 'pushing-levels',
+        name: 'MobilePushingLevels',
+        component: safeImport(() => import('@/views/mobile/features/MobilePushingLevels.vue')),
+        meta: {
+          title: '主线推关',
+          requiresToken: true
+        }
+      },
+      {
         path: 'legion-war',
         name: 'MobileLegionWar',
         component: safeImport(() => import('@/views/LegionWar.vue')),
@@ -291,6 +300,7 @@ const pcToMobileRouteMap = {
   'DailyTasks': '/mobile/daily-tasks',
   'BatchDailyTasks': '/mobile/batch-daily-tasks',
   'TaskScheduler': '/mobile/task-scheduler',
+  'PushingLevels': '/mobile/pushing-levels',
   'LegionWar': '/mobile/legion-war',
   'Profile': '/mobile/profile',
   'TokenImport': '/mobile/tokens'

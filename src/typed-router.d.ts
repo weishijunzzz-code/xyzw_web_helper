@@ -30,6 +30,7 @@ declare module 'vue-router/auto-routes' {
     '/LegionWar': RouteRecordInfo<'/LegionWar', '/LegionWar', Record<never, never>, Record<never, never>>,
     '/Login': RouteRecordInfo<'/Login', '/Login', Record<never, never>, Record<never, never>>,
     '/mobile/features/MobileBatchDailyTasks': RouteRecordInfo<'/mobile/features/MobileBatchDailyTasks', '/mobile/features/MobileBatchDailyTasks', Record<never, never>, Record<never, never>>,
+    '/mobile/features/MobilePushingLevels': RouteRecordInfo<'/mobile/features/MobilePushingLevels', '/mobile/features/MobilePushingLevels', Record<never, never>, Record<never, never>>,
     '/mobile/MobileGameFeatures': RouteRecordInfo<'/mobile/MobileGameFeatures', '/mobile/MobileGameFeatures', Record<never, never>, Record<never, never>>,
     '/mobile/MobileTokens': RouteRecordInfo<'/mobile/MobileTokens', '/mobile/MobileTokens', Record<never, never>, Record<never, never>>,
     '/NotFound': RouteRecordInfo<'/NotFound', '/NotFound', Record<never, never>, Record<never, never>>,
