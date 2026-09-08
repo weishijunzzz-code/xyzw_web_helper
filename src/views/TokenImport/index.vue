@@ -678,8 +678,10 @@ import {
   SyncCircle,
   TrashBin,
   GameController,
+  Download,
 } from "@vicons/ionicons5";
 import { NIcon, NAlert, useDialog, useMessage } from "naive-ui";
+import { g_utils } from "@/utils/bonProtocol";
 import { h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { transformToken, scheduleAuthUserRequest } from "@/utils/token";
@@ -1187,6 +1189,11 @@ const getTokenActions = (token) => {
   }
 
   actions.push(
+    {
+      label: "导出BIN",
+      key: "export-bin",
+      icon: () => h(NIcon, null, { default: () => h(Download) }),
+    },
     { type: "divider" },
     {
       label: "删除",
@@ -1214,6 +1221,10 @@ const handleTokenAction = async (key, token) => {
     case "refresh-url":
       // URL获取的Token刷新
       refreshToken(token);
+      break;
+    case "export-bin":
+      // 导出Token的BIN数据
+      exportTokenBin(token);
       break;
     case "delete":
       deleteToken(token);
@@ -1302,6 +1313,67 @@ const deleteToken = (token) => {
       message.success("Token已删除");
     },
   });
+};
+
+// 导出Token的BIN数据为.bin文件（可与游戏上号器的"导入BIN文件"配合使用）
+const exportTokenBin = async (token) => {
+  try {
+    // 从 IndexedDB 读取原始 BIN 数据（打开游戏登录用的就是这份数据）
+    const binData = await getArrayBuffer(token.id);
+    if (!binData) {
+      message.error(
+        `Token "${token.name}" 没有BIN数据（仅BIN文件/扫码导入的Token支持导出）`,
+      );
+      return;
+    }
+
+    // 统一转换为标准 lx (pl) 格式（LZ4+XOR，与抓包bin文件一致）
+    // IndexedDB 中可能是 px 格式（bin/扫码导入时经 g_utils.encode 的 x 加密重编码），
+    // 游戏上号器与游戏模块的 lz4XorDecode 只认 pl 格式，"打开游戏"登录前也做了同样转换
+    const exportData = convertBinToLx(binData);
+
+    // 尝试解析BIN中的serverId，构造标准文件名: bin-{server}服-{name}.bin
+    let fileName = `${token.name}.bin`;
+    try {
+      const binMsg = g_utils.parse(exportData);
+      let binContent = binMsg.getData();
+      if (!binContent && binMsg._raw) {
+        binContent = binMsg._raw;
+      }
+      if (binContent && binContent.serverId) {
+        let sid = Number(binContent.serverId);
+        if (sid >= 2000000) {
+          sid -= 2000000;
+        } else if (sid >= 1000000) {
+          sid -= 1000000;
+        }
+        const serverNum = sid - 27;
+        fileName = `bin-${serverNum}服-${token.name}.bin`;
+      }
+    } catch (e) {
+      // 解析失败则使用默认文件名
+    }
+
+    downloadBinFile(fileName, exportData);
+    message.success(`已开始下载: ${fileName}`);
+  } catch (error) {
+    console.error("导出BIN失败:", error);
+    message.error("导出BIN失败: " + (error.message || error));
+  }
+};
+
+const downloadBinFile = (fileName, bin) => {
+  const blob = new Blob([new Uint8Array(bin)], {
+    type: "application/octet-stream",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 // 批量刷新所有URLToken
