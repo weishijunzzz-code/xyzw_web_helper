@@ -2620,6 +2620,42 @@
                   style="width: 100px"
                 />
               </div>
+              <div
+                class="setting-item"
+                style="
+                  flex-direction: row;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label class="setting-label">
+                  后台保活（防后台断连）
+                  <n-tag
+                    v-if="isKeepAlivePlaying"
+                    size="small"
+                    type="success"
+                    :bordered="false"
+                    style="margin-left: 6px"
+                    >已生效</n-tag
+                  >
+                  <n-tag
+                    v-else-if="batchSettings.enableKeepAlive"
+                    size="small"
+                    type="warning"
+                    :bordered="false"
+                    style="margin-left: 6px"
+                    >点击页面任意处生效</n-tag
+                  >
+                </label>
+                <n-switch v-model:value="batchSettings.enableKeepAlive" />
+              </div>
+              <n-alert
+                type="info"
+                :show-icon="false"
+                style="margin-top: 4px; font-size: 12px"
+              >
+                开启后将以几乎不可闻的音量循环播放一段音频，使页面保持"播放声音"状态，从而豁免浏览器对后台标签页的定时器节流，避免挂后台时心跳停摆被服务器踢线、连接重试失准。开启后标签页会显示扬声器图标，属正常现象。
+              </n-alert>
             </div>
           </n-grid-item>
         </n-grid>
@@ -3087,6 +3123,7 @@ import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
 import { Settings } from "@vicons/ionicons5";
 import { DEFAULT_WEIRD_TOWER_MAX_CLIMB } from "@/utils/towerClimbLimit.js";
+import { useKeepAlive } from "@/composables/useKeepAlive";
 
 // Import batch task modules
 import {
@@ -3686,6 +3723,8 @@ const batchSettings = reactive({
   // 页面刷新配置
   enableRefresh: false,
   refreshInterval: 360, // 分钟
+  // 后台保活配置
+  enableKeepAlive: false,
   smartDepartureGoldThreshold: 0,
   smartDepartureRecruitThreshold: 0,
   smartDepartureJadeThreshold: 0,
@@ -3726,6 +3765,24 @@ const openBatchSettings = () => {
 
 // Load settings on component mount
 loadBatchSettings();
+
+// ======================
+// 后台保活（防后台定时器节流断连）
+// ======================
+const { isKeepAlivePlaying, startKeepAlive, stopKeepAlive } = useKeepAlive();
+
+// 开关变化立即启停保活音频（无需等待保存设置）
+watch(
+  () => batchSettings.enableKeepAlive,
+  (enabled) => {
+    if (enabled) {
+      startKeepAlive();
+    } else {
+      stopKeepAlive();
+    }
+  },
+  { immediate: true }, // 挂载时读取已保存的开关状态（若被autoplay拦截会在首次交互后自动恢复）
+);
 
 // ======================
 // Legacy Gift Feature
@@ -4924,6 +4981,9 @@ onBeforeUnmount(() => {
     clearInterval(healthCheckInterval);
     healthCheckInterval = null;
   }
+
+  // 离开批量任务页时停止后台保活音频
+  stopKeepAlive();
 });
 
 // Task scheduler - ensure it runs properly
@@ -6706,6 +6766,11 @@ const startBatch = async () => {
 
   message.success(`批量任务执行结束 - 成功: ${successCount}, 失败: ${errorCount}`);
 };
+
+// 将startBatch注册到任务函数映射，使定时任务可以执行"执行全部日常"任务
+// （taskFunctionMap字面量定义时startBatch尚未初始化，无法直接写入字面量；
+//  startBatch内部使用selectedTokens.value，定时任务执行前已将其设置为任务选定的token列表）
+taskFunctionMap.startBatch = startBatch;
 
 const stopBatch = () => {
   shouldStop.value = true;
