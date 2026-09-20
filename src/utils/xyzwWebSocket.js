@@ -219,11 +219,6 @@ export function registerDefaultCommands(reg) {
     .register("saltroad_getsaltroadwartotalrank")
     .register("legionwar_getgoldmonthwarrank")
     .register("legion_getopponent")
-    .register("club_getinfo")
-    .register("club_gettargetteam")
-    .register("club_attack")
-    .register("club_attackmonster")
-    .register("club_taskclaim")
     .register("legion_getbattlefield")
     .register("legion_claimpayloadtask")
     .register("legion_claimpayloadtaskprogress")
@@ -234,6 +229,9 @@ export function registerDefaultCommands(reg) {
     // 营地挑战 / 俱乐部战
     .register("club_getinfo")
     .register("club_gettargetteam", { targetId: 0 })
+    .register("club_attack")
+    .register("club_attackmonster")
+    .register("club_taskclaim")
     .register("club_getattackrecord")
     .register("club_getdefenserecord", { targetId: 0, targetIsMirror: false })
     .register("club_getgrouprank")
@@ -285,7 +283,6 @@ export function registerDefaultCommands(reg) {
     .register("legionmatch_signup")
     .register("legionmatch_getrank")
     .register("legionmatch_getbattlerecord")
-    .register("legion_signin")
 
     // 钓鱼
     .register("artifact_lottery", { lotteryNumber: 1, newFree: true, type: 1 })
@@ -297,7 +294,6 @@ export function registerDefaultCommands(reg) {
 
     // 礼包相关
     .register("discount_claimreward", { discountId: 1 })
-    .register("collection_claimfreereward")
     .register("card_claimreward", { cardId: 1 })
 
     // 爬塔相关
@@ -305,7 +301,6 @@ export function registerDefaultCommands(reg) {
     .register("tower_claimreward")
 
     // 队伍相关
-    .register("presetteam_getinfo")
     .register("presetteam_getinfo")
     .register("presetteam_setteam")
     .register("presetteam_saveteam", { teamId: 1 })

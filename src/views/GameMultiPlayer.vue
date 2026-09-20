@@ -14,9 +14,17 @@
         {{ skippedSummary }}
       </span>
       <span class="toolbar-warning">
-        在窗口标题栏滚动可横向浏览；按住 Ctrl + 滚轮缩放页面，可同时查看更多账号
+        {{
+          isMobile
+            ? "左右滑动可切换账号窗口"
+            : "在窗口标题栏滚动可横向浏览；按住 Ctrl + 滚轮缩放页面，可同时查看更多账号"
+        }}
       </span>
-      <n-popover trigger="hover" placement="bottom-end" :width="360">
+      <n-popover
+        :trigger="isMobile ? 'click' : 'hover'"
+        placement="bottom-end"
+        :width="360"
+      >
         <template #trigger>
           <button class="crash-help-trigger" type="button">页面崩溃？</button>
         </template>
@@ -163,6 +171,7 @@ import {
   ref,
 } from "vue";
 import { useRouter } from "vue-router";
+import { useMobile } from "@/composables/useMobile";
 import {
   buildMultiGameFrameSrc,
   closeMultiGameSession,
@@ -172,6 +181,7 @@ import {
 } from "@/utils/gameLauncher";
 
 const router = useRouter();
+const { isMobile } = useMobile();
 const FRAME_LOAD_TIMEOUT_MS = 45_000;
 const launch = ref(readLaunchSafely());
 const gameStrip = ref(null);
@@ -695,5 +705,70 @@ onUnmounted(() => {
 
 .empty-card button {
   padding: 9px 18px;
+}
+
+/* 移动端适配：单窗口近全屏 + 触摸滑动切换 */
+@media (max-width: 768px) {
+  .multi-game-toolbar {
+    gap: 8px;
+    height: 46px;
+    padding: 6px 8px;
+  }
+
+  .toolbar-button {
+    padding: 8px 10px;
+  }
+
+  .toolbar-title {
+    font-size: 14px;
+  }
+
+  .toolbar-warning {
+    font-size: 11px;
+    margin-left: auto;
+  }
+
+  .game-strip {
+    gap: 8px;
+    height: calc(100dvh - 46px);
+    padding: 8px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .game-panel {
+    flex: 0 0 min(94vw, calc((100dvh - 130px) * 9 / 16));
+    border-radius: 6px;
+    scroll-snap-align: center;
+  }
+
+  .game-panel-header {
+    gap: 6px;
+    height: 42px;
+  }
+
+  .move-button {
+    width: 34px;
+    height: 30px;
+  }
+
+  .reload-button,
+  .close-button {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .empty-state {
+    height: calc(100dvh - 46px);
+    padding: 16px;
+  }
+
+  .empty-card {
+    padding: 24px 16px;
+  }
+
+  .empty-card h1 {
+    font-size: 18px;
+  }
 }
 </style>
