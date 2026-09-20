@@ -1,26 +1,27 @@
-# Dependencies
-node_modules/
+# Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-docker/**/*.docker
-docker/**/*.zip
-docker/**/*.tar
-docker/**/*.tar.gz
-docker/**/*.tgz
+node_modules
+dist
+dist-ssr
+*.local
 
-
-# Production builds
-dist/
-build/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # IDE
 # 同步vscode工作空间的配置
@@ -36,12 +37,25 @@ Thumbs.db
 # Logs
 logs
 *.log
-
+*.md
 # Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
+
+# 用户敏感数据（token 凭证、bin 文件）- 不要上传到 git
+xyzw_data/
+
+# 敏感凭据二进制文件
+*.bin
+public/xyzw_token.bin
+
+# 临时测试与探查脚本目录
+scratch/
+
+# Vite 缓存
+.vite/
 
 # Coverage directory used by tools like istanbul
 coverage/
@@ -52,8 +66,20 @@ coverage/
 # Dependency directories
 jspm_packages/
 
+# TypeScript cache
+*.tsbuildinfo
+
 # Optional npm cache directory
 .npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
 
 # Optional REPL history
 .node_repl_history
@@ -64,12 +90,51 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# Local cache
-.cache/
+# dotenv environment variable files
+.env
+.env.development
+.env.test
+.env.production
+.env.local
+.env.*.local
 
-# Temporary folders
-tmp/
-temp/
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+# Comment in the case you want to commit your Gatsby cache
+# src/.cache
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# Tern JS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
 
 # .github
 *.bat

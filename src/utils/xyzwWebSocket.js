@@ -48,6 +48,9 @@ const errorCodeMap = {
   1500010: "已经全部通关",
   72500028: "怪异塔章节奖励未领取",
   12200020: "怪异塔奖励未领取",
+  4800080: "不在规定时间内或未到报名阶段",
+  4800040: "俱乐部没有报名",
+  2100010: "活动未开放",
 };
 
 // 事件节流定义表，根据实际需要调整命令和节流时间
@@ -216,14 +219,25 @@ export function registerDefaultCommands(reg) {
     .register("saltroad_getsaltroadwartotalrank")
     .register("legionwar_getgoldmonthwarrank")
     .register("legion_getopponent")
+    .register("club_getinfo")
+    .register("club_gettargetteam")
+    .register("club_attack")
+    .register("club_attackmonster")
+    .register("club_taskclaim")
     .register("legion_getbattlefield")
     .register("legion_claimpayloadtask")
     .register("legion_claimpayloadtaskprogress")
     .register("saltroad_getwartype")
     .register("saltroad_getsaltroadwargrouprank")
     .register("league_getbattlefield")
-    .register("league_getgroupopponent")
     .register("legion_signup") // 盐场报名
+    // 营地挑战 / 俱乐部战
+    .register("club_getinfo")
+    .register("club_gettargetteam", { targetId: 0 })
+    .register("club_getattackrecord")
+    .register("club_getdefenserecord", { targetId: 0, targetIsMirror: false })
+    .register("club_getgrouprank")
+    .register("club_getrolerank")
 
     // 邮件
     .register("mail_getlist", { category: [0, 4, 5], lastId: 0, size: 60 })
@@ -257,6 +271,8 @@ export function registerDefaultCommands(reg) {
     .register("mergebox_claimcostprogress", { actType: 1 })
     .register("mergebox_claimmergeprogress", { actType: 1 })
     .register("evotower_claimtask", { taskId: 1 })
+    .register("evotower_buyenergy", { energy: 1 })
+    .register("tower_buyenergy", { buyNum: 1 })
     .register("evotower_claimlegiontask", { taskId: 1 })
 
     // 瓶子机器人
@@ -264,8 +280,11 @@ export function registerDefaultCommands(reg) {
     .register("bottlehelper_start", { bottleType: -1 })
     .register("bottlehelper_stop", { bottleType: -1 })
 
-    // 军团匹配和签到
+    // 军团匹配/营地挑战和签到
     .register("legionmatch_rolesignup")
+    .register("legionmatch_signup")
+    .register("legionmatch_getrank")
+    .register("legionmatch_getbattlerecord")
     .register("legion_signin")
 
     // 钓鱼
@@ -1138,6 +1157,10 @@ export class XyzwWebSocketClient {
       league_getgroupopponentresp: "league_getgroupopponent",
       legion_signupresp: "legion_signup",
       legion_payloadsignupresp: "legion_payloadsignup",
+      legionmatch_rolesignupresp: "legionmatch_rolesignup",
+      legionmatch_signupresp: "legionmatch_signup",
+      legionmatch_getrankresp: "legionmatch_getrank",
+      legionmatch_getbattlerecordresp: "legionmatch_getbattlerecord",
       pearl_replaceskillresp: "pearl_replaceskill",
       pearl_exchangeskillresp: "pearl_exchangeskill",
       pearl_unloadskillresp: "pearl_unloadskill",
@@ -1156,6 +1179,11 @@ export class XyzwWebSocketClient {
       // 军团信息
       legion_getinforesp: "legion_getinfo",
       legion_getinforresp: "legion_getinfo",
+      club_getinforesp: "club_getinfo",
+      club_gettargetteamresp: "club_gettargetteam",
+      club_attackresp: "club_attack",
+      club_attackmonsterresp: "club_attackmonster",
+      club_taskclaimresp: "club_taskclaim",
       // 车辆相关响应映射
       car_getrolecarresp: "car_getrolecar",
       car_refreshresp: "car_refresh",

@@ -13,8 +13,79 @@
       <div class="energy-display">
         <img src="/icons/xiaoyugan.png" alt="小鱼干" class="energy-icon" />
         <span class="energy-count">{{ towerEnergy }}</span>
+        <button
+          class="buy-energy-button"
+          :class="{ disabled: isBuying || isClimbing }"
+          :disabled="isBuying || isClimbing"
+          @click="openBuyEnergyDialog"
+        >
+          购买
+        </button>
       </div>
     </div>
+
+    <!-- 购买小鱼干弹窗：Teleport 到 body，脱离 n-tabs animated 的 transform 包含块，
+         否则 position: fixed 会失效导致弹窗跟随鼠标移动 -->
+    <Teleport to="body">
+      <div v-if="showBuyEnergyDialog" class="buy-energy-mask" @click.self="closeBuyEnergyDialog">
+        <div class="buy-energy-dialog" @click.stop>
+          <div class="dialog-header">
+            <h3>购买小鱼干</h3>
+            <button class="dialog-close" @click="closeBuyEnergyDialog">×</button>
+          </div>
+          <div class="dialog-body">
+            <div class="dialog-row">
+              <span class="row-label">购买数量</span>
+              <div class="num-selector">
+                <button class="num-btn" @click="changeBuyNum(-1)">-</button>
+                <input
+                  v-model.number="buyEnergyNum"
+                  type="number"
+                  min="1"
+                  max="100"
+                  class="num-input"
+                  @blur="clampBuyNum"
+                />
+                <button class="num-btn" @click="changeBuyNum(1)">+</button>
+              </div>
+            </div>
+            <div class="dialog-row">
+              <span class="row-label">快捷选择</span>
+              <div class="quick-btns">
+                <button v-for="n in [1, 10, 50, 100]" :key="n" class="quick-btn" @click="buyEnergyNum = n">{{ n }}</button>
+              </div>
+            </div>
+            <div class="dialog-hint">
+              消耗
+              <svg class="gold-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <linearGradient id="goldFace" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#FFE082" />
+                    <stop offset="55%" stop-color="#FFC107" />
+                    <stop offset="100%" stop-color="#E6A117" />
+                  </linearGradient>
+                </defs>
+                <path d="M12 1.6 22 6.2 12 10.8 2 6.2Z" fill="url(#goldFace)" stroke="#B07600" stroke-width="1.1" stroke-linejoin="round" />
+                <path d="M2 6.2V17.8L12 22.4V10.8Z" fill="#F9A825" stroke="#B07600" stroke-width="1.1" stroke-linejoin="round" />
+                <path d="M22 6.2V17.8L12 22.4V10.8Z" fill="#EFB218" stroke="#B07600" stroke-width="1.1" stroke-linejoin="round" />
+              </svg>
+              金砖，每次购买 1-100 份小鱼干
+            </div>
+          </div>
+          <div class="dialog-footer">
+            <button class="btn-cancel" @click="closeBuyEnergyDialog">取消</button>
+            <button
+              class="btn-confirm"
+              :class="{ disabled: buyEnergyNum < 1 || buyEnergyNum > 100 }"
+              :disabled="buyEnergyNum < 1 || buyEnergyNum > 100"
+              @click="confirmBuyEnergy"
+            >
+              确认购买
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <div class="card-content">
       <div class="tower-floor">
@@ -70,6 +141,9 @@ const message = useMessage();
 
 // 响应式数据
 const isClimbing = ref(false);
+const isBuying = ref(false); // 购买小鱼干状态
+const showBuyEnergyDialog = ref(false); // 购买弹窗显示
+const buyEnergyNum = ref(1); // 购买数量（1-100）
 const climbTimeout = ref(null); // 用于超时重置状态
 const lastClimbResult = ref(null); // 最后一次爬塔结果
 
@@ -108,6 +182,89 @@ const canClimb = computed(() => {
   const notClimbing = !isClimbing.value;
   return hasEnergy && notClimbing;
 });
+
+// ==================== 购买小鱼干 ====================
+// 接口来源：逆向 game bundle (game/index.140bc.jsc) 解密后源码
+//   TowerService.buyEnergy({ buyNum: N })
+// 对应 WebSocket 命令：tower_buyenergy
+// 普通塔与普通咸鱼王参数为 buyNum（怪异塔是 energy）
+
+const openBuyEnergyDialog = () => {
+  if (!tokenStore.selectedToken) {
+    message.warning("请先选择Token");
+    return;
+  }
+  if (isClimbing.value || isBuying.value) {
+    message.warning("正在执行其他操作，请稍候");
+    return;
+  }
+  buyEnergyNum.value = 1;
+  showBuyEnergyDialog.value = true;
+};
+
+const closeBuyEnergyDialog = () => {
+  if (isBuying.value) return;
+  showBuyEnergyDialog.value = false;
+};
+
+const changeBuyNum = (delta) => {
+  buyEnergyNum.value = Math.max(1, Math.min(100, buyEnergyNum.value + delta));
+};
+
+const clampBuyNum = () => {
+  if (!buyEnergyNum.value || buyEnergyNum.value < 1) buyEnergyNum.value = 1;
+  if (buyEnergyNum.value > 100) buyEnergyNum.value = 100;
+};
+
+/**
+ * 确认购买小鱼干，发送购买指令并刷新塔能量。
+ *
+ * @returns {Promise<void>} 无返回值，结果通过 message 提示
+ */
+const confirmBuyEnergy = async () => {
+  clampBuyNum();
+  const num = buyEnergyNum.value;
+  if (num < 1 || num > 100) {
+    message.error("购买数量必须在 1-100 之间");
+    return;
+  }
+  const tokenId = tokenStore.selectedToken.id;
+  const beforeEnergy = towerEnergy.value;
+
+  isBuying.value = true;
+  showBuyEnergyDialog.value = false;
+  try {
+    const res = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "tower_buyenergy",
+      { buyNum: num },
+      8000,
+    );
+    await getTowerInfo();
+    const afterEnergy = towerEnergy.value;
+    const gain = afterEnergy - beforeEnergy;
+    if (gain > 0) {
+      message.success(`购买成功！小鱼干 +${gain}（当前 ${afterEnergy}）`);
+    } else if (gain === 0) {
+      message.warning(`购买已执行（当前 ${afterEnergy}）`);
+    } else {
+      message.warning(`购买已执行，能量变化 ${gain}（当前 ${afterEnergy}）`);
+    }
+    console.log("[购买小鱼干] 响应:", JSON.stringify(res).slice(0, 500));
+  } catch (error) {
+    console.error("[购买小鱼干] 失败:", error);
+    const errMsg = error?.message || String(error);
+    if (errMsg.includes("1300050") || errMsg.includes("购买数量")) {
+      message.error("购买数量超出限制，请调整数量");
+    } else if (errMsg.includes("金砖")) {
+      message.error("金砖不足，无法购买");
+    } else {
+      message.error(`购买失败：${errMsg.slice(0, 80)}`);
+    }
+  } finally {
+    isBuying.value = false;
+  }
+};
 
 // 方法
 const startTowerClimb = async () => {
@@ -345,6 +502,236 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
+}
+
+/* ==================== 购买小鱼干按钮 ==================== */
+.buy-energy-button {
+  padding: 2px 10px;
+  margin-left: 4px;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-medium);
+  color: #fff;
+  background: linear-gradient(135deg, #f7b733 0%, #fc4a1a 100%);
+  border: none;
+  border-radius: var(--border-radius-small, 6px);
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+  line-height: 20px;
+}
+
+.buy-energy-button:hover:not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(252, 74, 26, 0.35);
+}
+
+.buy-energy-button:active:not(.disabled) {
+  transform: translateY(0);
+}
+
+.buy-energy-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==================== 购买小鱼干弹窗 ==================== */
+.buy-energy-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: var(--spacing-md);
+}
+
+.buy-energy-dialog {
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg-primary, #fff);
+  border-radius: var(--border-radius-large, 12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.buy-energy-dialog .dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.buy-energy-dialog .dialog-header h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.buy-energy-dialog .dialog-close {
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--border-radius-small, 6px);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.buy-energy-dialog .dialog-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.buy-energy-dialog .dialog-body {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.buy-energy-dialog .dialog-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.buy-energy-dialog .row-label {
+  flex-shrink: 0;
+  width: 76px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.num-selector {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.num-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--border-radius-small, 6px);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.num-btn:hover {
+  background: var(--bg-secondary);
+}
+
+.num-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  color: var(--text-primary);
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--border-radius-small, 6px);
+  outline: none;
+}
+
+.num-input:focus {
+  border-color: #fc4a1a;
+  box-shadow: 0 0 0 2px rgba(252, 74, 26, 0.15);
+}
+
+.quick-btns {
+  flex: 1;
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.quick-btn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--border-radius-small, 6px);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-btn:hover {
+  color: #fc4a1a;
+  border-color: #fc4a1a;
+}
+
+.dialog-hint {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-secondary);
+  text-align: center;
+  padding-top: var(--spacing-xs);
+  border-top: 1px dashed var(--border-color, #e5e7eb);
+}
+
+.dialog-hint .gold-icon {
+  width: 15px;
+  height: 15px;
+  vertical-align: -2px;
+  margin: 0 2px;
+}
+
+.buy-energy-dialog .dialog-footer {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
+}
+
+.btn-cancel,
+.btn-confirm {
+  flex: 1;
+  padding: 10px 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--border-radius-small, 6px);
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.btn-cancel {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.btn-cancel:hover {
+  background: var(--bg-secondary);
+}
+
+.btn-confirm {
+  color: #fff;
+  background: linear-gradient(135deg, #f7b733 0%, #fc4a1a 100%);
+  border: none;
+}
+
+.btn-confirm:hover:not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(252, 74, 26, 0.4);
+}
+
+.btn-confirm.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .card-content {

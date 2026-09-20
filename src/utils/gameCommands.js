@@ -530,12 +530,89 @@ export class GameCommands {
 
   /**
    * 军团匹配角色报名
+   *
+   * @param {number} ack 确认号
+   * @param {number} seq 序列号
+   * @param {Object} params 附加参数
+   * @returns {Object} 包装后的协议指令对象
    */
   legionmatch_rolesignup(ack = 0, seq = 0, params = {}) {
     return {
       ack,
-      body: this.g_utils.bon.encode({}),
+      body: this.g_utils.bon.encode(params),
       cmd: "legionmatch_rolesignup",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 军团战队报名（会长/管理）
+   *
+   * @param {number} ack 确认号
+   * @param {number} seq 序列号
+   * @param {Object} params 附加参数
+   * @returns {Object} 包装后的协议指令对象
+   */
+  legionmatch_signup(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode(params),
+      cmd: "legionmatch_signup",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取营地挑战/军团匹配排位与赛况
+   *
+   * @param {number} ack 确认号
+   * @param {number} seq 序列号
+   * @param {Object} params 附加参数
+   * @returns {Object} 包装后的协议指令对象
+   */
+  legionmatch_getrank(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode(params),
+      cmd: "legionmatch_getrank",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取营地挑战/军团匹配历史战报记录
+   *
+   * @param {number} ack 确认号
+   * @param {number} seq 序列号
+   * @param {Object} params 附加参数
+   * @returns {Object} 包装后的协议指令对象
+   */
+  legionmatch_getbattlerecord(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode(params),
+      cmd: "legionmatch_getbattlerecord",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取指定玩家对战中真实生效的布阵阵容
+   *
+   * @param {number} ack 确认号
+   * @param {number} seq 序列号
+   * @param {Object} params 请求参数，包含 targetId
+   * @returns {Object} 包装后的协议指令对象
+   */
+  role_gettargetteam(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode(params),
+      cmd: "role_gettargetteam",
       seq,
       time: Date.now(),
     };
@@ -673,6 +750,89 @@ export class GameCommands {
         ...params,
       }),
       cmd: "legionwar_getdetails",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取营地挑战/俱乐部战概览信息
+   *
+   * @param {number} ack 应答序号
+   * @param {number} seq 请求序号
+   * @param {Object} params 参数
+   * @returns {Object} WebSocket 协议数据包
+   */
+  club_getinfo(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "club_getinfo",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取营地挑战成员阵容详情
+   *
+   * @param {number} ack 应答序号
+   * @param {number} seq 请求序号
+   * @param {Object} params 参数，包含 targetId (成员角色 ID)
+   * @returns {Object} WebSocket 协议数据包
+   */
+  club_gettargetteam(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        targetId: 0,
+        ...params,
+      }),
+      cmd: "club_gettargetteam",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取营地挑战个人进攻战报流水
+   *
+   * @param {number} ack 应答序号
+   * @param {number} seq 请求序号
+   * @param {Object} params 参数
+   * @returns {Object} WebSocket 协议数据包
+   */
+  club_getattackrecord(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params,
+      }),
+      cmd: "club_getattackrecord",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 获取营地挑战成员防守战报流水
+   *
+   * @param {number} ack 应答序号
+   * @param {number} seq 请求序号
+   * @param {Object} params 参数，包含 targetId (成员角色 ID), targetIsMirror
+   * @returns {Object} WebSocket 协议数据包
+   */
+  club_getdefenserecord(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        targetId: 0,
+        targetIsMirror: false,
+        ...params,
+      }),
+      cmd: "club_getdefenserecord",
       seq,
       time: Date.now(),
     };
