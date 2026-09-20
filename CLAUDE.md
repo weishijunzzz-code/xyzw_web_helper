@@ -6,6 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Vue 3 Token Manager application for XYZW game automation. The application manages game tokens via Base64 decoding, establishes WebSocket connections, and provides a visual interface for token management and game automation.
 
+## Backend Service (Cloud Tasks, port 3001)
+
+本项目为**增量共存架构**：浏览器端功能（打开游戏/多开/BIN 管理）全部本地运行，另有独立 Node 后端（移植自 code06）提供 7x24 云端自动任务。
+
+- `server/`：Express + ws + better-sqlite3 + croner。API 前缀 `/api/*`（JWT 认证），推送 `/ws`
+- 启动：`cd server && npm install && node index.js`（独立 package.json，不污染前端依赖）
+- SQLite 数据：`server/data/xyzw.db`（已 gitignore）；生产用 NSSM 注册 Windows 服务（见 `deploy.ps1`）
+- 前端入口：`/admin/cloud-tasks`（CloudTasks.vue，登录/Token+BIM 同步/定时任务/实时日志）
+- 开发代理：vite proxy `/api/*`、`/ws` → `http://localhost:3001`
+- 生产模式：`server/index.js` 自动托管 `dist/`（单服务单端口 3001 = API + 推送 + 前端静态站）
+- 注意：`server/lib/xyzwWebSocket.js` 是 Node 版游戏客户端（ws 库），与浏览器版 `src/utils/xyzwWebSocket.js` 平行存在，勿混用；`server/lib/bonProtocol.js` 是加载器，直接复用前端 `src/utils/bonProtocol.js`
+- better-sqlite3 在新 Node 上需预编译二进制：`npm_config_better_sqlite3_binary_host=https://cdn.npmmirror.com/binaries/better-sqlite3`
+
 ## Development Commands
 
 ### Core Commands

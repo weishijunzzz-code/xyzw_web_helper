@@ -71,6 +71,16 @@
             <span>定时任务</span>
           </router-link>
           <router-link
+            to="/admin/cloud-tasks"
+            class="nav-item"
+            active-class="active"
+          >
+            <n-icon>
+              <CloudCircleOutline />
+            </n-icon>
+            <span>云端任务</span>
+          </router-link>
+          <router-link
             to="/admin/message-test"
             class="nav-item"
             active-class="active"
@@ -410,6 +420,7 @@ import {
   TimerOutline,
   BugOutline,
   ArrowUpCircle,
+  CloudCircleOutline,
 } from "@vicons/ionicons5";
 import { isNativePlatform } from "@/utils/capacitor";
 
@@ -527,6 +538,11 @@ const bottomNavItems = computed(() => {
       path: '/admin/batch-daily-tasks',
       icon: Layers,
       label: '批量'
+    },
+    {
+      path: '/admin/cloud-tasks',
+      icon: CloudCircleOutline,
+      label: '云端'
     }
   ];
 

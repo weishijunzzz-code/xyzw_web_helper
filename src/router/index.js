@@ -151,6 +151,15 @@ const my_routes = [
           requiresToken: true
         }
       },
+      {
+        path: 'cloud-tasks',
+        name: 'CloudTasks',
+        component: safeImport(() => import('@/views/CloudTasks.vue')),
+        meta: {
+          title: '云端任务',
+          requiresCloudAuth: true
+        }
+      },
       // 增加自动路由引用
       ...generatedRoutes,
     ]

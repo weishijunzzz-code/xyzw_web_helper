@@ -184,6 +184,18 @@ export default defineConfig(async () => {
       open: true,
       host: true,
       proxy: {
+        // 云端任务后端（Express :3001）
+        "/api/auth": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/token": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/task": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/status": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/settings": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/scheduled-tasks": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/push-level": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/salt-field": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/force-online": { target: "http://localhost:3001", changeOrigin: true },
+        "/api/health": { target: "http://localhost:3001", changeOrigin: true },
+        "/ws": { target: "ws://localhost:3001", ws: true, changeOrigin: true },
         // 微信登录接口代理
         "/api/weixin": {
           target: "https://open.weixin.qq.com",
