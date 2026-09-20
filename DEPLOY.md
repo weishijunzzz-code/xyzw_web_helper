@@ -9,10 +9,17 @@
 
 | 脚本 | 运行位置 | 作用 |
 |------|---------|------|
-| `make-release.ps1` | 仅本地 | 打包源码为 zip（自动排除 node_modules / .git / 运行数据） |
-| `setup-server.ps1` | 仅目标机 | 环境准备：Node 22 LTS + NSSM + 防火墙放行 3001（每台机器只跑一次） |
-| `deploy.ps1` | 仅目标机 | 前端构建 + 后端依赖安装（含 better-sqlite3 预编译）+ 注册/重启 Windows 服务 |
+| `deploy.ps1` | 本地 / 目标机 | **唯一部署脚本**：`-Pack` 本地打包；无参数智能发布（环境缺啥装啥 → 构建 → 依赖 → 服务没装就装/已装就重启） |
 | `server/.npmrc` | 随源码 | better-sqlite3 预编译走 npmmirror 镜像（无需手动配置） |
+
+`deploy.ps1` 参数一览：
+
+| 参数 | 作用 |
+|------|------|
+| `-Pack` | 本地打包 zip（无需管理员） |
+| `-Setup` | 目标机仅环境准备（Node 22 + NSSM + 防火墙），不发布 |
+| `-Install` | 发布并**强制重新注册**服务（改服务配置时用，日常不用） |
+| 无参数 | 智能发布：首次运行 = 完整安装；之后运行 = 更新 + 重启 |
 
 ## 二、首次部署（新服务器 / 新电脑）
 
@@ -20,7 +27,7 @@
 
 ```powershell
 cd D:\xyzw_web_helper
-.\make-release.ps1
+.\deploy.ps1 -Pack
 # 产出：D:\xyzw-web-helper-src.zip
 ```
 
@@ -32,30 +39,25 @@ cd D:\xyzw_web_helper
 C:\xy\xyzw-web-helper\
 ```
 
-### 3. 环境准备（管理员 PowerShell）
+### 3. 一键发布（管理员 PowerShell）
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 cd C:\xy\xyzw-web-helper
-.\setup-server.ps1
+.\deploy.ps1
 ```
 
-自动完成：
+一条命令自动完成全部流程：
 - Node.js **v22.23.2 LTS** 检查与静默安装（npmmirror 镜像，约 30MB）
   > 注意：必须 Node 22+。better-sqlite3 v12 官方不提供 Node 20 的预编译二进制，
   > Node 20 会回退源码编译（需要 Python + VS Build Tools）并失败。
 - NSSM 下载安装（Windows 服务托管）
 - 防火墙放行 TCP 3001
+- 前端构建 + 后端依赖 + better-sqlite3 预编译二进制
+- 注册 NSSM 服务（开机自启、崩溃自动重启、日志轮转）并启动
+- 健康检查
 
-### 4. 发布
-
-**同一个 PowerShell 窗口**继续执行（不关窗口，PATH 已刷新）：
-
-```powershell
-.\deploy.ps1 -Install
-```
-
-流程：`[1/4]` 前端构建 → `[2/4]` 后端依赖 + better-sqlite3 预编译 → `[3/4]` 注册 NSSM 服务并启动 → `[4/4]` 健康检查。
+流程对应脚本输出：`[1/5]` 环境准备 → `[2/5]` 前端构建 → `[3/5]` 后端依赖 + better-sqlite3 预编译 → `[4/5]` 注册 NSSM 服务并启动 → `[5/5]` 健康检查。
 
 看到绿色 **发布完成** 即成功。验证：
 
@@ -70,16 +72,16 @@ Invoke-RestMethod http://localhost:3001/api/health
 
 ```powershell
 # 本地：改完代码后
-.\make-release.ps1
-# 拷 zip 到目标机解压覆盖，然后目标机：
-.\deploy.ps1          # 无 -Install：只重新构建 + 重启服务
+.\deploy.ps1 -Pack
+# 拷 zip 到目标机解压覆盖，然后目标机管理员 PowerShell：
+.\deploy.ps1          # 智能发布：服务已注册 → 只重新构建 + 重启
 ```
 
 前端小改动也可以只覆盖 `dist\` 目录后执行 `nssm restart xyzw-web-helper`。
 
 ## 四、本地电脑自托管
 
-本地电脑同样可以用上面流程（`setup-server.ps1` + `deploy.ps1 -Install`）把服务注册在本机，
+本地电脑同样可以用上面首次部署流程把服务注册在本机（本机直接在项目目录运行 `.\deploy.ps1` 即可，无需打包拷贝），
 定时任务由服务端进程执行，**不需要浏览器开着**。运行条件：
 
 | 操作 | 定时任务 |
