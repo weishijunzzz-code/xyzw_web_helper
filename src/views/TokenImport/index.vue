@@ -1341,11 +1341,14 @@ const handleTokenAction = async (key, token) => {
   }
 };
 
-const editToken = (token) => {
+const editToken = async (token) => {
   editingToken.value = token;
+  // 有 BIN 数据的 Token：编辑框直接展示增强JSON（含bin），
+  // 所见即所得；保存时检测 bin 字段同步覆盖 IndexedDB（幂等）
+  const enhanced = await buildEnhancedTokenText(token);
   Object.assign(editForm, {
     name: token.name,
-    token: token.token,
+    token: enhanced || token.token,
     server: token.server || "",
     wsUrl: token.wsUrl || "",
     remark: token.remark || "",
@@ -1359,15 +1362,44 @@ const saveEdit = async () => {
   try {
     await editFormRef.value.validate();
 
+    let tokenStr = editForm.token;
+    let binUpdated = false;
+    // 增强JSON（含bin字段）：解码并覆盖该Token的IndexedDB BIN数据，
+    // token字段存剔除bin后的JSON，避免冗余base64
+    try {
+      const parsed = JSON.parse(tokenStr);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed) &&
+        typeof parsed.bin === "string" &&
+        parsed.bin
+      ) {
+        const binary = atob(parsed.bin);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        await storeArrayBuffer(editingToken.value.id, bytes.buffer);
+        const { bin: _ignored, ...rest } = parsed;
+        tokenStr = JSON.stringify(rest);
+        binUpdated = true;
+      }
+    } catch (e) {
+      // 非JSON，按原文保存
+    }
+
     tokenStore.updateToken(editingToken.value.id, {
       name: editForm.name,
-      token: editForm.token,
+      token: tokenStr,
       server: editForm.server,
       wsUrl: editForm.wsUrl,
       remark: editForm.remark,
     });
 
-    message.success("Token信息已更新");
+    message.success(
+      binUpdated ? "Token信息已更新（BIN数据已同步覆盖）" : "Token信息已更新",
+    );
     showEditModal.value = false;
     editingToken.value = null;
   } catch (error) {
@@ -1375,43 +1407,45 @@ const saveEdit = async () => {
   }
 };
 
+// 拼装增强 Token JSON（含 bin base64，lx/pl 标准格式）；无 BIN 数据时返回 null
+const buildEnhancedTokenText = async (token) => {
+  try {
+    const binData = await getArrayBuffer(token.id);
+    if (!binData) return null;
+    const lxBytes = convertBinToLx(binData);
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < lxBytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(
+        null,
+        lxBytes.subarray(i, i + chunk),
+      );
+    }
+    let payload;
+    try {
+      payload = JSON.parse(token.token);
+    } catch (e) {
+      payload = null;
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      payload = { token: token.token };
+    }
+    payload.name = token.name;
+    payload.server = token.server;
+    payload.bin = btoa(binary);
+    return JSON.stringify(payload);
+  } catch (e) {
+    return null;
+  }
+};
+
 const copyToken = async (token) => {
   try {
-    // 若 IndexedDB 有 BIN 数据，复制增强 JSON（含 bin base64）。
-    // 手动导入该 JSON 时会自动恢复 BIN 数据，可直接打开游戏/导出BIN。
-    let binBase64 = null;
-    try {
-      const binData = await getArrayBuffer(token.id);
-      if (binData) {
-        const lxBytes = convertBinToLx(binData);
-        let binary = "";
-        const chunk = 0x8000;
-        for (let i = 0; i < lxBytes.length; i += chunk) {
-          binary += String.fromCharCode.apply(
-            null,
-            lxBytes.subarray(i, i + chunk),
-          );
-        }
-        binBase64 = btoa(binary);
-      }
-    } catch (e) {
-      // BIN 读取/转换失败则退回普通复制
-    }
-
-    if (binBase64) {
-      let payload;
-      try {
-        payload = JSON.parse(token.token);
-      } catch (e) {
-        payload = null;
-      }
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-        payload = { token: token.token };
-      }
-      payload.name = token.name;
-      payload.server = token.server;
-      payload.bin = binBase64;
-      await navigator.clipboard.writeText(JSON.stringify(payload));
+    // 有 BIN 数据时复制增强 JSON（含 bin base64），
+    // 导入该 JSON 会自动恢复 BIN 数据，可直接打开游戏/导出BIN。
+    const enhanced = await buildEnhancedTokenText(token);
+    if (enhanced) {
+      await navigator.clipboard.writeText(enhanced);
       message.success("Token已复制（含BIN数据，导入后可直接打开游戏/导出BIN）");
     } else {
       await navigator.clipboard.writeText(token.token);
