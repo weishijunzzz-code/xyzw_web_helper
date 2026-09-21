@@ -73,15 +73,19 @@ import { HERO_DICT } from "@/utils/HeroList";
 const tokenStore = useTokenStore();
 const message = useMessage();
 
-const HeroOptions = computed(() => [
-  ...Object.values(tokenStore.gameData.roleInfo.role.heroes).map((item) => {
+const HeroOptions = computed(() =>
+  Object.values(tokenStore.gameData.roleInfo?.role?.heroes || {}).map((item) => {
     return {
-      label: HERO_DICT[item.heroId].name + "(" + item.level + "/6000)",
+      label:
+        (HERO_DICT[item.heroId]?.name || `武将${item.heroId}`) +
+        "(" +
+        item.level +
+        "/6000)",
       value: item.heroId,
       disabled: item.level == 6000,
     };
   }),
-]);
+);
 
 const HeroValue = ref(null);
 const HeroItem = ref(null);
@@ -98,7 +102,7 @@ const state = ref({
 const handleUpdateValue = (value) => {
   HeroItem.value = Object.assign(
     {},
-    tokenStore.gameData.roleInfo.role.heroes[value],
+    tokenStore.gameData.roleInfo?.role?.heroes?.[value] || {},
     HERO_DICT[value],
   );
 };
@@ -126,14 +130,10 @@ watch(
   () => tokenStore.gameData.roleInfo.heroes,
   () => {
     if (HeroValue.value) {
-      if (
-        tokenStore.gameData.roleInfo.role.heroes[HeroValue.value].level != 6000
-      ) {
-        HeroItem.value = Object.assign(
-          {},
-          tokenStore.gameData.roleInfo.role.heroes[HeroValue.value],
-          HERO_DICT[HeroValue.value],
-        );
+      const hero =
+        tokenStore.gameData.roleInfo?.role?.heroes?.[HeroValue.value];
+      if (hero && hero.level != 6000) {
+        HeroItem.value = Object.assign({}, hero, HERO_DICT[HeroValue.value]);
       } else {
         HeroItem.value = null;
       }

@@ -1377,8 +1377,46 @@ const saveEdit = async () => {
 
 const copyToken = async (token) => {
   try {
-    await navigator.clipboard.writeText(token.token);
-    message.success("Token已复制到剪贴板");
+    // 若 IndexedDB 有 BIN 数据，复制增强 JSON（含 bin base64）。
+    // 手动导入该 JSON 时会自动恢复 BIN 数据，可直接打开游戏/导出BIN。
+    let binBase64 = null;
+    try {
+      const binData = await getArrayBuffer(token.id);
+      if (binData) {
+        const lxBytes = convertBinToLx(binData);
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < lxBytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(
+            null,
+            lxBytes.subarray(i, i + chunk),
+          );
+        }
+        binBase64 = btoa(binary);
+      }
+    } catch (e) {
+      // BIN 读取/转换失败则退回普通复制
+    }
+
+    if (binBase64) {
+      let payload;
+      try {
+        payload = JSON.parse(token.token);
+      } catch (e) {
+        payload = null;
+      }
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        payload = { token: token.token };
+      }
+      payload.name = token.name;
+      payload.server = token.server;
+      payload.bin = binBase64;
+      await navigator.clipboard.writeText(JSON.stringify(payload));
+      message.success("Token已复制（含BIN数据，导入后可直接打开游戏/导出BIN）");
+    } else {
+      await navigator.clipboard.writeText(token.token);
+      message.info("Token已复制到剪贴板（该Token无BIN数据）");
+    }
   } catch (error) {
     message.error("复制失败");
   }

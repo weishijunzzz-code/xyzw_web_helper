@@ -579,10 +579,50 @@ export const useTokenStore = defineStore("tokens", () => {
       token: parseResult.data.actualToken, // 使用验证过的实际token
       ...additionalInfo,
       ...parseResult.data, // 解析出的数据覆盖手动输入
-    };
+    } as any;
+
+    // 增强 Token：附带 bin（base64，lx/pl 格式原始 BIN）字段时恢复到 IndexedDB，
+    // 使手动导入的 Token 也可"打开游戏/导出BIN"；bin 不入库 localStorage
+    const binBase64: string | undefined =
+      typeof tokenData.bin === "string" ? tokenData.bin : undefined;
+    delete tokenData.bin;
+
+    if (binBase64) {
+      // token 字段存剔除 bin 后的 JSON，避免冗余 base64 大字段进入 localStorage
+      const cleanJson = { ...parseResult.data };
+      delete cleanJson.bin;
+      delete cleanJson.actualToken;
+      tokenData.token = JSON.stringify(cleanJson);
+    }
 
     try {
       const newToken = addToken(tokenData);
+
+      let binRestored = false;
+      if (binBase64 && newToken?.id) {
+        binRestored = true;
+        Promise.resolve()
+          .then(() => {
+            const binary = atob(binBase64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+            return storeArrayBuffer(newToken.id, bytes.buffer);
+          })
+          .then((ok) => {
+            if (ok) {
+              tokenLogger.info(`Token "${name}" 附带BIN数据已恢复到IndexedDB`);
+            } else {
+              tokenLogger.warn(`Token "${name}" 附带BIN数据恢复失败`);
+            }
+          })
+          .catch((binError) => {
+            tokenLogger.warn(
+              `Token "${name}" 附带BIN数据恢复异常: ${binError?.message || binError}`,
+            );
+          });
+      }
 
       // 添加更多验证信息到成功消息
       const tokenInfo = parseResult.data.actualToken;
@@ -595,7 +635,11 @@ export const useTokenStore = defineStore("tokens", () => {
         success: true,
         token: newToken,
         tokenName: name,
-        message: `Token "${name}" 导入成功`,
+        message:
+          `Token "${name}" 导入成功` +
+          (binRestored
+            ? "，已附带BIN数据（可直接打开游戏/导出BIN）"
+            : ""),
         details: `实际Token: ${displayToken}`,
       };
     } catch (error) {

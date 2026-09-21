@@ -132,16 +132,24 @@ const importRules = {
     { min: 20, message: "Token字符串长度应至少20个字符", trigger: "blur" },
   ],
 };
-const handleImport = () => {
+const handleImport = async () => {
   isImporting.value = true;
   try {
-    tokenStore.addToken({
-      name: importForm.name,
-      token: importForm.base64Token,
-      server: importForm.server,
-      wsUrl: importForm.wsUrl,
-    });
-    message.success("Token添加成功");
+    // 走标准解析入口：支持增强 JSON（含 bin 字段）自动恢复 BIN 数据，
+    // 使手动导入的 Token 也可直接打开游戏/导出BIN
+    const result = tokenStore.importBase64Token(
+      importForm.name,
+      importForm.base64Token,
+      {
+        server: importForm.server,
+        wsUrl: importForm.wsUrl,
+      },
+    );
+    if (!result.success) {
+      message.error(result.message || "添加Token失败");
+      return;
+    }
+    message.success(result.message || "Token添加成功");
     importForm.name = "";
     importForm.base64Token = "";
     importForm.server = "";

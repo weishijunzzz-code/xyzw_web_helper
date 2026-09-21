@@ -87,7 +87,7 @@
               :key="merchantId"
             >
               <div class="merchant-name">
-                {{ merchantConfig[merchantId].name }}
+                {{ merchantConfig[merchantId]?.name || `商人${merchantId}` }}
               </div>
               <div class="items-list">
                 <div class="item" v-for="(item, index) in items" :key="index">

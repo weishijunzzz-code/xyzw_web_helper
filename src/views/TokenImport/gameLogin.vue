@@ -144,6 +144,9 @@
           <li>文件包含加密前缀、JSON数据、BON尾部三部分</li>
           <li>生成的文件可以被正确解析和验证</li>
           <li>JSON数据包含敏感信息，请勿分享给他人</li>
+          <li>纯 roleToken JSON 仅支持连接类功能（WebSocket/任务），
+            无法进入游戏——如需进游戏请使用「Token管理页 → 复制Token」得到的增强
+            JSON（含 bin 字段），导入后会自动恢复BIN数据，可直接打开游戏/导出BIN</li>
         </ul>
       </n-alert>
     </n-card>
