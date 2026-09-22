@@ -121,13 +121,10 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, reactive } from "vue";
 import { Scan, Refresh, Close, CloudUpload, Download } from "@vicons/ionicons5";
-import { NIcon, useMessage, NButton, NForm, NFormItem, NInput } from "naive-ui";
-import { Scan, Refresh, Close, CloudUpload } from "@vicons/ionicons5";
 import { NCheckbox, NIcon, useMessage, NButton, NForm, NFormItem, NInput } from "naive-ui";
 import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { g_utils, bon } from "@/utils/bonProtocol";
-import { g_utils } from "@/utils/bonProtocol";
 import {
   buildRoleBin,
   downloadBinFile,
@@ -198,7 +195,6 @@ const roleList = ref<
     combUser?: any;
   }>
 >([]);
-const currentCombUser = ref<any>(null);
 const saveCombUser = ref(false);
 
 const handleDownload = (roleInfo: any) => {

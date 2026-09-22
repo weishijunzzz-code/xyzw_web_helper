@@ -838,6 +838,7 @@ const importMethodOptions = [
   { label: "手动输入", value: "manual" },
   { label: "URL获取", value: "url" },
   { label: "微信扫码", value: "wxQrcode" },
+  { label: "手机号验证码", value: "mobile" },
   { label: "多角色BIN", value: "bin" },
   { label: "单角色BIN", value: "singlebin" },
 ];
@@ -1635,20 +1636,6 @@ const exportTokenBin = async (token) => {
     console.error("导出BIN失败:", error);
     message.error("导出BIN失败: " + (error.message || error));
   }
-};
-
-const downloadBinFile = (fileName, bin) => {
-  const blob = new Blob([new Uint8Array(bin)], {
-    type: "application/octet-stream",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 };
 
 // 批量刷新所有URLToken

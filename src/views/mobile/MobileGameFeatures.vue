@@ -10,6 +10,14 @@
         </div>
         <n-icon size="18" class="entry-arrow"><ChevronForward /></n-icon>
       </div>
+      <div class="quick-entry-card apex" @click="goToApex">
+        <div class="entry-icon">🐉</div>
+        <div class="entry-info">
+          <div class="entry-title">逐鹿盐山</div>
+          <div class="entry-desc">Apex 竞速挑战 · 竞猜助威</div>
+        </div>
+        <n-icon size="18" class="entry-arrow"><ChevronForward /></n-icon>
+      </div>
     </div>
 
     <MobileAdapter :pc-component="GameFeatures" />
@@ -26,6 +34,11 @@ const router = useRouter()
 
 const goToPushingLevels = () => {
   router.push('/mobile/pushing-levels')
+}
+
+// 逐鹿盐山：移动端首页（Dashboard 内 GameStatus 的逐鹿盐山标签页）
+const goToApex = () => {
+  router.push('/mobile/dashboard')
 }
 </script>
 
@@ -55,6 +68,15 @@ const goToPushingLevels = () => {
   &:active {
     transform: scale(0.98);
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  }
+
+  &.apex {
+    background: linear-gradient(135deg, #f6b93b 0%, #e58e26 55%, #d63031 100%);
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.35);
+
+    &:active {
+      box-shadow: 0 2px 8px rgba(230, 126, 34, 0.25);
+    }
   }
 }
 

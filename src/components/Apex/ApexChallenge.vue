@@ -10,7 +10,7 @@
           v-model:value="selectedRound"
           :options="roundOptions"
           size="small"
-          style="width: 176px"
+          :style="isMobile ? 'width: 100%' : 'width: 176px'"
         />
         <n-tag v-if="selectedRoundEnded" size="small" round type="default">
           历史期 · 已结束
@@ -154,7 +154,7 @@
           </div>
         </n-card>
 
-        <n-grid :cols="4" :x-gap="12" :y-gap="12" style="margin-top: 12px">
+        <n-grid :cols="isMobile ? 2 : 4" :x-gap="12" :y-gap="12" style="margin-top: 12px">
           <n-grid-item v-for="rs in resetCards" :key="rs.label">
             <div class="stat-card" :class="rs.color">
               <div class="stat-icon">{{ rs.icon }}</div>
@@ -431,7 +431,7 @@
       v-model:show="voteDialogVisible"
       preset="card"
       :title="`助威 ${voteTargetName || ''}`"
-      style="width: 380px"
+      :style="isMobile ? 'width: calc(100vw - 40px)' : 'width: 380px'"
       :bordered="false"
     >
       <div class="vote-dialog-body">
@@ -502,6 +502,7 @@ import {
 } from "naive-ui";
 import { RefreshOutline } from "@vicons/ionicons5";
 import { useTokenStore } from "@/stores/tokenStore";
+import useMobile from "@/composables/useMobile";
 import {
   ApexAction,
   apexCooldownLeft,
@@ -541,6 +542,7 @@ import {
 
 const tokenStore = useTokenStore();
 const message = useMessage();
+const { isMobile } = useMobile();
 
 // ==================== 常量 ====================
 
@@ -2221,5 +2223,66 @@ watch(
 .my-vote {
   margin-left: 6px;
   color: var(--n-primary-color, #18a058);
+}
+
+/* ==================== 移动端适配 ==================== */
+@media (max-width: 768px) {
+  .apex-challenge-container {
+    padding: 4px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .toolbar .left {
+    width: 100%;
+  }
+
+  .toolbar .right {
+    justify-content: flex-end;
+  }
+
+  .tab-content {
+    padding: 0;
+  }
+
+  /* 比赛场次行窄屏改为纵向堆叠 */
+  .match-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .team-block.right {
+    text-align: left;
+  }
+
+  .team-block.right .team-name {
+    justify-content: flex-start;
+  }
+
+  .vs {
+    align-self: center;
+  }
+
+  .season-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .season-banner::before {
+    right: -30px;
+  }
+
+  /* 助威网格窄屏两列 */
+  .vote-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

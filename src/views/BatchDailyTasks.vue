@@ -6445,9 +6445,6 @@ const taskFunctionMap = {
   skinChallenge,
   batchUseItems,
   batchMergeItems,
-  // Car tasks
-  batchSmartSendCar,
-  batchClaimCars,
   // Item tasks
   batchOpenBox,
   batchOpenBoxByPoints,
@@ -6986,6 +6983,24 @@ const stopBatch = () => {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  /* 批量功能按钮区：窄屏自适应换行，tab 栏可横向滚动 */
+  .left-column :deep(.n-tabs .n-tabs-nav) {
+    overflow-x: auto;
+  }
+
+  .left-column :deep(.n-tabs .n-tab-pane .n-space) {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .left-column :deep(.n-tabs .n-tab-pane .n-space .n-button) {
+    flex: 0 0 auto;
+  }
+
+  .left-column :deep(.n-card__content) {
+    overflow-x: hidden;
   }
 
   /* 批量功法残卷赠送样式 */
