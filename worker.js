@@ -18,6 +18,16 @@ export default {
     // Proxy configuration
     const proxies = [
       {
+        prefix: '/api/hortor-ucenter',
+        target: 'https://comb-platform.hortorgames.com',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 12; ALN-AL80 Build/HUAWEIALN-AL80; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/114.0.5735.196 Mobile Safari/537.36',
+          'Accept': 'application/json',
+          'Host': 'ucenter-app-server.hortorgames.com',
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      },
+      {
         prefix: '/api/weixin-long',
         target: 'https://long.open.weixin.qq.com',
         headers: {

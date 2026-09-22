@@ -46,6 +46,7 @@ declare module 'vue-router/auto-routes' {
     '/TokenImport/bin-mobile': RouteRecordInfo<'/TokenImport/bin-mobile', '/TokenImport/bin-mobile', Record<never, never>, Record<never, never>>,
     '/TokenImport/gameLogin': RouteRecordInfo<'/TokenImport/gameLogin', '/TokenImport/gameLogin', Record<never, never>, Record<never, never>>,
     '/TokenImport/manual': RouteRecordInfo<'/TokenImport/manual', '/TokenImport/manual', Record<never, never>, Record<never, never>>,
+    '/TokenImport/mobile': RouteRecordInfo<'/TokenImport/mobile', '/TokenImport/mobile', Record<never, never>, Record<never, never>>,
     '/TokenImport/singlebin': RouteRecordInfo<'/TokenImport/singlebin', '/TokenImport/singlebin', Record<never, never>, Record<never, never>>,
     '/TokenImport/tokenToBin': RouteRecordInfo<'/TokenImport/tokenToBin', '/TokenImport/tokenToBin', Record<never, never>, Record<never, never>>,
     '/TokenImport/url': RouteRecordInfo<'/TokenImport/url', '/TokenImport/url', Record<never, never>, Record<never, never>>,

@@ -258,7 +258,6 @@ src/
 │   ├── Daily/
 │   │   └── DailyTaskCard.vue     # Daily task visualization card
 │   ├── Club/                     # Guild/club related components
-│   │   └── ClubCarKing.vue       # Club racing king feature
 │   ├── Tower/                    # Tower climbing components
 │   ├── Team/                     # Team management components
 │   ├── Test/

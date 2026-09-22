@@ -311,8 +311,6 @@ export const getActivityStatus = () => {
   }
 
   return {
-    // 车活动开放 (周一到周三)
-    isCarActivityOpen: day >= 1 && day <= 3,
     // 梦境活动开放 (周日、周一、周三、周四)
     ismengjingActivityOpen: day === 0 || day === 1 || day === 3 || day === 4,
     // 宝库活动开放 (非周一、周二)

@@ -649,12 +649,6 @@
        // 军团信息
        'legion_getinforesp': 'legion_getinfo',
        'legion_getinforresp': 'legion_getinfo',
-       // 车辆相关响应映射
-       'car_getrolecarresp': 'car_getrolecar',
-       'car_refreshresp': 'car_refresh',
-       'car_claimresp': 'car_claim',
-       'car_sendresp': 'car_send',
-       'car_getmemberhelpingcntresp': 'car_getmemberhelpingcnt',
        'role_gettargetteamresp': 'role_gettargetteam',
        'activity_warorderclaimresp': 'activity_recyclewarorderrewardclaim',
        'arena_getarearankresp': 'arena_getarearank',

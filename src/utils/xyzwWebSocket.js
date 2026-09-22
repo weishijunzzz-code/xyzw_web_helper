@@ -31,8 +31,6 @@ const errorCodeMap = {
   1500020: "能量不足",
   2300070: "未加入俱乐部",
   3500020: "没有可领取的奖励",
-  12000050: "今日发车次数已达上限",
-  12000060: "不在发车时间内",
   400190: "没有可领取的签到奖励",
   1000020: "今天已经领取过奖励了",
   3300050: "购买数量超出限制",
@@ -336,6 +334,14 @@ export function registerDefaultCommands(reg) {
     // 活动/任务
     .register("activity_get")
     .register("activity_recyclewarorderrewardclaim")
+    // 玄武赐福活动
+    .register("activity_warorderget")
+    .register("activity_warordertaskclaim")
+    .register("activity_warorderrewardclaim")
+    .register("activity_getlotteryinfo")
+    .register("activity_lottery")
+    .register("activity_claimsignreward")
+    .register("activity_commonbuygoods")
     .register("legion_getpayloadtask")
     .register("legion_getpayloadkillrecord")
     .register("legion_getpayloadbf")
@@ -358,16 +364,6 @@ export function registerDefaultCommands(reg) {
     // 扭蛋相关
     .register("gacha_getinfo")
     .register("gacha_drawreward", { num: 1, isGroup: false })
-
-    // 车辆相关
-    .register("car_getrolecar")
-    .register("car_refresh", { carId: 0 })
-    .register("car_claim", { carId: 0 })
-    .register("car_send", { carId: 0, helperId: 0, text: "" })
-    .register("car_getmemberhelpingcnt")
-    .register("car_getmemberrank")
-    .register("car_research")
-    .register("car_claimpartconsumereward")
 
     // 功法
       .register("legacy_getinfo")
@@ -431,7 +427,10 @@ export function registerDefaultCommands(reg) {
     .register("apex_getroleinfo")
     .register("apex_getguesslist", { scheduleId: 0, idx: 0 })
     .register("apex_guess", { teamId: "" })
-    .register("apex_get64oppomap", { scheduleId: 0, groupId: 0 });
+    .register("apex_get64oppomap", { scheduleId: 0, groupId: 0 })
+    // —— APEX 逐鹿盐山：按需注册，仅登记组件实际调用的命令 ——
+    .register("apex_getvotelist")
+    .register("apex_vote", { round: 0, teamId: "" });
   registry.commands.set(
     "fight_startareaarena",
     (ack = 0, seq = 0, params = {}) => {
@@ -1104,6 +1103,8 @@ export class XyzwWebSocketClient {
       apex_getguesslistresp: "apex_getguesslist",
       apex_guessresp: "apex_guess",
       apex_get64oppomapresp: "apex_get64oppomap",
+      apex_getvotelistresp: "apex_getvotelist",
+      apex_voteresp: "apex_vote",
       hero_recruitresp: "hero_recruit",
       friend_batchresp: "friend_batch",
       system_claimhanguprewardresp: "system_claimhangupreward",
@@ -1179,17 +1180,17 @@ export class XyzwWebSocketClient {
       club_attackresp: "club_attack",
       club_attackmonsterresp: "club_attackmonster",
       club_taskclaimresp: "club_taskclaim",
-      // 车辆相关响应映射
-      car_getrolecarresp: "car_getrolecar",
-      car_refreshresp: "car_refresh",
-      car_claimresp: "car_claim",
-      car_sendresp: "car_send",
-      car_getmemberhelpingcntresp: "car_getmemberhelpingcnt",
-      car_getmemberrankresp: "car_getmemberrank",
-      car_researchresp: "car_research",
-      car_claimpartconsumerewardresp: "car_claimpartconsumereward",
       role_gettargetteamresp: "role_gettargetteam",
-      activity_warorderclaimresp: "activity_recyclewarorderrewardclaim",
+      // 玄武赐福活动响应映射
+      activity_warordergetresp: "activity_warorderget",
+      activity_warorderclaimresp: [
+        "activity_warorderrewardclaim",
+        "activity_warordertaskclaim",
+        "activity_recyclewarorderrewardclaim",
+      ],
+      activity_getlotteryinforesp: "activity_getlotteryinfo",
+      activity_lotteryresp: "activity_lottery",
+      activity_rewardresp: "activity_claimsignreward",
       arena_getarearankresp: "arena_getarearank",
       bosstower_gethelprankresp: "bosstower_gethelprank",
       // 功法相关响应映射
@@ -1233,6 +1234,7 @@ export class XyzwWebSocketClient {
         "lordweapon_changedefaultweapon",
       ],
       syncrewardresp: [
+        "activity_commonbuygoods",
         "system_buygold",
         "discount_claimreward",
         "card_claimreward",

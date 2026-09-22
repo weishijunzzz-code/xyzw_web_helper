@@ -7,9 +7,10 @@
         <li>点击下方按钮获取微信登录二维码</li>
         <li>使用微信扫码并确认登录</li>
         <li>
-          系统将获取<strong color="red">该微信下所有角色</strong>的Token信息
+          系统将获取<strong color="red">该微信下所有角色</strong>的Token信息，并保存可用于刷新Token的登录凭据
         </li>
       </ol>
+      <n-checkbox v-model:checked="saveCombUser">强制下线账号请勾选</n-checkbox>
     </div>
 
     <!-- 二维码显示区域 -->
@@ -121,9 +122,17 @@
 import { ref, onMounted, onUnmounted, reactive } from "vue";
 import { Scan, Refresh, Close, CloudUpload, Download } from "@vicons/ionicons5";
 import { NIcon, useMessage, NButton, NForm, NFormItem, NInput } from "naive-ui";
+import { Scan, Refresh, Close, CloudUpload } from "@vicons/ionicons5";
+import { NCheckbox, NIcon, useMessage, NButton, NForm, NFormItem, NInput } from "naive-ui";
 import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { g_utils, bon } from "@/utils/bonProtocol";
+import { g_utils } from "@/utils/bonProtocol";
+import {
+  buildRoleBin,
+  downloadBinFile,
+  getRoleBinFileName,
+} from "@/utils/binFile";
 import { useTokenStore } from "@/stores/tokenStore";
 import {
   tokenToBinComplete,
@@ -185,8 +194,12 @@ const roleList = ref<
     roleIndex?: number;
     wsUrl: string;
     importMethod: string;
+    serverId?: string | number;
+    combUser?: any;
   }>
 >([]);
+const currentCombUser = ref<any>(null);
+const saveCombUser = ref(false);
 
 const handleDownload = (roleInfo: any) => {
   if (!originalBinData.value) {
@@ -194,25 +207,8 @@ const handleDownload = (roleInfo: any) => {
     return;
   }
   try {
-    const newData = { ...originalBinData.value };
-    newData.serverId = roleInfo.serverId; // 确保类型一致
-    const newBinBuffer = g_utils.encode(newData) as ArrayBuffer;
-
-    // 构造文件名: bin-{server}-0-{roleId}-{name}.bin
-    let sid = Number(roleInfo.serverId);
-    let roleIndex = 0;
-
-    if (sid >= 2000000) {
-      roleIndex = 2;
-      sid -= 2000000;
-    } else if (sid >= 1000000) {
-      roleIndex = 1;
-      sid -= 1000000;
-    }
-
-    const serverNum = sid - 27;
-    const fileName = `bin-${serverNum}服-${roleIndex}-${roleInfo.roleId}-${roleInfo.name}.bin`;
-
+    const newBinBuffer = buildRoleBin(originalBinData.value, roleInfo.serverId);
+    const fileName = getRoleBinFileName(roleInfo);
     downloadBinFile(fileName, newBinBuffer);
     message.success(`已开始下载: ${fileName}`);
   } catch (e: any) {
@@ -352,15 +348,15 @@ const addSelectedRole = async (roleInfo: any) => {
   }
 
   try {
-    const newData = { ...originalBinData.value };
-    newData.serverId = roleInfo.serverId; // 确保类型一致
-    const newBinBuffer = g_utils.encode(newData) as ArrayBuffer;
+    const newBinBuffer = buildRoleBin(originalBinData.value, roleInfo.serverId);
     const tokenId = getTokenId(newBinBuffer);
     const roleToken = await transformToken(newBinBuffer);
     const roleName = roleInfo.name || `角色_${roleInfo.roleId}`;
 
     // 刷新indexDB数据库token数据 (保存原始bin)
-    storeArrayBuffer(tokenId, newBinBuffer);
+    if (!saveCombUser.value) {
+      await storeArrayBuffer(tokenId, newBinBuffer);
+    }
 
     let sid = Number(roleInfo.serverId);
     let roleIndex = 0;
@@ -399,6 +395,8 @@ const addSelectedRole = async (roleInfo: any) => {
       roleIndex: roleIndex,
       wsUrl: importForm.wsUrl || "",
       importMethod: "wxQrcode",
+      serverId: roleInfo.serverId,
+      ...(saveCombUser.value ? { combUser: currentCombUser.value } : {}),
     });
 
     // 【新增】生成该角色的标准bin文件
@@ -756,14 +754,14 @@ const getEncryptedData = async (code) => {
     "&gameTp=app&system=android" +
     "&deviceUniqueId=DID-0e782e88-2f3b-4f5b-9020-47f5e5a5a026" +
     "&packageName=com.hortorgames.xyzw";
-  
+
   const loginUrl = getApiUrl(path, 'hortor');
   const headers = getApiHeaders('hortor');
 
   console.log("Hortor 登录 URL:", loginUrl);
 
   let responseText = '';
-  
+
   if (isNativePlatform()) {
     // 移动端使用 nativeHttp
     const response = await nativeHttp.post(loginUrl, encoded, headers);
@@ -800,7 +798,7 @@ const getEncryptedData = async (code) => {
   if (!combUser) {
     throw new Error("登录响应结构异常");
   }
-  console.log("combUser:", combUser);
+  currentCombUser.value = combUser;
 
   // 保存用户信息，供后续生成标准bin文件使用
   currentCombUser.value = combUser;
@@ -809,7 +807,7 @@ const getEncryptedData = async (code) => {
   // 首先尝试从 window.o4e 获取（index.js 加载后会挂载到全局）
   const o4e = (window as any).o4e;
   let encryptedBuffer;
-  
+
   if (o4e?.encMsg && o4e?.lz4XorEncode) {
     encryptedBuffer = o4e.encMsg(
       {
@@ -1016,25 +1014,8 @@ const handleImport = async () => {
   });
   console.log("当前Token列表:", tokenStore.gameTokens);
   message.success("Token添加成功");
-  roleList.value = [];
+    roleList.value = [];
   emit("ok");
-};
-
-const downloadBinFile = (fileName, bin) => {
-  const blob = new Blob([new Uint8Array(bin)], {
-    type: "application/octet-stream",
-  });
-
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  URL.revokeObjectURL(url);
 };
 
 /**

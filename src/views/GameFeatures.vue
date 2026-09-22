@@ -329,7 +329,9 @@ watch(
         if (
           importMethod === "url" ||
           importMethod === "bin" ||
-          importMethod === "wxQrcode"
+          importMethod === "wxQrcode" ||
+          importMethod === "mobile" ||
+          importMethod === "wxForceLogout"
         ) {
           message.warning("Token已过期，正在尝试自动刷新...");
           return;

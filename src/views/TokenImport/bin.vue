@@ -80,6 +80,11 @@ import PQueue from "p-queue";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { getTokenId, transformToken, getServerList } from "@/utils/token";
 import { g_utils } from "@/utils/bonProtocol";
+import {
+  buildRoleBin,
+  downloadBinFile,
+  getRoleBinFileName,
+} from "@/utils/binFile";
 
 const $emit = defineEmits(["cancel", "ok"]);
 
@@ -151,25 +156,8 @@ const handleDownload = (roleInfo: any) => {
     return;
   }
   try {
-    const newData = { ...originalBinData.value };
-    newData.serverId = roleInfo.serverId; // 确保类型一致
-    const newBinBuffer = g_utils.encode(newData) as ArrayBuffer;
-    
-    // 构造文件名: bin-{server}-0-{roleId}-{name}.bin
-    let sid = Number(roleInfo.serverId);
-    let roleIndex = 0;
-    
-    if (sid >= 2000000) {
-      roleIndex = 2;
-      sid -= 2000000;
-    } else if (sid >= 1000000) {
-      roleIndex = 1;
-      sid -= 1000000;
-    }
-    
-    const serverNum = sid - 27;
-    const fileName = `bin-${serverNum}服-${roleIndex}-${roleInfo.roleId}-${roleInfo.name}.bin`;
-    
+    const newBinBuffer = buildRoleBin(originalBinData.value, roleInfo.serverId);
+    const fileName = getRoleBinFileName(roleInfo);
     downloadBinFile(fileName, newBinBuffer);
     message.success(`已开始下载: ${fileName}`);
   } catch (e: any) {
@@ -185,9 +173,7 @@ const addSelectedRole = async (roleInfo: any) => {
   }
 
   try {
-    const newData = { ...originalBinData.value };
-    newData.serverId = roleInfo.serverId; // 确保类型一致
-    const newBinBuffer = g_utils.encode(newData) as ArrayBuffer;
+    const newBinBuffer = buildRoleBin(originalBinData.value, roleInfo.serverId);
     const tokenId = getTokenId(newBinBuffer);
     const roleToken = await transformToken(newBinBuffer);
     const roleName = roleInfo.name || `角色_${roleInfo.roleId}`;
@@ -322,22 +308,6 @@ const handleImport = async () => {
   $emit("ok");
 };
 
-const downloadBinFile = (fileName, bin) => {
-  const blob = new Blob([new Uint8Array(bin)], {
-    type: "application/octet-stream",
-  });
-
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  URL.revokeObjectURL(url);
-};
 </script>
 
 <style scoped lang="scss">

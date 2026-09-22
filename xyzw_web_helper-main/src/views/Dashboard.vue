@@ -436,51 +436,6 @@
                 <n-input-number v-model:value="batchSettings.targetBoxPoints" :min="1" :max="1000000" :step="100" size="small" style="width:100px" />
               </div>
             </div>
-            <n-divider title-placement="left" style="margin:12px 0 8px 0">智能发车条件设置(0为不限制)</n-divider>
-            <div class="settings-grid">
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">保底车辆颜色</label>
-                <n-select
-                  v-model:value="batchSettings.carMinColor"
-                  :options="[
-                    { label: '绿·普通', value: 1 },
-                    { label: '蓝·稀有', value: 2 },
-                    { label: '紫·史诗', value: 3 },
-                    { label: '橙·传说', value: 4 },
-                    { label: '红·神话', value: 5 },
-                    { label: '金·传奇', value: 6 }
-                  ]"
-                  size="small"
-                  style="width:100px"
-                />
-              </div>
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">车辆强制刷新保底</label>
-                <n-switch v-model:value="batchSettings.useGoldRefreshFallback" />
-              </div>
-            </div>
-            <div class="settings-grid" v-if="batchSettings.useGoldRefreshFallback" style="margin-top:12px">
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">需同时满足所有条件</label>
-                <n-switch v-model:value="batchSettings.smartDepartureMatchAll" />
-              </div>
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">金砖 >=</label>
-                <n-input-number v-model:value="batchSettings.smartDepartureGoldThreshold" :min="0" :step="100" size="small" style="width:100px" />
-              </div>
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">招募令 >=</label>
-                <n-input-number v-model:value="batchSettings.smartDepartureRecruitThreshold" :min="0" :step="10" size="small" style="width:100px" />
-              </div>
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">白玉 >=</label>
-                <n-input-number v-model:value="batchSettings.smartDepartureJadeThreshold" :min="0" :step="100" size="small" style="width:100px" />
-              </div>
-              <div class="setting-item" style="flex-direction:row;justify-content:space-between;align-items:center">
-                <label class="setting-label">刷新卷 >=</label>
-                <n-input-number v-model:value="batchSettings.smartDepartureTicketThreshold" :min="0" :step="1" size="small" style="width:100px" />
-              </div>
-            </div>
           </n-grid-item>
           <!-- 右列：延迟与连接设置 -->
           <n-grid-item>
@@ -666,7 +621,6 @@ const batchSettings = reactive({
   targetBoxPoints: 1000,
   receiverId: '',
   password: '',
-  useGoldRefreshFallback: false,
   tokenListColumns: 2,
   maxLogEntries: 1000,
   enableRefresh: false,
@@ -678,14 +632,8 @@ const batchSettings = reactive({
   refreshDelay: 1000,
   longDelay: 3000,
   maxActive: 2,
-  carMinColor: 4,
   connectionTimeout: 10000,
-  reconnectDelay: 1000,
-  smartDepartureGoldThreshold: 0,
-  smartDepartureRecruitThreshold: 0,
-  smartDepartureJadeThreshold: 0,
-  smartDepartureTicketThreshold: 0,
-  smartDepartureMatchAll: false
+  reconnectDelay: 1000
 })
 
 // ==================== Token / 任务列表 ====================
@@ -734,7 +682,7 @@ const tokenSelectColumns = [
 ]
 
 const taskGroupDefinitions = [
-  { name: 'daily', label: '日常', tasks: ['startBatch', 'claimHangUpRewards', 'batchAddHangUpTime', 'resetBottles', 'batchlingguanzi', 'batchclubsign', 'batchStudy', 'batcharenafight', 'batchSmartSendCar', 'batchClaimCars', 'store_purchase', 'collection_claimfreereward', 'batchGenieSweep'] },
+  { name: 'daily', label: '日常', tasks: ['startBatch', 'claimHangUpRewards', 'batchAddHangUpTime', 'resetBottles', 'batchlingguanzi', 'batchclubsign', 'batchStudy', 'batcharenafight', 'store_purchase', 'collection_claimfreereward', 'batchGenieSweep'] },
   { name: 'dungeon', label: '副本', tasks: ['climbTower', 'batchmengjing', 'skinChallenge', 'batchClaimPeachTasks', 'batchBuyDreamItems'] },
   { name: 'baoku', label: '宝库', tasks: ['batchbaoku13', 'batchbaoku45'] },
   { name: 'weirdTower', label: '怪异塔', tasks: ['climbWeirdTower', 'batchUseItems', 'batchMergeItems', 'batchClaimFreeEnergy'] },
@@ -1206,8 +1154,6 @@ const commandLabelMap = {
   climbWeirdTower: '爬怪异塔',
   arenaFight: '竞技场',
   claimMail: '领取邮件',
-  claimCar: '领取车辆',
-  refreshCar: '刷新车辆',
   legacyHangup: '挂机遗产',
   heroRecruit: '招募英雄',
   studyGame: '学习功法',

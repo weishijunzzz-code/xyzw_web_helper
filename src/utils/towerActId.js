@@ -11,6 +11,15 @@ const getCycleFriday = (date) => {
   return cycleDate;
 };
 
+// 玄武赐福活动ID前缀（当天日期 YYMMDD，如 "260919"）
+export const getXuanwuActBase = (date = new Date()) => {
+  const year = String(date.getFullYear()).slice(-2);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}${month}${day}`;
+};
+
 export const getTowerActId = (date = new Date()) => {
   const cycleFriday = getCycleFriday(date);
   const year = String(cycleFriday.getFullYear()).slice(-2);
