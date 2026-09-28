@@ -42,7 +42,7 @@ import {
   apexSeasonConf,
   apexConstantConf,
   apexSupportLevels,
-} from "./apexStageMap";
+} from "./apexStageMap.js";
 
 export { apexConstantConf };
 

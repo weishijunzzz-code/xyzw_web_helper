@@ -1,6 +1,7 @@
 /**
  * 挂机、答题、签到类任务
- * 包含: claimHangUpRewards, batchAddHangUpTime, batchStudy, batchclubsign
+ * 包含: claimHangUpRewards, batchAddHangUpTime, batchStudy, batchclubsign,
+ *       batchLegionWarSignUp, batchJoinClub
  */
 
 import { preloadQuestions, findAnswer } from '../studyQuestionsFromJSON.js';
@@ -539,11 +540,201 @@ export function createTasksHangUp(deps) {
     message.success("批量助威结束");
   };
 
+  /**
+   * 一键盐场报名
+   */
+  const batchLegionWarSignUp = async () => {
+    if (selectedTokens.value.length === 0) return;
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始盐场报名: ${token.name} ===`,
+          type: "info",
+        });
+        await ensureConnection(tokenId);
+        if (shouldStop.value) return;
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_signup",
+          {},
+          5000,
+        );
+        await new Promise((r) => setTimeout(r, 500));
+        tokenStatus.value[tokenId] = "completed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 盐场报名已完成 ===`,
+          type: "success",
+        });
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 盐场报名失败: ${error.message || "未知错误"}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量盐场报名结束");
+  };
+
+  /**
+   * 一键加入俱乐部（串行处理）
+   * @param {string|number} clubId - 俱乐部ID（定时任务 settings 传入）
+   * @param {string} reason - 申请理由
+   */
+  const batchJoinClub = async (clubId, reason) => {
+    if (selectedTokens.value.length === 0) {
+      message.warning("请先选择账号");
+      return;
+    }
+    if (!clubId) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: "未配置俱乐部ID，跳过一键加入俱乐部（需在定时任务设置中加入 joinClubId）",
+        type: "warning",
+      });
+      return;
+    }
+
+    isRunning.value = true;
+    const results = [];
+
+    for (let i = 0; i < selectedTokens.value.length; i++) {
+      const tokenId = selectedTokens.value[i];
+      const token = tokens.value.find((t) => t.id === tokenId);
+      if (!token) continue;
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始加入俱乐部: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        // 检查是否已加入俱乐部
+        let clubInfo = null;
+        try {
+          clubInfo = await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "legion_getinfo",
+            {},
+            5000,
+          );
+        } catch (e) {
+          // 获取失败说明可能未加入俱乐部，继续申请
+          clubInfo = null;
+        }
+
+        if (clubInfo && (clubInfo.legionId || clubInfo.id || (clubInfo.info && clubInfo.info.id))) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 已加入俱乐部，跳过`,
+            type: "info",
+          });
+          results.push({ tokenId, success: false, message: "已加入俱乐部" });
+          continue;
+        }
+
+        // 发送加入申请
+        let response;
+        try {
+          response = await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "legion_applyjoin",
+            {
+              legionId: Number(clubId),
+              applyReason: String(reason || "").trim(),
+            },
+            10000,
+          );
+        } catch (e) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 申请加入请求失败: ${e.message || "未知错误"}`,
+            type: "error",
+          });
+          results.push({ tokenId, success: false, message: e.message });
+          continue;
+        }
+
+        // 处理响应
+        const errorCode = response?.error || response?.code || response?.ret;
+        if (errorCode === 0 || errorCode === undefined || errorCode === null) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 申请加入俱乐部成功`,
+            type: "success",
+          });
+          results.push({ tokenId, success: true, message: "申请成功" });
+        } else {
+          const errorMsg = response?.msg || response?.message || `错误码: ${errorCode}`;
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 申请加入失败: ${errorMsg}`,
+            type: "error",
+          });
+          results.push({ tokenId, success: false, message: errorMsg });
+        }
+      } catch (error) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 申请加入失败: ${error.message || "未知错误"}`,
+          type: "error",
+        });
+        results.push({ tokenId, success: false, message: error.message });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+      }
+
+      // 串行延迟避免请求过快
+      if (i < selectedTokens.value.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+
+    const successCount = results.filter((r) => r.success).length;
+    const failCount = results.length - successCount;
+    message.success(`批量加入俱乐部完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+  };
+
   return {
     claimHangUpRewards,
     batchAddHangUpTime,
     batchStudy,
     batchclubsign,
+    batchLegionWarSignUp,
+    batchJoinClub,
     batchWarGuessCheer,
   };
 }

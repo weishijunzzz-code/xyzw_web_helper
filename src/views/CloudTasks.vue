@@ -105,6 +105,19 @@
 
       <!-- 定时任务 -->
       <n-card title="定时任务（服务端 croner，时区 Asia/Shanghai）" size="small" class="section-card">
+        <template #header-extra>
+          <n-space size="small">
+            <n-button size="tiny" @click="exportTasks">导出任务</n-button>
+            <n-button size="tiny" @click="fileInput?.click()">导入任务</n-button>
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".json,application/json"
+              style="display: none"
+              @change="onImportFile"
+            />
+          </n-space>
+        </template>
         <n-collapse v-model:expanded-names="collapseExpanded">
           <n-collapse-item
             :title="editingTaskId ? `编辑定时任务：${taskForm.name || editingTaskId}` : '新建定时任务'"
@@ -415,8 +428,6 @@ const TASK_LABELS = {
   skinChallenge: "皮肤挑战",
   batchUseItems: "使用道具",
   batchMergeItems: "合成道具",
-  batchSmartSendCar: "智能发车",
-  batchClaimCars: "领取车辆",
   batchOpenBox: "开宝箱",
   batchOpenBoxByPoints: "按积分开箱",
   batchClaimBoxPointReward: "领宝箱积分奖励",
@@ -429,6 +440,10 @@ const TASK_LABELS = {
   batchGenieSweep: "灯神扫荡",
   batchOpenFragmentPacks: "开碎片包",
   batchClaimBoxWeeklyRewards: "领宝箱周奖励",
+  batchTopUpBoxWeekWithoutClaim: "宝箱周补齐（不领积分）",
+  batchTopUpBoxWeekWithClaim: "宝箱周补齐（并领积分）",
+  batchClaimRollUpPack: "领取十殿精选礼包",
+  batchGachaDrawReward: "一键免费扭蛋",
   batchbaoku13: "宝库 1-3 层",
   batchbaoku45: "宝库 4-5 层",
   batchmengjing: "梦境",
@@ -448,8 +463,20 @@ const TASK_LABELS = {
   charge_claimaddup_rewards: "累计充值奖励",
   claim_recruit_welfare: "招募福利",
   claim_weird_tower_all: "怪塔全部奖励",
+  activity_claimrolluppack: "领取周一免费礼包",
+  activityShopBuy: "江湖黑市购买",
+  executeWarguessStoreBuy: "助威商店购买（需配置 warguessGoodsIds）",
   batchLegacyClaim: "遗产领取",
   batchLegacyGiftSendEnhanced: "遗产送礼",
+  batchLegacyBeginHangup: "功法挂机修炼",
+  batchLegionWarSignUp: "军团战报名（盐场）",
+  batchJoinClub: "一键加入俱乐部（需配置 joinClubId）",
+  batchXuanwuBlessing: "一键玄武赐福",
+  batchApexGuess: "逐鹿盐山竞猜",
+  batchFootballBet: "一键竞猜（默认第3项）",
+  batchCampChallenge: "营地挑战（普通）",
+  batchCampChallengePet: "营地挑战（宠物）",
+  batchCampClaimTasks: "营地任务领取",
 };
 
 const taskOptions = Object.entries(TASK_LABELS).map(([value, label]) => ({
@@ -558,6 +585,95 @@ async function removeTask(t) {
     await refreshTasks();
   } catch (e) {
     pushLog("error", `删除失败: ${e.response?.data?.error || e.message}`);
+  }
+}
+
+/* ---------- 导出/导入定时任务 ---------- */
+const fileInput = ref(null);
+
+async function exportTasks() {
+  try {
+    const tasks = await scheduledTasksApi.getAll();
+    const payload = {
+      type: "xyzw-scheduled-tasks",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tasks: (tasks || []).map((t) => ({
+        name: t.name,
+        cron: t.cron,
+        taskType: t.taskType,
+        settings: t.settings || {},
+        enabled: t.enabled !== false,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+    a.href = url;
+    a.download = `xyzw-scheduled-tasks-${stamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    pushLog("success", `已导出 ${payload.tasks.length} 条定时任务`);
+  } catch (e) {
+    pushLog("error", `导出失败: ${e.response?.data?.error || e.message}`);
+  }
+}
+
+async function onImportFile(ev) {
+  const file = ev.target?.files?.[0];
+  ev.target.value = ""; // 允许重复选择同一文件
+  if (!file) return;
+
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    pushLog("error", "导入失败：文件不是合法的 JSON");
+    return;
+  }
+  if (data?.type !== "xyzw-scheduled-tasks" || !Array.isArray(data.tasks)) {
+    pushLog("error", "导入失败：文件格式不符（缺少 xyzw-scheduled-tasks 标识）");
+    return;
+  }
+  if (data.tasks.length === 0) {
+    pushLog("info", "文件中没有任务");
+    return;
+  }
+
+  let ok = 0;
+  let fail = 0;
+  for (const t of data.tasks) {
+    try {
+      // tokenIds 固定传空：执行账号由导入方登录后用「编辑」自行选择
+      await scheduledTasksApi.create({
+        name: t.name || "",
+        cron: t.cron,
+        taskType: t.taskType || "batch_daily",
+        tokenIds: [],
+        settings: t.settings || {},
+        enabled: t.enabled !== false,
+      });
+      ok++;
+    } catch (e) {
+      fail++;
+      pushLog(
+        "error",
+        `导入「${t.name || "未命名"}」失败: ${e.response?.data?.error || e.message}`,
+      );
+    }
+  }
+  await refreshTasks();
+  if (ok > 0) {
+    pushLog(
+      "success",
+      `导入完成：成功 ${ok} 条${fail ? `，失败 ${fail} 条` : ""}，执行账号需用「编辑」自行选择`,
+    );
+  } else if (fail > 0) {
+    pushLog("error", `导入失败：${fail} 条任务全部未成功`);
   }
 }
 

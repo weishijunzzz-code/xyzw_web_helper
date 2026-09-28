@@ -3,8 +3,152 @@ import { PEACH_TASKS } from "../PeachTaskIds.js";
 
 /**
  * 开箱、钓鱼、招募类任务
- * 包含: batchOpenBox, batchClaimBoxPointReward, batchFish, batchRecruit
+ * 包含: batchOpenBox, batchClaimBoxPointReward, batchFish, batchRecruit,
+ *       batchTopUpBoxWeekWithoutClaim, batchTopUpBoxWeekWithClaim,
+ *       batchClaimRollUpPack, batchGachaDrawReward
  */
+
+/**
+ * 计算最优开箱方案
+ * @param {Object} params - { boxCounts, targetPoints, woodenReserve }
+ * @returns {Object|null} 开箱方案 { wooden, bronze, gold, platinum, totalPoints, excess } 或 null（无法达成）
+ */
+function calculateBoxOpenPlan(params) {
+  const { boxCounts, targetPoints, woodenReserve = 200 } = params;
+
+  const woodenTotal = boxCounts[2001] || 0;
+  const woodenUsable = Math.max(0, woodenTotal - woodenReserve);
+  const bronzeAvailable = Math.floor((boxCounts[2002] || 0) / 10) * 10;
+  const goldAvailable = Math.floor((boxCounts[2003] || 0) / 10) * 10;
+  const platinumAvailable = Math.floor((boxCounts[2004] || 0) / 10) * 10;
+
+  let bestPlan = null;
+  let minExcess = Infinity;
+  let minPlatinum = Infinity;
+  let minGold = Infinity;
+  let minBronze = Infinity;
+  let minWooden = Infinity;
+
+  // 遍历木质箱子（以10个为单位，从小到大）
+  const woodenBy10 = Math.floor(woodenUsable / 10) * 10;
+  for (let w = 0; w <= woodenBy10; w += 10) {
+    const pointsFromWood = w;
+
+    if (pointsFromWood >= targetPoints) {
+      // 木质箱子已经够用
+      const excess = pointsFromWood - targetPoints;
+      const isBetter = excess < minExcess || (excess === minExcess && w < minWooden);
+
+      if (isBetter) {
+        minExcess = excess;
+        minPlatinum = 0;
+        minGold = 0;
+        minBronze = 0;
+        minWooden = w;
+        bestPlan = { wooden: w, bronze: 0, gold: 0, platinum: 0 };
+      }
+      break;
+    }
+
+    // 需要高级箱子补齐
+    const remaining = targetPoints - pointsFromWood;
+
+    // 遍历高级箱子组合（从小到大）
+    for (let p = 0; p <= platinumAvailable; p += 10) {
+      for (let g = 0; g <= goldAvailable; g += 10) {
+        for (let b = 0; b <= bronzeAvailable; b += 10) {
+          const pointsFromHigh = p * 50 + g * 20 + b * 10;
+          const totalPoints = pointsFromWood + pointsFromHigh;
+
+          if (totalPoints >= targetPoints) {
+            const excess = totalPoints - targetPoints;
+            const isBetter =
+              excess < minExcess ||
+              (excess === minExcess && p < minPlatinum) ||
+              (excess === minExcess && p === minPlatinum && g < minGold) ||
+              (excess === minExcess && p === minPlatinum && g === minGold && b < minBronze) ||
+              (excess === minExcess && p === minPlatinum && g === minGold && b === minBronze && w < minWooden);
+
+            if (isBetter) {
+              minExcess = excess;
+              minPlatinum = p;
+              minGold = g;
+              minBronze = b;
+              minWooden = w;
+              bestPlan = { wooden: w, bronze: b, gold: g, platinum: p };
+            }
+            break;
+          }
+
+          // 检查是否可以用木质箱子凑零（凑零时允许使用保留的木质箱子）
+          const remainingAfterAll = targetPoints - totalPoints;
+          if (remainingAfterAll < 100 && remainingAfterAll > 0) {
+            const woodenForFill = Math.ceil(remainingAfterAll / 10) * 10;
+            const totalWooden = w + woodenForFill;
+            // 凑零时允许使用所有木质箱子
+            if (totalWooden <= woodenTotal) {
+              const excess = 0;
+              const isBetter =
+                excess < minExcess ||
+                (excess === minExcess && p < minPlatinum) ||
+                (excess === minExcess && p === minPlatinum && g < minGold) ||
+                (excess === minExcess && p === minPlatinum && g === minGold && b < minBronze) ||
+                (excess === minExcess && p === minPlatinum && g === minGold && b === minBronze && totalWooden < minWooden);
+
+              if (isBetter) {
+                minExcess = excess;
+                minPlatinum = p;
+                minGold = g;
+                minBronze = b;
+                minWooden = totalWooden;
+                bestPlan = { wooden: totalWooden, bronze: b, gold: g, platinum: p };
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!bestPlan) {
+    return null;
+  }
+
+  const totalPoints = bestPlan.wooden * 1 + bestPlan.bronze * 10 + bestPlan.gold * 20 + bestPlan.platinum * 50;
+
+  return {
+    ...bestPlan,
+    totalPoints,
+    excess: totalPoints - targetPoints
+  };
+}
+
+/**
+ * 判断当前是否为箱子周
+ * 活动周顺序：黑市周 -> 招募周 -> 宝箱周
+ * 校准后起始日期：2025-12-12（黑市周开始）
+ * @returns {Object} { isBoxWeek: boolean, current: string }
+ */
+const isBoxWeek = () => {
+  const now = new Date();
+  // 校准后的起始日期：2025-12-12是黑市周开始
+  // 根据用户反馈，2026-04-03应该是招募周
+  const start = new Date('2025-12-12T12:00:00');
+  const weekDuration = 7 * 24 * 60 * 60 * 1000;
+  const cycleDuration = 3 * weekDuration;
+
+  const elapsed = now - start;
+  const cyclePosition = elapsed % cycleDuration;
+
+  if (cyclePosition < weekDuration) {
+    return { isBoxWeek: false, current: '黑市周' };
+  } else if (cyclePosition < 2 * weekDuration) {
+    return { isBoxWeek: false, current: '招募周' };
+  } else {
+    return { isBoxWeek: true, current: '宝箱周' };
+  }
+};
 
 /**
  * 创建物品类任务执行器
@@ -1523,6 +1667,467 @@ export function createTasksItem(deps) {
     shouldStop.value = false;
   };
 
+  /**
+   * 一键补齐箱子周任务
+   * @param {boolean} claimReward - 是否领取积分奖励
+   */
+  const batchTopUpBoxWeek = async (claimReward = false) => {
+    if (selectedTokens.value.length === 0) return;
+
+    // 只在非定时任务模式下初始化状态
+    if (!isRunning.value) {
+      isRunning.value = true;
+      shouldStop.value = false;
+
+      selectedTokens.value.forEach((id) => {
+        tokenStatus.value[id] = "waiting";
+      });
+    }
+
+    const boxPriority = [
+      { id: 2001, name: "木质宝箱", points: 1, reserve: 200 },
+      { id: 2002, name: "青铜宝箱", points: 10, reserve: 0 },
+      { id: 2003, name: "黄金宝箱", points: 20, reserve: 0 },
+      { id: 2004, name: "铂金宝箱", points: 50, reserve: 0 },
+    ];
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始自动补齐箱子周任务: ${token.name} ===`,
+          type: "info",
+        });
+
+        const weekInfo = isBoxWeek();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 当前活动周: ${weekInfo.current} (isBoxWeek: ${weekInfo.isBoxWeek})`,
+          type: "info",
+        });
+
+        if (!weekInfo.isBoxWeek) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 当前不是箱子周，跳过补齐`,
+            type: "info",
+          });
+          tokenStatus.value[tokenId] = "completed";
+          return;
+        }
+
+        await ensureConnection(tokenId);
+
+        // 获取活动数据
+        const actResult = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "activity_get",
+          {},
+          10000,
+        );
+
+        const act = actResult?.activity || actResult?.body?.activity || actResult;
+        const myTotalInfo = act?.myTotalInfo || {};
+        const activityConfig = act?.activity || [];
+
+        const boxActivity = activityConfig.find(a => a.id === 2);
+        const maxPoints = boxActivity?.data?.rewards?.slice(-1)[0]?.num || 8000;
+
+        const boxProgress = myTotalInfo?.['2'] || {};
+        const currentPoints = Number(boxProgress?.num || 0);
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 箱子周进度: 当前积分: ${currentPoints}/${maxPoints}`,
+          type: "info",
+        });
+
+        if (currentPoints === 0 || currentPoints >= maxPoints) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 当前轮次无需补齐`,
+            type: "info",
+          });
+          tokenStatus.value[tokenId] = "completed";
+          return;
+        }
+
+        const neededPoints = maxPoints - currentPoints;
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 需要补齐积分: ${neededPoints}`,
+          type: "info",
+        });
+
+        // 获取角色信息（箱子库存）
+        const roleInfoRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "role_getroleinfo",
+          {},
+          5000,
+        );
+        const role = roleInfoRes?.role || roleInfoRes?.data?.role || {};
+        const items = role.items || {};
+
+        const boxInventory = {};
+        let totalAvailablePoints = 0;
+
+        for (const box of boxPriority) {
+          const count = items[box.id]?.quantity || 0;
+          boxInventory[box.id] = count;
+          totalAvailablePoints += count * box.points;
+        }
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 箱子库存: 木质=${boxInventory[2001]}, 青铜=${boxInventory[2002]}, 黄金=${boxInventory[2003]}, 铂金=${boxInventory[2004]}`,
+          type: "info",
+        });
+
+        if (totalAvailablePoints < neededPoints) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 积分不足! 需要 ${neededPoints}, 可获得 ${totalAvailablePoints}`,
+            type: "warning",
+          });
+        }
+
+        // 计算补齐方案
+        const bestPlan = calculateBoxOpenPlan({
+          boxCounts: boxInventory,
+          targetPoints: neededPoints,
+          woodenReserve: 200
+        });
+
+        if (!bestPlan) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 无法找到合适的补齐方案`,
+            type: "error",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          return;
+        }
+
+        const boxToOpen = {};
+        if (bestPlan.wooden > 0) boxToOpen[2001] = bestPlan.wooden;
+        if (bestPlan.bronze > 0) boxToOpen[2002] = bestPlan.bronze;
+        if (bestPlan.gold > 0) boxToOpen[2003] = bestPlan.gold;
+        if (bestPlan.platinum > 0) boxToOpen[2004] = bestPlan.platinum;
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 补齐方案: 木质=${bestPlan.wooden}, 青铜=${bestPlan.bronze}, 黄金=${bestPlan.gold}, 铂金=${bestPlan.platinum}`,
+          type: "info",
+        });
+
+        // 执行开箱
+        for (const box of boxPriority) {
+          if (shouldStop.value) break;
+
+          const count = boxToOpen[box.id] || 0;
+          if (count <= 0) continue;
+
+          const batches = Math.floor(count / 10);
+          const remainder = count % 10;
+
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 开始开 ${box.name}: ${count} 个`,
+            type: "info",
+          });
+
+          for (let i = 0; i < batches && !shouldStop.value; i++) {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "item_openbox",
+              { itemId: box.id, number: 10 },
+              5000,
+            );
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} ${box.name} 开箱进度: ${(i + 1) * 10}/${count}`,
+              type: "info",
+            });
+            await new Promise((r) => setTimeout(r, delayConfig.action));
+          }
+
+          if (remainder > 0 && !shouldStop.value) {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "item_openbox",
+              { itemId: box.id, number: remainder },
+              5000,
+            );
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} ${box.name} 开箱进度: ${count}/${count}`,
+              type: "info",
+            });
+          }
+        }
+
+        // 根据配置决定是否领取积分奖励
+        if (claimReward) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 补齐完成，领取宝箱积分奖励`,
+            type: "info",
+          });
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "item_batchclaimboxpointreward",
+            {},
+            5000,
+          );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 宝箱积分奖励领取成功`,
+            type: "success",
+          });
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 补齐完成，跳过领取宝箱积分奖励`,
+            type: "info",
+          });
+        }
+
+        await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+        tokenStatus.value[tokenId] = "completed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 自动补齐箱子周任务完成 ===`,
+          type: "success",
+        });
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `补齐箱子周任务失败: ${error.message}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+
+    currentRunningTokenId.value = null;
+    isRunning.value = false;
+    shouldStop.value = false;
+  };
+
+  /**
+   * 一键补齐箱子周任务（不领积分）
+   */
+  const batchTopUpBoxWeekWithoutClaim = async () => {
+    await batchTopUpBoxWeek(false);
+  };
+
+  /**
+   * 一键补齐箱子周任务（领积分）
+   */
+  const batchTopUpBoxWeekWithClaim = async () => {
+    await batchTopUpBoxWeek(true);
+  };
+
+  /**
+   * 领取十殿精选礼包
+   */
+  const batchClaimRollUpPack = async () => {
+    if (selectedTokens.value.length === 0)
+      return;
+
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value)
+        return;
+
+      tokenStatus.value[tokenId] = "running";
+
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始领取十殿精选礼包: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 获取活动信息...`,
+          type: "info",
+        });
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "activity_get",
+          {},
+          10000,
+        );
+
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 发送领取请求...`,
+          type: "info",
+        });
+        const result = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "activity_claimrolluppack",
+          { id: 17 },
+          10000,
+        );
+
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+
+        if (result.error) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 十殿精选礼包领取失败: ${result.error}`,
+            type: "error",
+          });
+          tokenStatus.value[tokenId] = "failed";
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 十殿精选礼包领取成功`,
+            type: "success",
+          });
+          await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+          tokenStatus.value[tokenId] = "completed";
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} === 领取完成 ===`,
+            type: "success",
+          });
+        }
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 领取过程出错: ${error.message}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+
+    currentRunningTokenId.value = null;
+    isRunning.value = false;
+    shouldStop.value = false;
+    message.success("批量领取十殿精选礼包结束");
+  };
+
+  /**
+   * 一键免费扭蛋
+   */
+  const batchGachaDrawReward = async () => {
+    if (selectedTokens.value.length === 0)
+      return;
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value)
+        return;
+      tokenStatus.value[tokenId] = "running";
+
+      const token = tokens.value.find((t) => t.id === tokenId);
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始免费扭蛋: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        const result = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "gacha_drawreward",
+          { num: 1, isGroup: false },
+          5000,
+        );
+
+        if (result && !result.error) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 免费扭蛋成功`,
+            type: "success",
+          });
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 免费扭蛋失败: ${result?.error || "未知错误"}`,
+            type: "error",
+          });
+        }
+
+        tokenStatus.value[tokenId] = "completed";
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 免费扭蛋失败: ${error.message || "未知错误"}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量免费扭蛋结束");
+  };
+
   return {
     batchOpenBox,
     batchOpenBoxByPoints,
@@ -1536,5 +2141,9 @@ export function createTasksItem(deps) {
     batchGenieSweep,
     batchOpenFragmentPacks,
     batchClaimBoxWeeklyRewards,
+    batchTopUpBoxWeekWithoutClaim,
+    batchTopUpBoxWeekWithClaim,
+    batchClaimRollUpPack,
+    batchGachaDrawReward,
   };
 }

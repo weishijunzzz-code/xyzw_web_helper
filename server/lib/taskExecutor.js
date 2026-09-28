@@ -13,6 +13,10 @@ import { createTasksDungeon } from './batch/tasksDungeon.js';
 import { createTasksArena } from './batch/tasksArena.js';
 import { createTasksStore } from './batch/tasksStore.js';
 import { createTasksLegacy } from './batch/tasksLegacy.js';
+import { createTasksXuanwuBlessing } from './batch/tasksXuanwuBlessing.js';
+import { createTasksApex } from './batch/tasksApex.js';
+import { createTasksFootball } from './batch/tasksFootball.js';
+import { createTasksCampChallenge } from './batch/tasksCampChallenge.js';
 import { getActivityStatus, getTodayStartSec, isTodayAvailable, calculateMonthProgress, pickArenaTargetId } from './batch/connectionManager.js';
 import { normalizeCars, gradeLabel, shouldSendCar, canClaim, isBigPrize, countRacingRefreshTickets } from './batch/carUtils.js';
 import { gameLogger } from './logger.js';
@@ -78,6 +82,29 @@ const TASK_MAP = {
   batchLegacyGiftSendEnhanced: { module: 'legacy', fn: 'batchLegacyGiftSendEnhanced' },
   // tasksHangUp 补充
   batchWarGuessCheer: { module: 'hangUp', fn: 'batchWarGuessCheer' },
+  batchLegionWarSignUp: { module: 'hangUp', fn: 'batchLegionWarSignUp' },
+  batchJoinClub: { module: 'hangUp', fn: 'batchJoinClub' },
+  // tasksItem 补充
+  batchTopUpBoxWeekWithoutClaim: { module: 'item', fn: 'batchTopUpBoxWeekWithoutClaim' },
+  batchTopUpBoxWeekWithClaim: { module: 'item', fn: 'batchTopUpBoxWeekWithClaim' },
+  batchClaimRollUpPack: { module: 'item', fn: 'batchClaimRollUpPack' },
+  batchGachaDrawReward: { module: 'item', fn: 'batchGachaDrawReward' },
+  // tasksStore 补充
+  activity_claimrolluppack: { module: 'store', fn: 'activity_claimrolluppack' },
+  activityShopBuy: { module: 'store', fn: 'activityShopBuy' },
+  executeWarguessStoreBuy: { module: 'store', fn: 'executeWarguessStoreBuy' },
+  // tasksLegacy 补充
+  batchLegacyBeginHangup: { module: 'legacy', fn: 'batchLegacyBeginHangup' },
+  // tasksXuanwuBlessing
+  batchXuanwuBlessing: { module: 'xuanwuBlessing', fn: 'batchXuanwuBlessing' },
+  // tasksApex
+  batchApexGuess: { module: 'apex', fn: 'batchApexGuess' },
+  // tasksFootball
+  batchFootballBet: { module: 'football', fn: 'batchFootballBet' },
+  // tasksCampChallenge
+  batchCampChallenge: { module: 'campChallenge', fn: 'batchCampChallenge' },
+  batchCampChallengePet: { module: 'campChallenge', fn: 'batchCampChallengePet' },
+  batchCampClaimTasks: { module: 'campChallenge', fn: 'batchCampClaimTasks' },
   // 日常任务（特殊处理）
   startBatch: { module: 'special', fn: 'startBatch' },
 };
@@ -136,6 +163,10 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
     arena: createTasksArena(deps),
     store: createTasksStore(deps),
     legacy: createTasksLegacy(deps),
+    xuanwuBlessing: createTasksXuanwuBlessing(deps),
+    apex: createTasksApex(deps),
+    football: createTasksFootball(deps),
+    campChallenge: createTasksCampChallenge(deps),
   };
 
   const results = [];
@@ -175,7 +206,18 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
     deps.addLog({ time: new Date().toLocaleTimeString(), message: `=== 开始执行: ${taskName} ===`, type: 'info' });
 
     try {
-      await fn();
+      // 参数型任务从定时任务 settings 透传配置
+      if (taskName === 'batchFootballBet') {
+        await fn(settings.footballPick || 3);
+      } else if (taskName === 'batchJoinClub') {
+        await fn(settings.joinClubId, settings.joinClubReason);
+      } else if (taskName === 'executeWarguessStoreBuy') {
+        await fn({ goodsIds: settings.warguessGoodsIds || [] });
+      } else if (taskName === 'activityShopBuy') {
+        await fn({ goodsIndices: settings.blackMarketGoodsIndices || [] });
+      } else {
+        await fn();
+      }
       results.push({ task: taskName, status: 'ok' });
     } catch (e) {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `任务失败: ${taskName} - ${e.message}`, type: 'error' });
