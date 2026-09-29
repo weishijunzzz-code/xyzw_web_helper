@@ -1,0 +1,68 @@
+name: '自动清理工作流记录'
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 每天 UTC 00:00 运行 (北京时间 08:00)
+  workflow_dispatch:  # 添加手动触发，方便测试，不用每次都等定时触发
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 清理 7 天前的已完成记录
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            async function deleteRuns() {
+              // 设置7天前的时间截点
+              const cutoff = new Date();
+              cutoff.setDate(cutoff.getDate() - 7);
+            
+              let page = 1;
+              const perPage = 100;
+            
+              console.log('开始清理 7 天前的已完成工作流记录...');
+            
+              // 循环获取页面，直到没有数据为止
+              while (true) {
+                try {
+                  const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRuns({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    status: 'completed',
+                    per_page: perPage,
+                    page: page
+                  });
+
+                  // 如果当前页面没有数据，说明已经删除完所有记录了
+                  if (workflow_runs.length === 0) {
+                    console.log(`第 ${page} 页没有更多数据，清理结束。`);
+                    break;
+                  }
+
+                  let deletedCount = 0;
+                  for (const run of workflow_runs) {
+                    const runDate = new Date(run.created_at);
+                    if (runDate < cutoff) {
+                      await github.rest.actions.deleteWorkflowRun({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        run_id: run.id
+                      });
+                      deletedCount++;
+                      console.log(`✅ Deleted run #${run.id} (${run.name})`);
+                    }
+                  }
+            
+                  console.log(`第 ${page} 页处理完毕，删除了 ${deletedCount} 条记录。`);
+                  page++;
+                } catch (error) {
+                  console.error(`❌ 处理第 ${page} 页时出错: ${error}`);
+                  break;
+                }
+              }
+              console.log('所有过期记录清理完成！');
+            }
+
+            deleteRuns();

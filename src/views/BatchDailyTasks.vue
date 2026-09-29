@@ -1075,7 +1075,7 @@
               v-model:value="selectedTokensForApply"
               style="margin-top: 8px"
             >
-              <n-grid :cols="2" :x-gap="12" :y-gap="8">
+              <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
                 <n-grid-item v-for="token in sortedTokens" :key="token.id">
                   <n-checkbox :value="token.id">{{ token.name }}</n-checkbox>
                 </n-grid-item>
@@ -1712,7 +1712,7 @@
             <div style="font-weight: bold; margin-bottom: 8px">
               {{ merchant.name }}
             </div>
-            <n-grid :cols="3" :x-gap="12" :y-gap="8">
+            <n-grid :cols="isMobile ? 1 : 3" :x-gap="12" :y-gap="8">
               <n-grid-item v-for="(item, index) in merchant.items" :key="index">
                 <n-checkbox
                   :value="`${id}-${index}`"
@@ -1769,6 +1769,7 @@
         <div
           v-for="(item, index) in blackMarketPurchaseList"
           :key="`${index}-${item.itemId ?? 'new'}`"
+          class="bm-edit-row"
           style="
             display: grid;
             grid-template-columns: 220px 120px 120px 1fr 96px;
@@ -2114,7 +2115,7 @@
             </div>
 
             <n-checkbox-group v-model:value="taskForm.selectedTokens">
-              <n-grid :cols="2" :x-gap="12" :y-gap="8">
+              <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
                 <n-grid-item v-for="token in sortedTokens" :key="token.id">
                   <n-checkbox :value="token.id">{{ token.name }}</n-checkbox>
                 </n-grid-item>
@@ -2153,7 +2154,7 @@
                   :name="group.name"
                   :tab="group.label"
                 >
-                  <n-grid :cols="2" :x-gap="12" :y-gap="8">
+                  <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
                     <n-grid-item
                       v-for="task in groupedAvailableTasks[group.name]"
                       :key="task.value"
@@ -2173,7 +2174,7 @@
                   name="other"
                   tab="其他"
                 >
-                  <n-grid :cols="2" :x-gap="12" :y-gap="8">
+                  <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
                     <n-grid-item
                       v-for="task in groupedAvailableTasks['other']"
                       :key="task.value"
@@ -2220,7 +2221,7 @@
       style="width: 90%; max-width: 700px"
     >
       <div class="settings-content">
-        <n-grid :cols="2" :x-gap="24">
+        <n-grid :cols="isMobile ? 1 : 2" :x-gap="24">
           <!-- 左列：批量操作设置 -->
           <n-grid-item>
             <n-divider title-placement="left" style="margin: 1px 0 8px 0"
@@ -3068,7 +3069,7 @@
             </div>
             <div style="max-height: 150px; overflow-y: auto">
               <n-checkbox-group v-model:value="newGroupSelectedTokens">
-                <n-grid :cols="3" :x-gap="12" :y-gap="8">
+                <n-grid :cols="isMobile ? 1 : 3" :x-gap="12" :y-gap="8">
                   <n-grid-item v-for="token in sortedTokens" :key="token.id">
                     <n-checkbox :value="token.id">{{ token.name }}</n-checkbox>
                   </n-grid-item>
@@ -3296,6 +3297,7 @@ import { useMessage } from "naive-ui";
 import { Settings } from "@vicons/ionicons5";
 import { DEFAULT_WEIRD_TOWER_MAX_CLIMB } from "@/utils/towerClimbLimit.js";
 import { useKeepAlive } from "@/composables/useKeepAlive";
+import { useMobile } from "@/composables/useMobile";
 
 // Import batch task modules
 import {
@@ -3359,6 +3361,7 @@ import { merchantConfig, goldItemsConfig } from "@/utils/dreamConstants";
 // Initialize token store, message service, and task runner
 const tokenStore = useTokenStore();
 const message = useMessage();
+const { isMobile } = useMobile();
 const weirdTowerMaxClimb = ref(DEFAULT_WEIRD_TOWER_MAX_CLIMB);
 
 // 排序配置（从localStorage读取，与TokenImport共享）
@@ -7637,6 +7640,49 @@ const stopBatch = () => {
     .avatar-container {
       margin-bottom: 12px;
     }
+  }
+}
+
+/* ============================================================
+   移动端弹窗适配：所有设置/配置弹窗（任务设置、每账号齿轮设置、
+   梦境/江湖黑市/助威商店/黑市清单、任务模板、定时任务编辑）
+   ============================================================ */
+@media (max-width: 768px) {
+  /* 弹窗内容限高内部滚动，不再撑满整页 */
+  .settings-content {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* 设置行统一「左标签 + 右控件」，标签不再一字一行 */
+  .setting-item {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px;
+  }
+
+  .setting-item .setting-label {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .setting-item .n-input,
+  .setting-item .n-select,
+  .setting-item .n-input-number,
+  .setting-item .n-button {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* 开关行标签不换行 */
+  .switch-row .switch-label {
+    white-space: nowrap;
+  }
+
+  /* 黑市清单编辑行：窄屏单列堆叠（覆盖 inline 五列网格） */
+  .bm-edit-row {
+    grid-template-columns: 1fr !important;
   }
 }
 </style>
