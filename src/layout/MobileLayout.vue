@@ -160,6 +160,7 @@ import {
   Person,
   Time,
   Layers,
+  CloudCircleOutline,
   CheckmarkCircle
 } from '@vicons/ionicons5'
 
@@ -173,7 +174,8 @@ const bottomNavItems = [
   { path: '/mobile/game-features', label: '功能', icon: Grid },
   { path: '/mobile/tokens', label: '账号', icon: Person },
   { path: '/mobile/task-scheduler', label: '定时', icon: Time },
-  { path: '/mobile/batch-daily-tasks', label: '批量', icon: Layers }
+  { path: '/mobile/batch-daily-tasks', label: '批量', icon: Layers },
+  { path: '/mobile/cloud-tasks', label: '云端', icon: CloudCircleOutline }
 ]
 
 // 计算属性
@@ -568,7 +570,7 @@ const isActiveRoute = (path) => {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 12px;
+  padding: 6px 8px; // 6 项时收窄水平内边距，防止溢出胶囊
   text-decoration: none;
   color: var(--text-tertiary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

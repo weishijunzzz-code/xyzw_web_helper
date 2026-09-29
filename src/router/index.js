@@ -253,6 +253,15 @@ const my_routes = [
         }
       },
       {
+        path: 'cloud-tasks',
+        name: 'MobileCloudTasks',
+        component: safeImport(() => import('@/views/CloudTasks.vue')),
+        meta: {
+          title: '云端任务',
+          requiresCloudAuth: true
+        }
+      },
+      {
         path: 'profile',
         name: 'MobileProfile',
         component: safeImport(() => import('@/views/Profile.vue')),
@@ -333,6 +342,7 @@ const pcToMobileRouteMap = {
   'TaskScheduler': '/mobile/task-scheduler',
   'PushingLevels': '/mobile/pushing-levels',
   'LegionWar': '/mobile/legion-war',
+  'CloudTasks': '/mobile/cloud-tasks',
   'Profile': '/mobile/profile',
   'TokenImport': '/mobile/tokens'
 }
