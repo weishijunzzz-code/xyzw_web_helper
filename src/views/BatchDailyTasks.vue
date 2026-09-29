@@ -59,6 +59,19 @@
                   <n-button size="small">导入配置</n-button>
                 </n-upload>
               </div>
+              <div
+                class="setting-item"
+                style="
+                  flex-direction: row;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label class="setting-label">黑市采购清单配置</label>
+                <n-button size="small" @click="openBlackMarketPurchaseModal">
+                  点击配置
+                </n-button>
+              </div>
             </div>
           </div>
           <div
@@ -348,6 +361,13 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="openApplyLegionModal"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  批量申请俱乐部
+                </n-button>
+                <n-button
+                  size="small"
                   @click="batchStudy"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -363,6 +383,13 @@
                   "
                 >
                   一键竞技场战斗3次
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="store_syncpurchaseconfig"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键配置黑市清单
                 </n-button>
                 <n-button
                   size="small"
@@ -623,6 +650,13 @@
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
                   批量招募
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="openRedeemCodeModal"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键使用兑换码
                 </n-button>
                 <n-button
                   size="small"
@@ -1610,6 +1644,56 @@
       </div>
     </n-modal>
 
+    <!-- Redeem Code Modal -->
+    <n-modal
+      v-model:show="showRedeemCodeModal"
+      preset="card"
+      title="一键使用兑换码"
+      style="width: 90%; max-width: 560px"
+    >
+      <div class="settings-content">
+        <n-alert type="info" show-icon style="margin-bottom: 12px">
+          每行填写一个兑换码，也支持用空格、逗号或分号分隔。执行时会先读取角色已兑换记录，已使用的兑换码会自动跳过。
+        </n-alert>
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label class="setting-label">兑换码列表</label>
+            <n-input
+              v-model:value="batchSettings.cdkCodes"
+              type="textarea"
+              placeholder="例如：&#10;vip666&#10;VIP666&#10;happy666"
+              :autosize="{ minRows: 7, maxRows: 14 }"
+            />
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">平台类型</label>
+            <n-input
+              v-model:value="batchSettings.cdkPlatformType"
+              placeholder="默认 h5"
+            />
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: right">
+          <n-button
+            @click="showRedeemCodeModal = false"
+            style="margin-right: 12px"
+          >
+            取消
+          </n-button>
+          <n-button @click="saveRedeemCodeConfig" style="margin-right: 12px">
+            保存配置
+          </n-button>
+          <n-button
+            type="primary"
+            @click="executeRedeemCodes"
+            :disabled="!batchSettings.cdkCodes?.trim()"
+          >
+            开始兑换
+          </n-button>
+        </div>
+      </div>
+    </n-modal>
+
     <!-- Dream Buy Modal -->
     <n-modal
       v-model:show="showDreamBuyModal"
@@ -1663,6 +1747,83 @@
           <n-button type="primary" @click="saveDreamBuyConfig"
             >保存配置</n-button
           >
+        </div>
+      </div>
+    </n-modal>
+
+    <!-- Black Market Purchase Modal -->
+    <n-modal
+      v-model:show="showBlackMarketPurchaseModal"
+      preset="card"
+      title="黑市采购清单配置"
+      style="width: 90%; max-width: 760px"
+    >
+      <div class="settings-content">
+        <n-alert type="info" show-icon style="margin-bottom: 12px">
+          这里保存的是要下发到游戏服务器的黑市采购清单。每条填写 `itemId`
+          和折扣，折扣范围 1-10；保存后需手动执行“一键配置黑市清单”才会真正写入服务器。
+        </n-alert>
+
+        <div style="display: flex; gap: 12px; margin-bottom: 12px">
+          <n-button size="small" type="primary" @click="addBlackMarketPurchaseItem">
+            新增条目
+          </n-button>
+          <n-button size="small" @click="resetBlackMarketPurchaseList">
+            恢复默认
+          </n-button>
+        </div>
+
+        <n-alert type="warning" show-icon style="margin-bottom: 12px">
+          优先从下拉框选择常用物品，系统会自动填入 `itemId`、备注和推荐折扣；如果下拉里没有，再手动填写 `itemId`。
+        </n-alert>
+
+        <div
+          v-for="(item, index) in blackMarketPurchaseList"
+          :key="`${index}-${item.itemId ?? 'new'}`"
+          style="
+            display: grid;
+            grid-template-columns: 220px 120px 120px 1fr 96px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+          "
+        >
+          <n-select
+            :value="item.itemId"
+            :options="blackMarketItemOptions"
+            placeholder="选择常用物品"
+            clearable
+            filterable
+            @update:value="(value) => applyBlackMarketCatalogItem(index, value)"
+          />
+          <n-input-number
+            v-model:value="item.itemId"
+            placeholder="itemId"
+            :min="1"
+            :show-button="false"
+          />
+          <n-input-number
+            v-model:value="item.discount"
+            placeholder="折扣"
+            :min="1"
+            :max="10"
+          />
+          <n-input v-model:value="item.note" placeholder="备注（可选）" />
+          <n-button type="error" secondary @click="removeBlackMarketPurchaseItem(index)">
+            删除
+          </n-button>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px; text-align: right">
+          <n-button
+            @click="showBlackMarketPurchaseModal = false"
+            style="margin-right: 12px"
+          >
+            取消
+          </n-button>
+          <n-button type="primary" @click="saveBlackMarketPurchaseConfig">
+            保存配置
+          </n-button>
         </div>
       </div>
     </n-modal>
@@ -2036,6 +2197,21 @@
                 </n-tab-pane>
               </n-tabs>
             </n-checkbox-group>
+          </div>
+          <div
+            v-if="taskForm.selectedTasks.includes('batchApplyLegion')"
+            class="setting-item"
+          >
+            <label class="setting-label">目标俱乐部ID</label>
+            <n-input-number
+              v-model:value="taskForm.legionApplyTargetId"
+              placeholder="请输入目标俱乐部ID"
+              :min="1"
+              clearable
+            />
+            <div style="font-size: 12px; color: #86909c">
+              定时执行“批量申请俱乐部”时会对所有选中账号申请这个俱乐部。
+            </div>
           </div>
         </div>
         <div class="modal-actions" style="margin-top: 20px; text-align: right">
@@ -2681,6 +2857,130 @@
       </div>
     </n-modal>
 
+    <!-- Batch Apply Legion Modal -->
+    <n-modal
+      v-model:show="showApplyLegionModal"
+      preset="card"
+      title="批量申请俱乐部"
+      style="width: 90%; max-width: 720px"
+    >
+      <div class="settings-content">
+        <div class="settings-grid" style="display: block">
+          <div
+            style="
+              margin-bottom: 16px;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              flex-wrap: wrap;
+            "
+          >
+            <span style="font-size: 16px">俱乐部ID:</span>
+            <n-input-number
+              v-model:value="applyLegionTargetId"
+              placeholder="请输入俱乐部ID"
+              :min="1"
+              clearable
+              style="width: 180px"
+            />
+            <n-button
+              @click="fetchApplyLegionTargetInfo"
+              :loading="applyLegionLoading"
+            >
+              查询俱乐部
+            </n-button>
+            <n-button
+              type="primary"
+              @click="handleBatchApplyLegion"
+              :disabled="!applyLegionPreview?.id || isRunning"
+            >
+              发起申请
+            </n-button>
+          </div>
+
+          <div
+            style="
+              margin-bottom: 12px;
+              padding: 12px;
+              border-radius: 8px;
+              background: #f8f9fa;
+              border: 1px solid #e9ecef;
+              color: #666;
+            "
+          >
+            仅会对当前未加入俱乐部的账号发申请，已加入任意俱乐部的账号会自动跳过。
+          </div>
+
+          <n-alert
+            v-if="applyLegionError"
+            type="error"
+            :show-icon="true"
+            style="margin-bottom: 16px"
+          >
+            {{ applyLegionError }}
+          </n-alert>
+
+          <div
+            v-if="applyLegionPreview"
+            style="
+              display: flex;
+              gap: 16px;
+              align-items: flex-start;
+              padding: 16px;
+              border: 1px solid #e5e7eb;
+              border-radius: 10px;
+              background: white;
+            "
+          >
+            <img
+              :src="applyLegionPreview.logo || ''"
+              alt="俱乐部头像"
+              style="
+                width: 64px;
+                height: 64px;
+                border-radius: 50%;
+                object-fit: cover;
+                background: #f3f4f6;
+                border: 1px solid #e5e7eb;
+              "
+            />
+            <div style="flex: 1; min-width: 0">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  gap: 12px;
+                  flex-wrap: wrap;
+                  margin-bottom: 8px;
+                "
+              >
+                <div style="font-size: 18px; font-weight: 600">
+                  {{ applyLegionPreview.name }}
+                </div>
+                <n-tag type="info">ID: {{ applyLegionPreview.id }}</n-tag>
+              </div>
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; color: #666">
+                <span>等级: {{ applyLegionPreview.level || 0 }}</span>
+                <span>成员数: {{ applyLegionPreview.memberCount || 0 }}</span>
+                <span v-if="applyLegionPreview.chairmanName">
+                  会长: {{ applyLegionPreview.chairmanName }}
+                </span>
+              </div>
+              <div
+                v-if="applyLegionPreview.notice"
+                style="margin-top: 10px; color: #666; line-height: 1.5"
+              >
+                公告: {{ applyLegionPreview.notice }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px; text-align: right">
+          <n-button @click="showApplyLegionModal = false">关闭</n-button>
+        </div>
+      </div>
+    </n-modal>
+
     <!-- Token Group Management Modal -->
     <n-modal
       v-model:show="showGroupManageModal"
@@ -3045,6 +3345,12 @@ import {
   createTasksCampChallenge,
   createTasksXuanwuBlessing,
 } from "@/utils/batch";
+import {
+  blackMarketItemCatalog,
+  createBlackMarketPurchaseEntry,
+  defaultBlackMarketPurchaseList,
+  normalizeBlackMarketPurchaseList,
+} from "@/utils/batch/blackMarketConfig";
 
 import { merchantConfig, goldItemsConfig } from "@/utils/dreamConstants";
 
@@ -3452,6 +3758,86 @@ const handleWarGuessCheer = async () => {
   await batchWarGuessCheer(selectedWarGuessLegionId.value, warGuessCoin.value);
 };
 
+// ======================
+// Batch Apply Legion Feature
+// ======================
+const showApplyLegionModal = ref(false);
+const applyLegionTargetId = ref(null);
+const applyLegionPreview = ref(null);
+const applyLegionLoading = ref(false);
+const applyLegionError = ref("");
+
+const openApplyLegionModal = () => {
+  showApplyLegionModal.value = true;
+  applyLegionError.value = "";
+  applyLegionPreview.value = null;
+};
+
+const fetchApplyLegionTargetInfo = async () => {
+  if (selectedTokens.value.length === 0) {
+    message.warning("请先选择一个账号用于查询俱乐部");
+    return;
+  }
+
+  if (!applyLegionTargetId.value) {
+    message.warning("请先输入俱乐部ID");
+    return;
+  }
+
+  const tokenId = selectedTokens.value[0];
+  const token = tokens.value.find((t) => t.id === tokenId);
+
+  applyLegionLoading.value = true;
+  applyLegionError.value = "";
+  applyLegionPreview.value = null;
+
+  try {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `正在使用 ${token.name} 查询俱乐部 ${applyLegionTargetId.value}...`,
+      type: "info",
+    });
+
+    const status = tokenStore.getWebSocketStatus(tokenId);
+    if (status !== "connected") {
+      tokenStore.createWebSocketConnection(tokenId, token.token, token.wsUrl);
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    applyLegionPreview.value = await queryLegionById(
+      tokenId,
+      applyLegionTargetId.value,
+    );
+
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `已查询到目标俱乐部: ${applyLegionPreview.value.name} (${applyLegionPreview.value.id})`,
+      type: "success",
+    });
+  } catch (error) {
+    console.error("Fetch legion info error:", error);
+    applyLegionError.value = error.message || "查询俱乐部失败";
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `查询俱乐部失败: ${applyLegionError.value}`,
+      type: "error",
+    });
+    message.error(applyLegionError.value);
+  } finally {
+    applyLegionLoading.value = false;
+  }
+};
+
+const handleBatchApplyLegion = async () => {
+  if (!applyLegionPreview.value?.id) {
+    message.warning("请先查询并确认目标俱乐部");
+    return;
+  }
+
+  showApplyLegionModal.value = false;
+  await batchApplyLegion(applyLegionPreview.value.id);
+};
+
 // Settings Modal State
 const showSettingsModal = ref(false);
 const currentSettingsTokenId = ref(null);
@@ -3549,13 +3935,23 @@ for (const merchantId in goldItemsConfig) {
   });
 }
 
+const createDefaultBlackMarketPurchaseList = () =>
+  defaultBlackMarketPurchaseList.map((item) => ({ ...item }));
+
+const blackMarketItemOptions = blackMarketItemCatalog.map((item) => ({
+  label: `${item.label} (${item.itemId})`,
+  value: item.itemId,
+}));
+
 const batchSettings = reactive({
   dreamPurchaseList: defaultDreamPurchaseList,
-  blackMarketPurchaseList: [0, 1, 2, 3, 4, 5, 7], // 默认购买的黑市商品
+  blackMarketPurchaseList: createDefaultBlackMarketPurchaseList(),
   warguessStorePurchaseList: [7, 8, 9], // 默认购买的助威商店商品：随机红将碎片、白玉、军团币
   boxCount: 100,
   fishCount: 100,
   recruitCount: 100,
+  cdkCodes: "",
+  cdkPlatformType: "h5",
   defaultBoxType: 2001,
   defaultFishType: 1,
   targetBoxPoints: 1000,
@@ -3594,6 +3990,13 @@ const loadBatchSettings = () => {
       const parsed = JSON.parse(saved);
       Object.assign(batchSettings, parsed);
     }
+    batchSettings.cdkCodes = batchSettings.cdkCodes || "";
+    batchSettings.cdkPlatformType = batchSettings.cdkPlatformType || "h5";
+    batchSettings.blackMarketPurchaseList = normalizeBlackMarketPurchaseList(
+      batchSettings.blackMarketPurchaseList?.length
+        ? batchSettings.blackMarketPurchaseList
+        : createDefaultBlackMarketPurchaseList(),
+    );
   } catch (error) {
     console.error("Failed to load batch settings:", error);
   }
@@ -3948,6 +4351,7 @@ const batchJoinClub = async () => {
   const failCount = results.length - successCount;
   message.success(`批量加入俱乐部完成：成功 ${successCount} 个，失败 ${failCount} 个`);
 };
+const showRedeemCodeModal = ref(false); // Control the visibility of the redeem code modal
 const editingTask = ref(null); // Currently editing task
 const taskForm = reactive({
   name: "", // Task name
@@ -3956,6 +4360,7 @@ const taskForm = reactive({
   cronExpression: "", // Cron expression for complex scheduling
   selectedTokens: [], // Selected token IDs
   selectedTasks: [], // Selected task function names
+  legionApplyTargetId: null, // Target legion for batchApplyLegion
   enabled: true, // Whether the task is enabled
 });
 
@@ -3971,11 +4376,13 @@ const taskGroupDefinitions = [
       "resetBottles",
       "batchlingguanzi",
       "batchclubsign",
+      "batchApplyLegion",
       "batchStudy",
       "batcharenafight",
       "batchCampChallenge",
       "batchCampChallengePet",
       "batchCampClaimTasks",
+      "store_syncpurchaseconfig",
       "store_purchase",
       "collection_claimfreereward",
       "batchGachaDrawReward",
@@ -4014,6 +4421,7 @@ const taskGroupDefinitions = [
       "batchClaimBoxPointReward",
       "batchFish",
       "batchRecruit",
+      "batchRedeemCodes",
       "legion_storebuygoods",
       "batchClaimRollUpPack",
       "pkroomAppoint",
@@ -4130,6 +4538,7 @@ const openTaskModal = () => {
     cronExpression: "",
     selectedTokens: [],
     selectedTasks: [],
+    legionApplyTargetId: null,
     enabled: true,
   });
   taskScheduleSelectedGroupIds.value = [];
@@ -4155,6 +4564,16 @@ const editTask = (task) => {
       minutes,
     );
   }
+  Object.assign(taskForm, {
+    name: "",
+    runType: "daily",
+    runTime: undefined,
+    cronExpression: "",
+    selectedTokens: [],
+    selectedTasks: [],
+    legionApplyTargetId: null,
+    enabled: true,
+  });
   Object.assign(taskForm, taskData);
   taskScheduleSelectedGroupIds.value = [];
   showTaskModal.value = true;
@@ -4228,6 +4647,14 @@ const saveTask = () => {
     return;
   }
 
+  if (
+    taskForm.selectedTasks.includes("batchApplyLegion") &&
+    !Number(taskForm.legionApplyTargetId)
+  ) {
+    message.warning("请为批量申请俱乐部任务填写目标俱乐部ID");
+    return;
+  }
+
   // Format runTime as string for storage
   let formattedRunTime = null;
   if (taskForm.runType === "daily" && taskForm.runTime) {
@@ -4247,6 +4674,7 @@ const saveTask = () => {
     cronExpression: taskForm.runType === "cron" ? taskForm.cronExpression : "",
     selectedTokens: [...taskForm.selectedTokens],
     selectedTasks: [...taskForm.selectedTasks],
+    legionApplyTargetId: Number(taskForm.legionApplyTargetId || 0) || null,
     enabled: taskForm.enabled,
   };
 
@@ -4395,6 +4823,7 @@ const exportConfig = () => {
         recruitCount: batchSettings.recruitCount,
         defaultBoxType: batchSettings.defaultBoxType,
         defaultFishType: batchSettings.defaultFishType,
+        blackMarketPurchaseList: batchSettings.blackMarketPurchaseList,
         commandDelay: batchSettings.commandDelay,
         taskDelay: batchSettings.taskDelay,
         actionDelay: batchSettings.actionDelay,
@@ -4496,6 +4925,12 @@ const importConfig = async ({ file }) => {
         // Import batch settings if provided
         if (importData.batchSettings) {
           Object.assign(batchSettings, importData.batchSettings);
+          batchSettings.blackMarketPurchaseList =
+            normalizeBlackMarketPurchaseList(
+              batchSettings.blackMarketPurchaseList?.length
+                ? batchSettings.blackMarketPurchaseList
+                : createDefaultBlackMarketPurchaseList(),
+            );
           saveBatchSettings();
         }
 
@@ -4903,6 +5338,18 @@ const verifyTaskDependencies = async (task) => {
     }
   }
 
+  if (
+    task.selectedTasks.includes("batchApplyLegion") &&
+    !Number(task.legionApplyTargetId)
+  ) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 定时任务 ${task.name} 缺少目标俱乐部ID ===`,
+      type: "error",
+    });
+    return false;
+  }
+
   // 直接使用所有选中的token，WebSocket连接由具体任务函数内部管理
   // ensureConnection函数会自动处理并行连接和连接池管理
   const connectedTokens = task.selectedTokens.map((tokenId) => {
@@ -5068,6 +5515,8 @@ const executeScheduledTask = async (task) => {
           ].includes(taskName)
         ) {
           await taskFunction(true);
+        } else if (taskName === "batchApplyLegion") {
+          await taskFunction(task.legionApplyTargetId);
         } else {
           await taskFunction();
         }
@@ -5371,9 +5820,84 @@ const executeHelper = () => {
   }
 };
 
+const openRedeemCodeModal = () => {
+  loadBatchSettings();
+  batchSettings.cdkCodes = batchSettings.cdkCodes || "";
+  batchSettings.cdkPlatformType = batchSettings.cdkPlatformType || "h5";
+  showRedeemCodeModal.value = true;
+};
+
+const saveRedeemCodeConfig = () => {
+  batchSettings.cdkCodes = batchSettings.cdkCodes || "";
+  batchSettings.cdkPlatformType = batchSettings.cdkPlatformType || "h5";
+  localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
+  message.success("兑换码配置已保存");
+};
+
+const executeRedeemCodes = async () => {
+  if (!batchSettings.cdkCodes?.trim()) {
+    message.error("请先填写兑换码");
+    return;
+  }
+
+  saveRedeemCodeConfig();
+  showRedeemCodeModal.value = false;
+  await batchRedeemCodes();
+};
+
 // Dream Buy Modal Logic
 const showDreamBuyModal = ref(false);
 const dreamBuyList = ref([]);
+
+// Black Market Purchase Modal Logic
+const showBlackMarketPurchaseModal = ref(false);
+const blackMarketPurchaseList = ref(createDefaultBlackMarketPurchaseList());
+
+const openBlackMarketPurchaseModal = () => {
+  blackMarketPurchaseList.value = normalizeBlackMarketPurchaseList(
+    batchSettings.blackMarketPurchaseList?.length
+      ? batchSettings.blackMarketPurchaseList
+      : createDefaultBlackMarketPurchaseList(),
+  ).map((item) => ({ ...item }));
+
+  showBlackMarketPurchaseModal.value = true;
+};
+
+const addBlackMarketPurchaseItem = () => {
+  blackMarketPurchaseList.value.push(createBlackMarketPurchaseEntry());
+};
+
+const applyBlackMarketCatalogItem = (index, itemId) => {
+  blackMarketPurchaseList.value[index] = {
+    ...blackMarketPurchaseList.value[index],
+    ...createBlackMarketPurchaseEntry(itemId),
+  };
+};
+
+const removeBlackMarketPurchaseItem = (index) => {
+  blackMarketPurchaseList.value.splice(index, 1);
+};
+
+const resetBlackMarketPurchaseList = () => {
+  blackMarketPurchaseList.value = createDefaultBlackMarketPurchaseList();
+};
+
+const saveBlackMarketPurchaseConfig = () => {
+  const normalized = normalizeBlackMarketPurchaseList(
+    blackMarketPurchaseList.value,
+  );
+
+  if (normalized.length === 0) {
+    message.error("请至少配置一项黑市采购条目");
+    return;
+  }
+
+  batchSettings.blackMarketPurchaseList = normalized;
+  saveBatchSettings();
+
+  showBlackMarketPurchaseModal.value = false;
+  message.success("黑市采购清单已保存");
+};
 
 const openDreamBuyModal = () => {
   // Load saved settings
@@ -6321,7 +6845,9 @@ const {
   batchStudy,
   batchclubsign,
   batchLegionWarSignUp,
+  batchApplyLegion,
   batchWarGuessCheer,
+  queryLegionById,
 } = tasksHangUp;
 
 const tasksBottle = createTasksBottle(createTaskDeps());
@@ -6345,6 +6871,7 @@ const {
   batchClaimBoxPointReward,
   batchFish,
   batchRecruit,
+  batchRedeemCodes,
   batchHeroUpgrade,
   batchBookUpgrade,
   batchClaimStarRewards,
@@ -6368,6 +6895,7 @@ const tasksStore = createTasksStore(createTaskDeps());
 const {
   legion_storebuygoods,
   legionStoreBuySkinCoins,
+  store_syncpurchaseconfig,
   store_purchase,
   collection_claimfreereward,
   activity_claimrolluppack,

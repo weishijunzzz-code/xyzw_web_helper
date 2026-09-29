@@ -386,6 +386,189 @@ export function createTasksHangUp(deps) {
     message.success("批量俱乐部签到结束");
   };
 
+  const normalizeLegionPreview = (response, fallbackLegionId = 0) => {
+    const raw = response?.legionData || response?.info || response?.legionInfo || null;
+    if (!raw) return null;
+
+    const members = raw.members || {};
+    const memberCount =
+      raw.memberCount ||
+      raw.memNum ||
+      raw.memberNum ||
+      raw.num ||
+      Object.keys(members).length ||
+      0;
+
+    return {
+      id: Number(raw.id || raw.legionId || fallbackLegionId || 0),
+      name: raw.name || raw.legionName || "未知俱乐部",
+      logo: raw.logo || raw.icon || raw.headImg || raw.badge || "",
+      level: Number(raw.level || raw.lv || 0),
+      memberCount: Number(memberCount || 0),
+      chairmanName:
+        raw.chairmanName ||
+        raw.leaderName ||
+        raw.masterName ||
+        raw.ownerName ||
+        "",
+      notice: raw.notice || raw.declaration || raw.announcement || "",
+      raw,
+    };
+  };
+
+  const extractRoleLegionId = (roleInfo) => {
+    const role = roleInfo?.role || roleInfo?.roleInfo?.role || roleInfo?.roleInfo || {};
+    const legionId =
+      role.legionId ??
+      role.legionID ??
+      role.clubId ??
+      role.clubID ??
+      role.guildId ??
+      role.guildID ??
+      0;
+    return Number(legionId || 0);
+  };
+
+  const queryLegionById = async (tokenId, legionId) => {
+    const normalizedLegionId = Number(legionId);
+    if (!normalizedLegionId) {
+      throw new Error("俱乐部ID无效");
+    }
+
+    const response = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "legion_getinfobyid",
+      { legionId: normalizedLegionId },
+      5000,
+    );
+
+    const preview = normalizeLegionPreview(response, normalizedLegionId);
+    if (!preview?.id) {
+      throw new Error("未查询到俱乐部信息");
+    }
+
+    return preview;
+  };
+
+  /**
+   * 批量申请俱乐部
+   * @param {number|string} legionId - 目标俱乐部ID
+   */
+  const batchApplyLegion = async (legionId) => {
+    const targetLegionId = Number(legionId);
+
+    if (selectedTokens.value.length === 0) {
+      message.warning("请先选择账号");
+      return;
+    }
+
+    if (!targetLegionId) {
+      message.warning("请先输入目标俱乐部ID");
+      return;
+    }
+
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始申请俱乐部: ${token.name} -> ${targetLegionId} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        const targetLegion = await queryLegionById(tokenId, targetLegionId);
+        const roleInfo = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "role_getroleinfo",
+          {},
+          5000,
+        );
+
+        const currentLegionId = extractRoleLegionId(roleInfo);
+        if (currentLegionId > 0) {
+          if (currentLegionId === targetLegionId) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 已在目标俱乐部 [${targetLegion.name}] 中，跳过 ===`,
+              type: "warning",
+            });
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 当前已加入其他俱乐部 (${currentLegionId})，跳过 ===`,
+              type: "warning",
+            });
+          }
+          tokenStatus.value[tokenId] = "completed";
+          return;
+        }
+
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_applyjoin",
+          { legionId: targetLegionId },
+          5000,
+        );
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 已向 [${targetLegion.name}] 发起申请 ===`,
+          type: "success",
+        });
+        tokenStatus.value[tokenId] = "completed";
+      } catch (error) {
+        console.error(error);
+        const errorMessage = error?.message || "未知错误";
+
+        if (
+          errorMessage.includes("已加入") ||
+          errorMessage.includes("已经加入") ||
+          errorMessage.includes("当前已加入")
+        ) {
+          tokenStatus.value[tokenId] = "completed";
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 已加入俱乐部，跳过申请 ===`,
+            type: "warning",
+          });
+        } else {
+          tokenStatus.value[tokenId] = "failed";
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 申请俱乐部失败: ${errorMessage}`,
+            type: "error",
+          });
+        }
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量申请俱乐部结束");
+  };
+
   /**
    * 一键盐场报名
    */
@@ -612,6 +795,8 @@ export function createTasksHangUp(deps) {
     batchStudy,
     batchclubsign,
     batchLegionWarSignUp,
+    batchApplyLegion,
     batchWarGuessCheer,
+    queryLegionById,
   };
 }

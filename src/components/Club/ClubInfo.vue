@@ -111,7 +111,7 @@
           </div>
         </n-modal>
       </div>
-      <div v-else>
+      <div v-else class="club-layout">
         <div class="toolbar">
           <n-space size="small">
             <!-- 申请列表按钮 -->
@@ -232,7 +232,13 @@
           </div>
         </n-modal>
 
-        <n-tabs v-model:value="activeTab" type="line" animated>
+        <!-- 左：俱乐部信息 -->
+        <div class="club-main">
+          <div class="section-head">
+            <span class="section-title">俱乐部资料</span>
+            <span class="section-sub">概览 · 成员 · 申请 · 怪异塔</span>
+          </div>
+          <n-tabs v-model:value="activeTab" type="line" animated>
           <n-tab-pane name="overview" tab="概览" display-directive="show:lazy">
             <div class="overview">
               <n-grid x-gap="12" y-gap="12" cols="2" item-responsive>
@@ -413,6 +419,21 @@
           </n-tab-pane>
 
         </n-tabs>
+        </div>
+
+        <!-- 右：盐场岛屿信息（所在岛屿 + 岛屿体系 + 实时榜单） -->
+        <aside class="club-side">
+          <div class="section-head">
+            <span class="section-title">盐场积分榜</span>
+            <span class="section-sub">所在岛屿 · 实时排名</span>
+          </div>
+          <div class="club-side-body">
+            <n-alert v-if="childError" type="error" :bordered="false" title="盐场面板渲染失败">
+              <div style="font-size: 12px; word-break: break-all;">{{ childError }}</div>
+            </n-alert>
+            <ClubIslandPanel v-else />
+          </div>
+        </aside>
       </div>
     </template>
   </MyCard>
@@ -697,13 +718,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, h, reactive, watch, nextTick } from "vue";
+import { ref, computed, h, watch, nextTick, onErrorCaptured } from "vue";
 import { useMessage, useDialog, NDataTable, NModal, NAvatar, NTag, NDescriptions, NDescriptionsItem, NButton, NSpace, NIcon, NGrid, NGi, NStatistic, NThing, NAlert, NCollapse, NCollapseItem, NCard } from "naive-ui";
 import { useTokenStore } from "@/stores/tokenStore";
-import { Copy, Refresh, People, BarChart, Flame, Skull, Megaphone, Person, ShieldCheckmark } from "@vicons/ionicons5";
+import { Copy, Refresh, BarChart, Flame, Skull, Megaphone, Person, ShieldCheckmark } from "@vicons/ionicons5";
 import ClubHistoryRecords from "./ClubHistoryRecords.vue";
 import ClubWeirdTowerInfo from "./ClubWeirdTowerInfo.vue";
-import { $emit } from "@/stores/events";
+import ClubIslandPanel from "./ClubIslandPanel.vue";
 import { HERO_DICT, legacycolor, HeroFillInfo, getLineupType, LINEUP_RULES } from "@/utils/HeroList";
 import html2canvas from 'html2canvas';
 import { downloadCanvasAsImage } from "@/utils/imageExport";
@@ -711,6 +732,21 @@ import { downloadCanvasAsImage } from "@/utils/imageExport";
 const tokenStore = useTokenStore();
 const message = useMessage();
 const dialog = useDialog();
+
+/**
+ * 错误边界：截获子组件（尤其是右栏盐场面板）的渲染错误。
+ * 目的有二：
+ *  1. 避免子组件抛错把整张俱乐部卡片带崩（表现为「俱乐部板块打不开」）；
+ *  2. 把错误原文显示在界面上，便于定位，而不用翻控制台。
+ */
+const childError = ref("");
+onErrorCaptured((err, _instance, info) => {
+  console.error("[ClubInfo] 子组件渲染错误:", info, err);
+  if (!childError.value) {
+    childError.value = `${info}｜${err?.message || err}`;
+  }
+  return false; // 阻止继续向上冒泡，保住父级渲染
+});
 
 const info = computed(() => tokenStore.gameData?.legionInfo || null);
 const club = computed(() => info.value?.info || null);
@@ -1650,12 +1686,6 @@ watch(activeTab, (val) => {
   }
 });
 
-// 组件卸载时移除事件监听器
-onUnmounted(() => {
-  // 移除申请列表响应事件监听（已改为Promise直接处理，不再监听）
-  // $emit.off("legion_applylistresp", handleApplyListResp);
-});
-
 // 今日是否已进行俱乐部签到
 const legionSignedIn = computed(() => {
   const ts = Number(
@@ -1955,8 +1985,11 @@ const clubOverview = computed(() => {
   const currentHP = formatNumber(boss.currentHP || 0);
   const currentBossId = boss.bossId || 0;
   const unfoughtBosses = [];
+  // ⚠️ statistics 必须带可选链：`role` 存在但 `statistics` 缺失时，
+  // `role?.statistics[...]` 会抛 TypeError，导致整个俱乐部面板渲染失败（打不开）。
+  const roleStats = tokenStore.gameData?.roleInfo?.role?.statistics || {};
   for (let k = 1; k <= 150; k++) {
-    if (!tokenStore.gameData?.roleInfo?.role?.statistics[`lb:${k}`]) {
+    if (!roleStats[`lb:${k}`]) {
       unfoughtBosses.push(k);
     }
   }
@@ -2008,62 +2041,114 @@ const formatNumber = (num) => {
 
 <style scoped lang="scss">
 .club-info {
+  /* 与身份牌保持一致：跨满父级 grid 的所有列（.identity-embedded 同为 1 / -1） */
+  grid-column: 1 / -1;
+
+  /* 俱乐部信息（左） + 盐场岛屿积分榜（右），整卡占满宽度 */
+  .club-layout {
+    display: flex;
+    /* toolbar 需独占一行，故允许换行 */
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+    width: 100%;
+  }
+
+  /* 左右两栏共用的定义标题 */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+  }
+
+  .section-title {
+    position: relative;
+    padding-left: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--n-text-color, #333);
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 14px;
+      border-radius: 2px;
+      background: #18a058;
+    }
+  }
+
+  .section-sub {
+    font-size: 12px;
+    color: rgba(128, 128, 128, 0.75);
+  }
+
+  .club-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .club-side {
+    flex: 0 0 380px;
+    width: 380px;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    /* 标题固定，只有榜单区滚动 */
+    max-height: calc(100vh - 32px);
+  }
+
+  .club-side-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* 积分榜可独立滑动，不牵动左侧俱乐部信息 */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+  }
+
+  /* 窄屏改为上下堆叠 */
+  @media (max-width: 1280px) {
+    .club-layout {
+      flex-direction: column;
+    }
+
+    .club-side {
+      flex: 1 1 auto;
+      width: 100%;
+      position: static;
+      /* 堆叠后不再限高，交给页面整体滚动 */
+      max-height: none;
+    }
+
+    .club-side-body {
+      overflow-y: visible;
+    }
+
+    /* 主轴变纵向，flex-basis:100% 会被解释成高度，必须还原 */
+    .toolbar {
+      flex: initial;
+    }
+  }
+
   .toolbar {
     display: flex;
     justify-content: flex-end;
     margin-bottom: var(--spacing-sm);
+    /* 作为 .club-layout 的 flex 子项时独占整行，避免与左右两栏抢宽度 */
+    flex: 0 0 100%;
   }
 
   .overview {
     /* No specific styles needed for grid layout */
-  }
-
-  .members-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .member-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 8px;
-    border-radius: 8px;
-    background: var(--bg-tertiary);
-  }
-
-  .member-row .left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .member-row .right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-secondary);
-  }
-
-  .member-row .name {
-    font-weight: var(--font-weight-medium);
-  }
-
-  .member-row .power {
-    font-feature-settings: "tnum" 1;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .member-row .red-quench {
-    font-feature-settings: "tnum" 1;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .hint {
-    margin-top: 8px;
-    color: var(--text-tertiary);
-    font-size: var(--font-size-xs);
   }
 
   .empty-club {
@@ -2073,51 +2158,6 @@ const formatNumber = (num) => {
   .empty-club .actions {
     margin-top: var(--spacing-sm);
   }
-}
-
-.status-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 8px;
-  margin-right: var(--spacing-md);
-}
-
-.status-info {
-  flex: 1;
-
-  h3 {
-    margin: 0;
-    font-size: var(--font-size-lg);
-  }
-
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-  }
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-
-  &.active {
-    background: rgba(24, 160, 88, 0.12);
-    color: var(--success-color);
-  }
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
 }
 
 /* 申请列表样式 */
@@ -2170,12 +2210,6 @@ const formatNumber = (num) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 选中状态 */
-.apply-item-selected {
-  background: var(--primary-color-light);
-  border-left: 3px solid var(--primary-color);
-}
-
 .apply-left {
   display: flex;
   align-items: center;
@@ -2220,23 +2254,6 @@ const formatNumber = (num) => {
 .apply-right {
   display: flex;
   gap: 8px;
-}
-
-/* 批量操作栏样式 */
-.apply-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-}
-
-.selected-info {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-left: auto;
 }
 
 /* 滚动条样式 */

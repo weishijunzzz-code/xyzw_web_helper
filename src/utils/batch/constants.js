@@ -127,6 +127,7 @@ export const availableTasks = [
   { label: "领取宝箱积分", value: "batchClaimBoxPointReward" },
   { label: "批量钓鱼", value: "batchFish" },
   { label: "批量招募", value: "batchRecruit" },
+  { label: "一键使用兑换码", value: "batchRedeemCodes" },
   { label: "一键宝库前3层", value: "batchbaoku13" },
   { label: "一键宝库4,5层", value: "batchbaoku45" },
   { label: "一键梦境", value: "batchmengjing" },
@@ -134,6 +135,7 @@ export const availableTasks = [
   { label: "营地挑战", value: "batchCampChallenge" },
   { label: "营地挑战宠物", value: "batchCampChallengePet" },
   { label: "领取营地任务奖励", value: "batchCampClaimTasks" },
+  { label: "批量申请俱乐部", value: "batchApplyLegion" },
   { label: "一键竞技场战斗3次", value: "batcharenafight" },
   { label: "一键钓鱼补齐", value: "batchTopUpFish" },
   { label: "一键竞技场补齐", value: "batchTopUpArena" },
@@ -144,6 +146,7 @@ export const availableTasks = [
   { label: "一键换皮闯关", value: "skinChallenge" },
   { label: "一键购买四圣碎片", value: "legion_storebuygoods" },
   { label: "一键购买俱乐部5皮肤币", value: "legionStoreBuySkinCoins" },
+  { label: "一键配置黑市采购清单", value: "store_syncpurchaseconfig" },
   { label: "一键黑市采购", value: "store_purchase" },
   { label: "一键购买江湖黑市", value: "activityShopBuy" },
   { label: "免费领取珍宝阁", value: "collection_claimfreereward" },
@@ -230,6 +233,8 @@ export const defaultBatchSettings = {
   connectionTimeout: 10000,
   reconnectDelay: 1000,
   maxLogEntries: 1000,
+  cdkCodes: "",
+  cdkPlatformType: "h5",
 };
 
 // 默认模板
@@ -255,6 +260,7 @@ export const defaultTaskForm = {
   cronExpression: "",
   selectedTokens: [],
   selectedTasks: [],
+  legionApplyTargetId: null,
   enabled: true,
 };
 

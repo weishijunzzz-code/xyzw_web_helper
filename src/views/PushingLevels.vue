@@ -154,6 +154,13 @@
           <n-space size="small">
             <n-tag size="small" type="success">{{ card.wins }}胜</n-tag>
             <n-tag size="small" type="error">{{ card.losses }}负</n-tag>
+            <n-tag
+              size="small"
+              type="warning"
+              title="连续失败次数：自上次胜利起累计，达到最大失败次数后自动停止推图"
+            >
+              连败 {{ card.retries }}
+            </n-tag>
           </n-space>
         </div>
         <div class="level-line">当前关卡：{{ card.level > 0 ? `${card.level}关` : "--" }}</div>
@@ -359,6 +366,8 @@ const runningCards = computed(() => {
         wins: state.wins || 0,
         losses: state.losses || 0,
         battles: state.battles || 0,
+        // 连续失败次数：自上次胜利起累计（胜利清零、失败与异常累加）
+        retries: state.retries || 0,
         countdown: state.countdown || 0,
         totalTime: state.totalTime || 0,
         lastError: state.lastError || "",
