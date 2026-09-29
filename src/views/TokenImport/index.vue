@@ -1,15 +1,23 @@
 <template>
   <div class="token-import-page">
     <div class="container">
-      <!-- 页面头部 -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-top">
-            <img src="/icons/xiaoyugan.png" alt="XYZW" class="brand-logo" />
-            <!-- 主题切换按钮 -->
-            <ThemeToggle />
-          </div>
-          <h1>游戏Token管理</h1>
+      <!-- 统计概览 -->
+      <div class="stats-row" :class="{ 'is-mobile': isMobile }">
+        <div class="stat-card">
+          <span class="stat-value">{{ tokenStore.gameTokens.length }}</span>
+          <span class="stat-label">本地账号</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value stat-on">{{ onlineCount }}</span>
+          <span class="stat-label">在线</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ offlineCount }}</span>
+          <span class="stat-label">离线</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ multiGameSelectedTokenIds.size }}</span>
+          <span class="stat-label">已选（批量进入游戏）</span>
         </div>
       </div>
 
@@ -173,6 +181,8 @@
               清空
             </n-button>
             <n-button
+                size="small"
+                secondary
                 type="warning"
                 :disabled="
                 multiGameSelectedTokenIds.size === 0 || isOpeningMultiGame
@@ -187,7 +197,7 @@
               </template>
               批量进入游戏（{{ multiGameSelectedTokenIds.size }}）
             </n-button>
-            <n-button type="info" @click="openGame">
+            <n-button quaternary @click="openGame">
               <template #icon>
                 <n-icon>
                   <GameController />
@@ -195,7 +205,7 @@
               </template>
               打开游戏
             </n-button>
-            <n-button v-if="!isMobile" type="success" @click="goToDashboard" size="small">
+            <n-button v-if="!isMobile" quaternary @click="goToDashboard" size="small">
               <template #icon>
                 <n-icon>
                   <List />
@@ -203,7 +213,7 @@
               </template>
               批量
             </n-button>
-            <n-button type="warning" @click="goToPushingLevels">
+            <n-button quaternary @click="goToPushingLevels">
               <template #icon>
                 <n-icon>
                   <Rocket />
@@ -1286,6 +1296,17 @@ const getConnectionStatus = (tokenId) => {
   return tokenStore.getWebSocketStatus(tokenId);
 };
 
+// 统计概览：在线 / 离线
+const onlineCount = computed(
+  () =>
+    tokenStore.gameTokens.filter(
+      (t) => getConnectionStatus(t.id) === "connected",
+    ).length,
+);
+const offlineCount = computed(
+  () => tokenStore.gameTokens.length - onlineCount.value,
+);
+
 const getConnectionStatusText = (tokenId) => {
   const status = getConnectionStatus(tokenId);
   const statusMap = {
@@ -2175,63 +2196,61 @@ onUnmounted(() => {
 .token-import-page {
   min-height: 100vh;
   background: var(--bg-secondary);
-  padding: var(--spacing-xl) 0;
+  padding: var(--spacing-lg) 0;
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: var(--spacing-2xl);
+/* ============ 统计概览（与云端任务页同范式） ============ */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+
+  &.is-mobile {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
 }
 
-.header-content {
+.stat-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-md);
-  color: var(--text-primary);
-}
-
-.header-top {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  position: relative;
-  width: 100%;
-  justify-content: center;
-}
-
-.theme-toggle {
-  position: absolute;
-  right: 0;
-  background: var(--bg-tertiary);
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--bg-primary);
   border: 1px solid var(--border-light);
-}
-
-.brand-logo {
-  width: 64px;
-  height: 64px;
   border-radius: var(--border-radius-medium);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-.header-content h1 {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  margin: 0;
+.stat-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
   color: var(--text-primary);
 }
 
-.header-content p {
-  font-size: var(--font-size-lg);
-  margin: 0;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+.stat-value.stat-on {
+  color: var(--success-color);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.stats-row.is-mobile .stat-card {
+  padding: 10px 12px;
+}
+
+.stats-row.is-mobile .stat-value {
+  font-size: 20px;
 }
 
 .import-section {
@@ -3021,10 +3040,75 @@ onUnmounted(() => {
 }
 
 :global([data-theme="dark"] .token-import-modal .arco-modal) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: var(--bg-primary) !important;
+}
+
+/* ============ 视觉打磨层（SaaS 范式，后声明覆盖） ============ */
+
+/* 状态徽章统一为彩色圆点 */
+.token-import-page .ant-badge-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* 列表行：细描边 + 悬停反馈，选中态主色描边 */
+.tokens-list .n-card {
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-medium);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-light);
+  }
+
+  &.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  }
+}
+
+/* 卡片视图：去紫蓝渐变，统一中性描边卡片 */
+.tokens-grid .token-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-medium);
+}
+
+.tokens-grid .token-card:hover {
+  border-color: var(--border-medium);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-light);
 }
 
 [data-theme="dark"] .token-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
+}
+
+/* 存储类型 / 区服标签弱化为小胶囊 */
+.token-import-page .n-tag {
+  font-weight: 500;
+}
+
+/* 工具栏与列表间距收敛 */
+.tokens-section {
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: none;
+  max-height: none;
+}
+
+.section-header {
+  position: static;
+  padding: 0 0 var(--spacing-md);
+  margin: 0 0 var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* 选中高亮 */
+.tokens-list .n-card.active,
+.tokens-grid .token-card.active {
+  background: var(--primary-color-light);
 }
 </style>
