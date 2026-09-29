@@ -153,7 +153,7 @@
                 style="width: 104px"
                 :to="false"
                 :consistent-menu-width="false"
-                @update:value="(val) => { sortConfig.field = val; localStorage.setItem('tokenSortConfig', JSON.stringify(sortConfig)); }"
+                @update:value="updateSortField"
               />
               <n-button
                 size="tiny"
@@ -866,6 +866,12 @@ const sortOptions = [
 // 切换排序方向
 const toggleSortDirection = () => {
   sortConfig.value.direction = sortConfig.value.direction === "asc" ? "desc" : "asc";
+  localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
+};
+
+// 排序字段变更（模板内不能直接访问 localStorage 全局，须经 script 函数）
+const updateSortField = (val) => {
+  sortConfig.value.field = val;
   localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
 };
 
