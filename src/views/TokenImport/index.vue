@@ -150,7 +150,9 @@
                 v-model:value="sortConfig.field"
                 :options="sortOptions"
                 size="tiny"
-                style="width: 80px"
+                style="width: 104px"
+                :to="false"
+                :consistent-menu-width="false"
                 @update:value="(val) => { sortConfig.field = val; localStorage.setItem('tokenSortConfig', JSON.stringify(sortConfig)); }"
               />
               <n-button
@@ -1130,11 +1132,9 @@ const refreshToken = async (token) => {
         lastRefreshed: Date.now(),
       });
       message.success("combUser Token刷新成功");
-    } else if (
-      token.importMethod === "wxQrcode" ||
-      token.importMethod === "bin" ||
-      token.importMethod === "mobile"
-    ) {
+    } else {
+      // 凭证数据（userToken/BIN）就是登录凭证：本地存有即可向官方登录接口换新 token，
+      // 不按导入方式限制（手动导入但之前存过 BIN 的账号同样可刷）
       let userToken = await getArrayBuffer(token.id);
       let usedOldKey = false;
       if (!userToken) {
@@ -1153,17 +1153,26 @@ const refreshToken = async (token) => {
           console.log("已迁移IndexedDB数据:", token.name, "->", token.id);
         }
         message.success("Token刷新成功");
-      }
-    } else {
-      dialog.info({
-        title: "重新获取Token",
-        content: `Token "${token.name}" 是通过微信扫码登录导入的，没有配置自动刷新地址。
+      } else {
+        // 本地没有任何登录凭证数据，无法自动刷新
+        const methodText = {
+          manual: "手动输入",
+          url: "URL 获取",
+          wxQrcode: "微信扫码",
+          mobile: "手机号验证码",
+          bin: "BIN 文件",
+          singlebin: "单角色 BIN",
+          wxForceLogout: "强制下线",
+        }[token.importMethod] || token.importMethod || "未知方式";
+        dialog.info({
+          title: "重新获取Token",
+          content: `Token "${token.name}"（${methodText}导入）本地没有可用的登录凭证数据（userToken），无法自动刷新。
 
 请选择以下操作：
 1. 重新手动导入新的Token
 2. 尝试重新连接现有Token`,
-        positiveText: "重新导入",
-        negativeText: "重新连接",
+          positiveText: "重新导入",
+          negativeText: "重新连接",
         onPositiveClick: () => {
           showImportForm.value = true;
           importMethod.value = "manual";
@@ -1190,6 +1199,7 @@ const refreshToken = async (token) => {
       });
       return;
     }
+  }
 
     // 如果当前token有连接，需要重新连接
     if (tokenStore.getWebSocketStatus(token.id) === "connected") {
