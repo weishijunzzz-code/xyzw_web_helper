@@ -1,5 +1,4 @@
-﻿﻿# ============================================================
-# xyzw-web-helper Windows 一键部署脚本（三合一）
+﻿# xyzw-web-helper Windows 一键部署脚本（三合一）
 #
 # 用法：
 #   .\deploy.ps1 -Pack        # 本地（开发机）：打包 zip（自动排除 node_modules/运行数据）
