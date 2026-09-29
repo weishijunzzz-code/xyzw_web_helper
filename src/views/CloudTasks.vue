@@ -33,62 +33,111 @@
 
     <!-- 已登录：云端任务管理 -->
     <template v-else>
+      <!-- 页头：标题 + 连接状态 + 退出 -->
       <div class="cloud-header">
-        <div>
+        <div class="cloud-header-text">
           <h2 class="cloud-title">云端任务</h2>
           <span class="cloud-sub">
-            后端 7×24 自动执行，关掉浏览器任务照跑 · 当前用户：{{ user?.username }}
+            后端 7×24 自动执行，关掉浏览器任务照跑 · {{ user?.username }}
           </span>
         </div>
-        <n-space>
-          <n-tag :type="pushConnected ? 'success' : 'error'" size="small">
+        <div class="cloud-header-actions">
+          <span class="push-pill" :class="{ on: pushConnected }">
+            <span class="push-dot" />
             {{ pushConnected ? "实时推送已连接" : "推送未连接" }}
-          </n-tag>
-          <n-button size="small" @click="logout">退出登录</n-button>
-        </n-space>
+          </span>
+          <n-button size="small" quaternary @click="logout">退出登录</n-button>
+        </div>
+      </div>
+
+      <!-- 统计概览 -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-value">{{ cloudTokens.length }}</span>
+          <span class="stat-label">云端账号</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value stat-on">{{ connectedCount }}</span>
+          <span class="stat-label">已连接</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ scheduledTasks.length }}</span>
+          <span class="stat-label">定时任务</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ enabledTaskCount }}</span>
+          <span class="stat-label">已启用</span>
+        </div>
       </div>
 
       <!-- Token 同步 -->
-      <n-card title="账号同步（本地 → 云端）" size="small" class="section-card">
-        <n-space align="center">
-          <span>
-            本地 {{ localTokens.length }} 个账号 · 云端已有
-            {{ cloudTokens.length }} 个
-          </span>
-          <n-button
-            type="primary"
-            size="small"
-            :loading="syncing"
-            :disabled="localTokens.length === 0"
-            @click="syncAllTokens"
-          >
-            全部同步到云端（含 BIN）
-          </n-button>
-          <n-button size="small" :loading="loadingCloud" @click="refreshCloudTokens">
-            刷新云端列表
-          </n-button>
-        </n-space>
-        <n-alert v-if="syncResult" :type="syncResult.type" style="margin-top: 10px">
+      <n-card class="section-card card-sync" :bordered="true">
+        <template #header>
+          <div class="card-head">
+            <span class="card-head-title">账号同步</span>
+            <span class="card-head-sub">
+              本地 {{ localTokens.length }} 个 · 云端 {{ cloudTokens.length }} 个
+            </span>
+          </div>
+        </template>
+        <template #header-extra>
+          <div class="card-head-actions">
+            <n-input
+              v-model:value="accountSearch"
+              size="small"
+              placeholder="搜索账号 / 服"
+              clearable
+              class="account-search"
+            >
+              <template #prefix>
+                <n-icon size="14"><Search /></n-icon>
+              </template>
+            </n-input>
+            <n-button
+              size="small"
+              type="primary"
+              :loading="syncing"
+              :disabled="localTokens.length === 0"
+              @click="syncAllTokens"
+            >
+              全部同步（含 BIN）
+            </n-button>
+            <n-button size="small" :loading="loadingCloud" @click="refreshCloudTokens">
+              刷新
+            </n-button>
+          </div>
+        </template>
+
+        <n-alert
+          v-if="syncResult"
+          :type="syncResult.type"
+          size="small"
+          style="margin-bottom: 10px"
+          closable
+          @close="syncResult = null"
+        >
           {{ syncResult.message }}
         </n-alert>
 
-        <div v-if="cloudTokens.length" class="cloud-token-list">
+        <div v-if="filteredCloudTokens.length" class="account-list">
           <div
-            v-for="t in cloudTokens"
+            v-for="t in filteredCloudTokens"
             :key="t.id"
-            class="cloud-token-row"
+            class="account-row"
           >
-            <span class="ct-name" :title="t.name">{{ t.name }}</span>
-            <span class="ct-server">{{ t.server || "-" }}</span>
-            <span
-              class="ct-status"
-              :class="`is-${connStatus[t.id] || 'disconnected'}`"
-            >
+            <span class="account-avatar">{{ avatarChar(t.name) }}</span>
+            <div class="account-info">
+              <span class="account-name" :title="t.name">{{ t.name }}</span>
+              <span v-if="t.server" class="account-server">{{ t.server }}</span>
+            </div>
+            <span class="account-status" :class="`is-${connStatus[t.id] || 'disconnected'}`">
+              <span class="status-dot" />
               {{ statusText(connStatus[t.id]) }}
             </span>
             <n-button
               size="tiny"
               :type="connStatus[t.id] === 'connected' ? 'warning' : 'success'"
+              secondary
               @click="toggleConnect(t)"
             >
               {{ connStatus[t.id] === "connected" ? "断开" : "连接" }}
@@ -101,14 +150,26 @@
             </n-popconfirm>
           </div>
         </div>
+        <n-empty
+          v-else
+          size="small"
+          :description="cloudTokens.length ? '没有匹配的账号' : '云端还没有账号，可从本地全部同步'"
+          style="padding: 24px 0"
+        />
       </n-card>
 
       <!-- 定时任务 -->
-      <n-card title="定时任务（服务端 croner，时区 Asia/Shanghai）" size="small" class="section-card">
+      <n-card class="section-card card-sched" :bordered="true">
+        <template #header>
+          <div class="card-head">
+            <span class="card-head-title">定时任务</span>
+            <span class="card-head-sub">服务端 croner · 时区 Asia/Shanghai</span>
+          </div>
+        </template>
         <template #header-extra>
-          <n-space size="small">
-            <n-button size="tiny" @click="exportTasks">导出任务</n-button>
-            <n-button size="tiny" @click="fileInput?.click()">导入任务</n-button>
+          <div class="card-head-actions">
+            <n-button size="small" @click="exportTasks">导出</n-button>
+            <n-button size="small" @click="fileInput?.click()">导入</n-button>
             <input
               ref="fileInput"
               type="file"
@@ -116,14 +177,17 @@
               style="display: none"
               @change="onImportFile"
             />
-          </n-space>
+          </div>
         </template>
-        <n-collapse v-model:expanded-names="collapseExpanded">
-          <n-collapse-item
-            :title="editingTaskId ? `编辑定时任务：${taskForm.name || editingTaskId}` : '新建定时任务'"
-            name="create"
-          >
-            <n-form label-placement="left" label-width="90">
+
+        <n-collapse v-model:expanded-names="collapseExpanded" class="task-create">
+          <n-collapse-item name="create">
+            <template #header>
+              <n-button size="small" type="primary" ghost @click.stop="toggleCreateForm">
+                {{ editingTaskId ? "编辑定时任务：" + (taskForm.name || editingTaskId) : "+ 新建定时任务" }}
+              </n-button>
+            </template>
+            <n-form :label-placement="isMobile ? 'top' : 'left'" :label-width="isMobile ? undefined : 90">
               <n-form-item label="任务名称">
                 <n-input v-model:value="taskForm.name" placeholder="如：每天日常" />
               </n-form-item>
@@ -177,33 +241,42 @@
           </n-collapse-item>
         </n-collapse>
 
-        <div v-if="scheduledTasks.length" class="sched-list">
-          <div v-for="t in scheduledTasks" :key="t.id" class="sched-row">
-            <div class="sched-info">
-              <div class="sched-name">
-                {{ t.name || t.id }}
-                <n-tag size="tiny" :type="t.enabled ? 'success' : 'default'">
+        <div v-if="scheduledTasks.length" class="task-list">
+          <div
+            v-for="t in scheduledTasks"
+            :key="t.id"
+            class="task-card"
+            :class="{ 'is-disabled': t.enabled === false }"
+          >
+            <div class="task-main">
+              <div class="task-title-row">
+                <span class="task-name">{{ t.name || t.id }}</span>
+                <n-tag size="tiny" :type="t.enabled ? 'success' : 'default'" :bordered="false">
                   {{ t.enabled ? "已启用" : "已停用" }}
                 </n-tag>
               </div>
-              <div class="sched-meta">
-                cron: <code>{{ t.cron }}</code> · 账号 {{ (t.tokenIds || []).length }} 个 ·
-                任务 {{ (t.settings?.selectedTasks || []).length }} 项
+              <div class="task-meta">
+                <code class="task-cron">{{ t.cron }}</code>
+                <span class="meta-chip">账号 {{ (t.tokenIds || []).length }}</span>
+                <span class="meta-chip">任务 {{ (t.settings?.selectedTasks || []).length }} 项</span>
                 <template v-if="t.lastRun">
-                  · 上次执行 {{ formatTime(t.lastRun) }}
+                  <span class="meta-chip">{{ formatTime(t.lastRun) }}</span>
                   <n-tag
                     size="tiny"
                     :type="t.lastResult?.success ? 'success' : 'error'"
+                    :bordered="false"
                   >
                     {{ t.lastResult?.success ? "成功" : "失败" }}
                   </n-tag>
                 </template>
               </div>
             </div>
-            <n-space size="small">
-              <n-button size="tiny" @click="startEditTask(t)">编辑</n-button>
-              <n-button size="tiny" @click="runTaskNow(t)">立即执行</n-button>
-              <n-button size="tiny" @click="toggleTask(t)">
+            <div class="task-actions">
+              <n-button size="tiny" quaternary @click="startEditTask(t)">编辑</n-button>
+              <n-button size="tiny" quaternary type="primary" @click="runTaskNow(t)">
+                立即执行
+              </n-button>
+              <n-button size="tiny" quaternary @click="toggleTask(t)">
                 {{ t.enabled ? "停用" : "启用" }}
               </n-button>
               <n-popconfirm @positive-click="removeTask(t)">
@@ -212,14 +285,27 @@
                 </template>
                 确定删除该定时任务？
               </n-popconfirm>
-            </n-space>
+            </div>
           </div>
         </div>
-        <n-empty v-else description="还没有定时任务，展开上方表单创建" style="margin: 16px 0" />
+        <n-empty
+          v-else
+          size="small"
+          description="还没有定时任务，点击上方「新建定时任务」创建"
+          style="padding: 24px 0"
+        />
       </n-card>
 
       <!-- 执行日志 -->
-      <n-card title="实时执行日志" size="small" class="section-card">
+      <n-card class="section-card card-log" :bordered="true">
+        <template #header>
+          <div class="card-head">
+            <span class="card-head-title">实时执行日志</span>
+            <span class="push-pill mini" :class="{ on: pushConnected }">
+              <span class="push-dot" />
+            </span>
+          </div>
+        </template>
         <template #header-extra>
           <n-button size="tiny" quaternary @click="logs = []">清空</n-button>
         </template>
@@ -252,6 +338,7 @@ import {
   NEmpty,
   NForm,
   NFormItem,
+  NIcon,
   NInput,
   NPopconfirm,
   NSelect,
@@ -259,16 +346,20 @@ import {
   NSwitch,
   NTag,
 } from "naive-ui";
+import { Search } from "@vicons/ionicons5";
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
 import { useCloudAuth } from "@/stores/cloudAuth";
+import { useMobile } from "@/composables/useMobile";
 import {
   ServerPushClient,
   scheduledTasksApi,
   statusApi,
   tokenApi,
 } from "@/api/serverApi";
+
+const { isMobile } = useMobile();
 
 const { getArrayBuffer } = useIndexedDB();
 const tokenStore = useTokenStore();
@@ -317,6 +408,38 @@ const loadingCloud = ref(false);
 const syncing = ref(false);
 const syncResult = ref(null);
 const connStatus = ref({});
+const accountSearch = ref("");
+
+const filteredCloudTokens = computed(() => {
+  const q = accountSearch.value.trim().toLowerCase();
+  if (!q) return cloudTokens.value;
+  return cloudTokens.value.filter(
+    (t) =>
+      t.name?.toLowerCase().includes(q) || String(t.server || "").toLowerCase().includes(q),
+  );
+});
+
+const connectedCount = computed(
+  () =>
+    Object.values(connStatus.value).filter((s) => s === "connected").length,
+);
+
+const enabledTaskCount = computed(
+  () => scheduledTasks.value.filter((t) => t.enabled !== false).length,
+);
+
+function avatarChar(name) {
+  const n = String(name || "?").trim();
+  return n.charAt(0).toUpperCase() || "?";
+}
+
+function toggleCreateForm() {
+  collapseExpanded.value = collapseExpanded.value.includes("create")
+    ? editingTaskId.value
+      ? ["create"]
+      : []
+    : ["create"];
+}
 
 async function refreshCloudTokens() {
   loadingCloud.value = true;
@@ -770,124 +893,329 @@ onUnmounted(() => {
 
 <style scoped>
 .cloud-tasks {
-  max-width: 1080px;
-  padding: 16px;
+  max-width: 1280px;
+  padding: var(--spacing-md);
   margin: 0 auto;
 }
 
-.auth-wrap {
-  display: grid;
-  place-items: center;
-  min-height: 60vh;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 380px;
-}
-
+/* ============ 页头 ============ */
 .cloud-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
 
 .cloud-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .cloud-sub {
-  color: var(--text-muted, #889);
+  display: block;
+  margin-top: 2px;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
-.section-card {
-  margin-bottom: 16px;
-}
-
-.cloud-token-list {
-  margin-top: 12px;
-}
-
-.cloud-token-row {
+.cloud-header-actions {
   display: flex;
-  gap: 10px;
   align-items: center;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--border-color, #eee);
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
-.ct-name {
+/* 推送状态胶囊 */
+.push-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--error-color);
+  background: rgba(208, 48, 80, 0.08);
+  border-radius: var(--border-radius-full);
+}
+
+.push-pill.on {
+  color: var(--success-color);
+  background: rgba(24, 160, 88, 0.1);
+}
+
+.push-pill .push-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.push-pill.mini {
+  padding: 0;
+  background: transparent;
+}
+
+/* ============ 统计概览 ============ */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-medium);
+}
+
+.stat-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.stat-value.stat-on {
+  color: var(--success-color);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ============ 卡片头部 ============ */
+.card-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
   min-width: 0;
-  max-width: 220px;
+}
+
+.card-head-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.card-head-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.card-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.account-search {
+  width: 170px;
+}
+
+/* ============ 账号列表 ============ */
+.account-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  padding: 8px 6px;
+  border-radius: var(--border-radius-small);
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.15s ease;
+}
+
+.account-row:last-child {
+  border-bottom: none;
+}
+
+.account-row:hover {
+  background: var(--bg-secondary);
+}
+
+.account-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.account-name {
   overflow: hidden;
   font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ct-server {
-  flex: 1;
-  color: var(--text-muted, #889);
+.account-server {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-full);
+}
+
+.account-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
   font-size: 12px;
+  color: var(--text-tertiary);
 }
 
-.ct-status {
-  font-size: 12px;
+.account-status .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-disabled);
 }
 
-.ct-status.is-connected {
-  color: #18a058;
+.account-status.is-connected {
+  color: var(--success-color);
 }
 
-.ct-status.is-connecting {
-  color: #f0a020;
+.account-status.is-connected .status-dot {
+  background: var(--success-color);
 }
 
-.ct-status.is-error {
-  color: #d03050;
+.account-status.is-connecting {
+  color: var(--warning-color);
 }
 
-.ct-status.is-disconnected {
-  color: #999;
+.account-status.is-connecting .status-dot {
+  background: var(--warning-color);
 }
 
-.sched-list {
-  margin-top: 12px;
+.account-status.is-error {
+  color: var(--error-color);
 }
 
-.sched-row {
+.account-status.is-error .status-dot {
+  background: var(--error-color);
+}
+
+/* ============ 定时任务列表 ============ */
+.task-create {
+  margin-bottom: var(--spacing-sm);
+}
+
+.task-list {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.task-card {
+  display: flex;
+  gap: var(--spacing-md);
   align-items: center;
   justify-content: space-between;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--border-color, #eee);
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--success-color);
+  border-radius: var(--border-radius-small);
+  background: var(--bg-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.sched-name {
+.task-card:hover {
+  border-color: var(--primary-color-light);
+  box-shadow: var(--shadow-light);
+}
+
+.task-card.is-disabled {
+  border-left-color: var(--text-disabled);
+  opacity: 0.75;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title-row {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sm);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.task-name {
   font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
-.sched-meta {
-  margin-top: 2px;
-  color: var(--text-muted, #889);
+.task-meta {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
   font-size: 12px;
+  color: var(--text-secondary);
 }
 
+.task-cron {
+  padding: 1px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-small);
+}
+
+.meta-chip {
+  white-space: nowrap;
+}
+
+.task-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* ============ 日志面板 ============ */
 .log-panel {
   max-height: 320px;
-  padding: 8px;
+  padding: var(--spacing-sm);
   overflow-y: auto;
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  background: var(--log-bg, #0d1117);
-  border-radius: 6px;
+  background: var(--log-bg);
+  border-radius: var(--border-radius-md);
 }
 
 .log-line {
@@ -897,7 +1225,7 @@ onUnmounted(() => {
 }
 
 .log-time {
-  margin-right: 8px;
+  margin-right: var(--spacing-sm);
   color: #7d8590;
 }
 
@@ -914,8 +1242,124 @@ onUnmounted(() => {
 }
 
 .log-empty {
-  padding: 16px;
+  padding: var(--spacing-md);
   color: #7d8590;
   text-align: center;
+}
+
+/* ============ 未登录 ============ */
+.auth-wrap {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.section-card {
+  margin-bottom: var(--spacing-md);
+}
+
+/* ============ 桌面端双栏：左配置 + 右常驻日志 ============ */
+@media (min-width: 769px) {
+  .cloud-tasks {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+    grid-template-areas:
+      "header header"
+      "stats stats"
+      "sync log"
+      "sched log";
+    gap: var(--spacing-md);
+    align-items: start;
+  }
+
+  .section-card {
+    margin-bottom: 0;
+  }
+
+  .cloud-header {
+    grid-area: header;
+  }
+
+  .stats-row {
+    grid-area: stats;
+  }
+
+  .card-sync {
+    grid-area: sync;
+  }
+
+  .card-sched {
+    grid-area: sched;
+  }
+
+  /* 日志面板常驻右侧，滚动时吸顶，随视口高度撑满 */
+  .card-log {
+    grid-area: log;
+    position: sticky;
+    top: 76px;
+  }
+
+  .card-log .log-panel {
+    max-height: calc(100vh - 250px);
+    min-height: 200px;
+  }
+}
+
+/* ============ 移动端 ============ */
+@media (max-width: 768px) {
+  .cloud-tasks {
+    padding: var(--spacing-sm);
+  }
+
+  .cloud-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+
+  .stat-card {
+    padding: 10px 12px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .account-search {
+    flex: 1;
+    width: auto;
+  }
+
+  .card-head-actions {
+    width: 100%;
+  }
+
+  /* 窄屏下卡片头部（标题 + 操作区）允许换行，避免标题被挤成竖排 */
+  .section-card :deep(.n-card-header) {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .task-card {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .task-main {
+    flex: 1 1 100%;
+  }
+
+  .task-actions {
+    margin-left: auto;
+  }
 }
 </style>

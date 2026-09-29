@@ -1,109 +1,98 @@
 <template>
-  <div class="default-layout">
-    <!-- 顶部导航 -->
-    <nav class="dashboard-nav">
-      <div class="nav-container">
-        <div class="nav-brand">
-          <img src="/icons/xiaoyugan.png" alt="XYZW" class="brand-logo" />
-          <div class="brand-toggle" @click="isMobileMenuOpen = true">
-            <n-icon>
+  <div class="default-layout" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+    <!-- 左侧导航栏（桌面端） -->
+    <aside
+      class="layout-sidebar"
+      :class="{ collapsed: isSidebarCollapsed }"
+    >
+      <div class="sidebar-brand">
+        <img src="/icons/xiaoyugan.png" alt="XYZW" class="brand-logo" />
+        <span v-if="!isSidebarCollapsed" class="brand-text">XYZW 控制台</span>
+      </div>
+
+      <div class="sidebar-nav">
+        <template v-for="group in sidebarGroups" :key="group.label">
+          <div v-if="!isSidebarCollapsed" class="nav-group-label">
+            {{ group.label }}
+          </div>
+          <router-link
+            v-for="item in group.items"
+            :key="item.path"
+            :to="item.path"
+            class="side-item"
+            active-class="active"
+            :title="isSidebarCollapsed ? item.label : undefined"
+          >
+            <n-icon size="20">
+              <component :is="item.icon" />
+            </n-icon>
+            <span v-if="!isSidebarCollapsed" class="side-label">{{ item.label }}</span>
+          </router-link>
+        </template>
+      </div>
+
+      <div class="sidebar-footer">
+        <!-- 调试设置 - 仅在原生应用显示 -->
+        <div
+          v-if="isNativePlatform"
+          class="side-item debug-item"
+          :title="isSidebarCollapsed ? '调试设置' : undefined"
+          @click="openDebugSettings"
+        >
+          <n-icon size="20">
+            <BugOutline />
+          </n-icon>
+          <span v-if="!isSidebarCollapsed" class="side-label">调试设置</span>
+          <n-switch
+            v-if="!isSidebarCollapsed"
+            :value="debugEnabled"
+            size="small"
+            @update:value="toggleDebug"
+            @click.stop
+          />
+        </div>
+        <button
+          class="side-item collapse-toggle"
+          :title="isSidebarCollapsed ? '展开菜单' : '收起菜单'"
+          @click="toggleSidebar"
+        >
+          <n-icon size="20" class="collapse-icon" :class="{ 'is-collapsed': isSidebarCollapsed }">
+            <ChevronBack />
+          </n-icon>
+          <span v-if="!isSidebarCollapsed" class="side-label">收起菜单</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 右侧主体 -->
+    <div class="layout-body">
+      <!-- 顶部工具栏 -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <!-- 移动端汉堡菜单 -->
+          <button
+            v-if="isMobile"
+            class="topbar-icon-btn"
+            @click="isMobileMenuOpen = true"
+          >
+            <n-icon size="20">
               <Menu />
             </n-icon>
-            <span class="brand-text">XYZW 控制台</span>
-          </div>
-        </div>
-
-        <div class="nav-menu">
-          <router-link
-            to="/admin/dashboard"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <Home />
-            </n-icon>
-            <span>首页</span>
-          </router-link>
-          <router-link
-            to="/admin/game-features"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <Cube />
-            </n-icon>
-            <span>游戏功能</span>
-          </router-link>
-          <router-link to="/tokens" class="nav-item" active-class="active">
-            <n-icon>
-              <PersonCircle />
-            </n-icon>
-            <span>Token管理</span>
-          </router-link>
-          <router-link
-            to="/admin/batch-daily-tasks"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <Layers />
-            </n-icon>
-            <span>批量日常</span>
-          </router-link>
-          <router-link
-            to="/admin/PushingLevels"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <ArrowUpCircle />
-            </n-icon>
-            <span>主线推关</span>
-          </router-link>
-          <router-link
-            to="/admin/task-scheduler"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <TimerOutline />
-            </n-icon>
-            <span>定时任务</span>
-          </router-link>
-          <router-link
-            to="/admin/cloud-tasks"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <CloudCircleOutline />
-            </n-icon>
-            <span>云端任务</span>
-          </router-link>
-          <router-link
-            to="/admin/message-test"
-            class="nav-item"
-            active-class="active"
-          >
-            <n-icon>
-              <ChatbubbleEllipsesSharp />
-            </n-icon>
-            <span>消息测试</span>
-          </router-link>
-          <router-link to="/admin/legion-war" class="nav-item" active-class="active"  v-if="isNowInLegionWarTime()" >
-            <n-icon>
-              <LockOpen />
-            </n-icon>
-            <span>实时盐场</span>
+          </button>
+          <router-link to="/admin/dashboard" class="topbar-brand" v-if="isMobile">
+            <img src="/icons/xiaoyugan.png" alt="XYZW" class="brand-logo-sm" />
+            <span>XYZW</span>
           </router-link>
         </div>
 
-        <div class="nav-user">
+        <div class="topbar-right">
           <!-- 全局搜索 -->
-          <GlobalSearch ref="globalSearchRef" />
+          <GlobalSearch ref="globalSearchRef" class="topbar-search" />
 
           <!-- 活动日历 -->
-          <ActivityCalendarDropdown />
+          <span class="topbar-calendar">
+            <ActivityCalendarDropdown />
+          </span>
 
           <!-- 主题设置按钮 -->
           <ThemeSettings />
@@ -224,15 +213,28 @@
           </div>
 
           <n-dropdown :options="userMenuOptions" @select="handleUserAction">
-            <div class="user-menu-trigger">
+            <div class="topbar-icon-btn">
               <n-icon size="18">
                 <Settings />
               </n-icon>
             </div>
           </n-dropdown>
         </div>
+      </header>
+
+      <!-- 面包屑导航 -->
+      <BreadcrumbNav v-if="!isMobile" />
+
+      <div class="main" :class="{ 'has-bottom-nav': isMobile }">
+        <router-view v-slot="{ Component, route }">
+          <PageTransition :name="route.meta.transition || 'fade-slide'">
+            <component :is="Component" :key="route.path" />
+          </PageTransition>
+        </router-view>
       </div>
-    </nav>
+    </div>
+
+    <!-- 移动端抽屉菜单 -->
     <n-drawer
       v-model:show="isMobileMenuOpen"
       placement="left"
@@ -240,105 +242,16 @@
     >
       <div class="drawer-menu">
         <router-link
-          to="/admin/dashboard"
+          v-for="item in drawerItems"
+          :key="item.path"
+          :to="item.path"
           class="drawer-item"
           @click="isMobileMenuOpen = false"
         >
           <n-icon>
-            <Home />
+            <component :is="item.icon" />
           </n-icon>
-          <span>首页</span>
-        </router-link>
-        <router-link
-          to="/admin/game-features"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <Cube />
-          </n-icon>
-          <span>游戏功能</span>
-        </router-link>
-        <router-link
-          to="/tokens"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <PersonCircle />
-          </n-icon>
-          <span>Token管理</span>
-        </router-link>
-        <router-link
-          to="/admin/daily-tasks"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <Settings />
-          </n-icon>
-          <span>任务管理</span>
-        </router-link>
-        <router-link
-          to="/admin/batch-daily-tasks"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <Layers />
-          </n-icon>
-          <span>批量日常</span>
-        </router-link>
-        <router-link
-          to="/admin/PushingLevels"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <ArrowUpCircle />
-          </n-icon>
-          <span>主线推关</span>
-        </router-link>
-        <router-link
-          to="/admin/task-scheduler"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <TimerOutline />
-          </n-icon>
-          <span>定时任务</span>
-        </router-link>
-        <router-link
-          to="/admin/message-test"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <ChatbubbleEllipsesSharp />
-          </n-icon>
-          <span>消息测试</span>
-        </router-link>
-        <router-link
-          to="/admin/legion-war"
-          class="drawer-item"
-          v-if="isNowInLegionWarTime()"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <LockOpen />
-          </n-icon>
-          <span>实时盐场</span>
-        </router-link>
-        <router-link
-          to="/admin/profile"
-          class="drawer-item"
-          @click="isMobileMenuOpen = false"
-        >
-          <n-icon>
-            <Settings />
-          </n-icon>
-          <span>个人设置</span>
+          <span>{{ item.label }}</span>
         </router-link>
         <!-- 调试设置 - 仅在原生应用显示 -->
         <div
@@ -359,16 +272,6 @@
         </div>
       </div>
     </n-drawer>
-    <!-- 面包屑导航 -->
-    <BreadcrumbNav v-if="!isMobile" />
-
-    <div class="main" :class="{ 'has-bottom-nav': isMobile }">
-      <router-view v-slot="{ Component, route }">
-        <PageTransition :name="route.meta.transition || 'fade-slide'">
-          <component :is="Component" :key="route.path" />
-        </PageTransition>
-      </router-view>
-    </div>
 
     <!-- 移动端底部导航栏 -->
     <nav class="mobile-bottom-nav" v-if="isMobile">
@@ -406,14 +309,13 @@ import {
   Cube,
   Settings,
   ChevronDown,
+  ChevronBack,
   ChatbubbleEllipsesSharp,
-  LockClosedSharp,LockOpen,
+  LockOpen,
   Menu,
   Layers,
-  Grid,
   Apps,
   Person,
-  Mail,
   Search,
   Checkmark,
   Refresh,
@@ -442,10 +344,59 @@ const tokenSearchQuery = ref('');
 const selectedGroup = ref('all');
 
 // 移动端检测
-const { isMobile, isMobileLayout } = useMobile();
+const { isMobile } = useMobile();
 
 // 启用键盘快捷键
 useKeyboardShortcuts();
+
+// ========== 侧边栏折叠状态（localStorage 持久化） ==========
+const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed';
+const isSidebarCollapsed = ref(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true');
+
+const toggleSidebar = () => {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value;
+  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isSidebarCollapsed.value));
+};
+
+// ========== 侧边栏导航分组 ==========
+const sidebarGroups = computed(() => [
+  {
+    label: '总览',
+    items: [
+      { path: '/admin/dashboard', label: '首页', icon: Home },
+    ],
+  },
+  {
+    label: '游戏',
+    items: [
+      { path: '/admin/game-features', label: '游戏功能', icon: Cube },
+      { path: '/admin/PushingLevels', label: '主线推关', icon: ArrowUpCircle },
+      ...(isNowInLegionWarTime()
+        ? [{ path: '/admin/legion-war', label: '实时盐场', icon: LockOpen }]
+        : []),
+    ],
+  },
+  {
+    label: '任务',
+    items: [
+      { path: '/admin/daily-tasks', label: '日常任务', icon: Settings },
+      { path: '/admin/batch-daily-tasks', label: '批量日常', icon: Layers },
+      { path: '/admin/task-scheduler', label: '定时任务', icon: TimerOutline },
+      { path: '/admin/cloud-tasks', label: '云端任务', icon: CloudCircleOutline },
+    ],
+  },
+  {
+    label: '管理',
+    items: [
+      { path: '/tokens', label: 'Token管理', icon: PersonCircle },
+      { path: '/admin/profile', label: '个人设置', icon: Person },
+      { path: '/admin/message-test', label: '消息测试', icon: ChatbubbleEllipsesSharp },
+    ],
+  },
+]);
+
+// 移动端抽屉菜单项（与侧边栏一致 + 分组平铺）
+const drawerItems = computed(() => sidebarGroups.value.flatMap(g => g.items));
 
 // 判断token是否在线的辅助函数
 const isTokenOnline = (tokenId) => {
@@ -607,172 +558,263 @@ loadDebugState();
 </script>
 
 <style scoped lang="scss">
-// 根容器
+// ============================================================
+// 布局骨架：左侧可折叠侧边栏 + 顶部工具栏（现代控制台风格）
+// ============================================================
 .default-layout {
+  display: flex;
   width: 100%;
+  min-height: 100vh;
   box-sizing: border-box;
 }
 
-// 导航栏 - 使用新的设计令牌
-.dashboard-nav {
-  background: var(--color-bg-primary);
-  border-bottom: 1px solid var(--color-border-default);
-  padding: 0 var(--space-6);
-  position: sticky;
+// ---------- 侧边栏 ----------
+.layout-sidebar {
+  position: fixed;
   top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
+  bottom: 0;
+  left: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  background: var(--color-bg-elevated, var(--bg-primary));
+  border-right: 1px solid var(--color-border-default, var(--border-light));
+  transition: width 0.2s var(--ease-out, ease);
 
-.dark .dashboard-nav {
-  background: rgba(15, 23, 42, 0.9);
-}
+  &.collapsed {
+    width: 64px;
 
-// 主内容区域
-.main {
-  position: relative;
-  z-index: 1;
-  background: var(--color-bg-primary);
-  min-height: calc(100vh - 64px);
-  width: 100%;
-  box-sizing: border-box;
+    .sidebar-brand {
+      justify-content: center;
+      padding: 0;
+    }
 
-  @media (max-width: 768px) {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    .sidebar-nav {
+      padding: var(--space-2, 8px) var(--space-2, 8px);
+    }
+
+    .side-item {
+      justify-content: center;
+      padding: 10px 0;
+    }
   }
 }
 
-.nav-container {
+.sidebar-brand {
   display: flex;
   align-items: center;
-  height: 64px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-right: var(--space-8);
+  gap: var(--space-2, 8px);
+  height: 60px;
+  padding: 0 var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border-default, var(--border-light));
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .brand-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--duration-normal) var(--ease-out);
-
-  &:hover {
-    transform: scale(1.05) rotate(5deg);
-  }
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-lg, 8px);
+  flex-shrink: 0;
 }
 
 .brand-text {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-400));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--font-size-lg, 16px);
+  font-weight: var(--font-weight-bold, 700);
+  white-space: nowrap;
+  color: var(--color-text-primary, var(--text-primary));
 }
 
-.brand-toggle {
-  display: none;
-  align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
-  font-size: var(--font-size-xl);
-}
-
-.brand-toggle .n-icon {
-  font-size: inherit;
-}
-
-.nav-menu {
-  display: flex;
-  gap: var(--space-2);
+.sidebar-nav {
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-3, 12px) var(--space-2, 8px);
 }
 
-.nav-item {
+.nav-group-label {
+  padding: var(--space-3, 12px) var(--space-3, 12px) var(--space-1, 4px);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold, 600);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary, var(--text-tertiary));
+  white-space: nowrap;
+}
+
+.side-item {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-secondary);
+  gap: var(--space-3, 12px);
+  padding: 10px var(--space-3, 12px);
+  margin-bottom: 2px;
+  border-radius: var(--radius-lg, 8px);
+  color: var(--color-text-secondary, var(--text-secondary));
   text-decoration: none;
-  font-weight: var(--font-weight-medium);
-  transition: all var(--duration-fast) var(--ease-out);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background: var(--color-primary-500);
-    transition: all var(--duration-normal) var(--ease-out-expo);
-    transform: translateX(-50%);
-  }
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-medium, 500);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+  width: 100%;
 
   &:hover {
-    background: var(--color-bg-secondary);
-    color: var(--color-text-primary);
-
-    &::before {
-      width: 60%;
-    }
+    background: var(--color-bg-secondary, var(--bg-secondary));
+    color: var(--color-text-primary, var(--text-primary));
   }
 
   &.active {
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
+    background: var(--primary-color-light);
+    color: var(--primary-color);
+    font-weight: var(--font-weight-semibold, 600);
+  }
 
-    &::before {
-      width: 60%;
-    }
+  .n-icon {
+    flex-shrink: 0;
   }
 }
 
-.nav-user {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
+.side-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: var(--space-2, 8px);
+  border-top: 1px solid var(--color-border-default, var(--border-light));
+}
+
+.debug-item {
+  .n-switch {
+    margin-left: auto;
+  }
+}
+
+.collapse-toggle {
+  color: var(--color-text-tertiary, var(--text-tertiary));
+
+  &:hover {
+    color: var(--color-text-primary, var(--text-primary));
+  }
+}
+
+.collapse-icon {
+  transition: transform 0.2s ease;
+
+  &.is-collapsed {
+    transform: rotate(180deg);
+  }
+}
+
+// ---------- 右侧主体 ----------
+.layout-body {
+  flex: 1;
+  min-width: 0;
+  margin-left: 240px;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.2s var(--ease-out, ease);
+}
+
+.default-layout.sidebar-collapsed .layout-body {
+  margin-left: 64px;
+}
+
+@media (max-width: 768px) {
+  // 移动端无侧边栏，折叠态的偏移一并归零
+  .default-layout.sidebar-collapsed .layout-body {
+    margin-left: 0;
+  }
+}
+
+// ---------- 顶部工具栏 ----------
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4, 16px);
+  height: 60px;
+  padding: 0 var(--space-6, 24px);
+  background: var(--color-bg-elevated, var(--bg-primary));
+  border-bottom: 1px solid var(--color-border-default, var(--border-light));
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  text-decoration: none;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text-primary, var(--text-primary));
+}
+
+.brand-logo-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md, 6px);
+}
+
+.topbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--radius-lg, 8px);
+  background: transparent;
+  color: var(--color-text-secondary, var(--text-secondary));
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--color-bg-secondary, var(--bg-secondary));
+    color: var(--color-text-primary, var(--text-primary));
+  }
+}
+
+// ---------- Token 选择器 ----------
 .token-selector {
   .token-trigger {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-xl);
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-default);
+    gap: var(--space-3, 12px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-bg-secondary, var(--bg-secondary));
+    border: 1px solid var(--color-border-default, var(--border-light));
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-out-expo);
-    box-shadow: var(--shadow-sm);
+    transition: all 0.15s ease;
 
     &:hover,
     &.is-active {
-      border-color: var(--color-primary-300);
-      background: var(--color-bg-tertiary);
-      box-shadow: var(--shadow-md);
-      transform: translateY(-1px);
+      border-color: var(--color-border-active, var(--primary-color));
+      background: var(--color-bg-tertiary, var(--bg-tertiary));
     }
 
     .token-name {
-      font-size: var(--font-size-sm);
-      color: var(--text-primary);
+      font-size: var(--font-size-sm, 14px);
+      color: var(--color-text-primary, var(--text-primary));
       max-width: 120px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -780,7 +822,7 @@ loadDebugState();
     }
 
     .token-chevron {
-      transition: transform var(--transition-fast);
+      transition: transform var(--transition-fast, 0.15s ease);
 
       &.is-open {
         transform: rotate(180deg);
@@ -892,117 +934,70 @@ loadDebugState();
   border-top: 1px solid var(--border-light);
 }
 
-.user-menu-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--border-radius-medium);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-  color: var(--text-secondary);
+// ---------- 主内容区域 ----------
+.main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  background: var(--color-bg-secondary, var(--bg-secondary));
+  min-height: calc(100vh - 60px);
+  width: 100%;
+  box-sizing: border-box;
 
-  &:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+  @media (max-width: 768px) {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
+    // 内容紧凑缩放：与 MobileLayout 一致，只缩放页面内容，
+    // 顶栏/面包屑/底部导航保持原生尺寸（云端任务等 admin 页面在手机上的密度来源）
+    --mobile-content-zoom: 0.6;
+
+    > :deep(*) {
+      zoom: var(--mobile-content-zoom);
+    }
   }
 }
 
-.username {
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-}
-
+// ---------- 移动端 ----------
 @media (max-width: 768px) {
-  .dashboard-nav {
+  // 侧边栏隐藏，改用抽屉 + 底部导航
+  .layout-sidebar {
+    display: none;
+  }
+
+  .layout-body {
+    margin-left: 0;
+  }
+
+  .topbar {
+    height: 56px;
     padding: 0 var(--spacing-sm);
-    width: 100%;
-    box-sizing: border-box;
   }
 
-  .nav-container {
-    height: 56px;
-    width: 100%;
-    padding: 0;
-  }
-
-  .nav-item span {
+  // 顶栏收敛：隐藏搜索入口（保留抽屉导航与快捷键），日历只留图标
+  .topbar-search {
     display: none;
+
+    // GlobalSearch 为多根组件时 class 不会透传，兜底隐藏内部触发按钮
+    :deep(.search-trigger) {
+      display: none;
+    }
   }
 
-  .nav-menu {
-    display: none;
-  }
+  .topbar-calendar {
+    :deep(.activity-calendar-btn) {
+      padding: 0;
+      border-radius: var(--radius-md, 6px);
+    }
 
-  .nav-item {
-    padding: var(--spacing-sm);
-    flex: 0 0 auto;
-  }
-
-  .nav-container {
-    height: 56px;
-  }
-
-  .brand-logo {
-    display: none;
-  }
-
-  .brand-toggle {
-    display: inline-flex;
+    :deep(.btn-text) {
+      display: none !important;
+    }
   }
 
   .token-selector .token-trigger .token-name {
-    max-width: 80px;
+    display: none;
   }
-
-  .token-dropdown-panel {
-    width: 260px;
-  }
-}
-
-.drawer-menu {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-}
-
-.drawer-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-medium);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.drawer-item.router-link-active {
-  background: var(--primary-color-light);
-  color: var(--primary-color);
-}
-
-// 调试设置项样式
-.drawer-item.debug-settings-item {
-  cursor: pointer;
-  justify-content: space-between;
-
-  &:hover {
-    background: var(--bg-secondary);
-  }
-
-  .n-switch {
-    margin-left: auto;
-  }
-}
-
-/* 禁用样式：灰化、鼠标禁止、无hover效果 */
-.nav-item.disabled {
-  background: #cccccc;
-  color: #999999;
-  cursor: not-allowed; /* 鼠标样式：禁止 */
-  pointer-events: none; /* 可选：直接禁用所有鼠标事件（比阻止click更彻底） */
 }
 
 // 移动端底部导航栏
@@ -1050,14 +1045,59 @@ loadDebugState();
   line-height: 1.2;
 }
 
-// 移动端适配 - 合并到上面的媒体查询中
 @media (max-width: 768px) {
   .mobile-bottom-nav {
     display: flex;
   }
 
   .main.has-bottom-nav {
-    padding-bottom: 56px; // 为底部导航栏留出空间
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
   }
+}
+
+// ---------- 抽屉菜单 ----------
+.drawer-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.drawer-item.router-link-active {
+  background: var(--primary-color-light);
+  color: var(--primary-color);
+}
+
+// 调试设置项样式
+.drawer-item.debug-settings-item {
+  cursor: pointer;
+  justify-content: space-between;
+
+  &:hover {
+    background: var(--bg-secondary);
+  }
+
+  .n-switch {
+    margin-left: auto;
+  }
+}
+
+/* 禁用样式：灰化、鼠标禁止、无hover效果 */
+.side-item.disabled,
+.drawer-item.disabled {
+  background: #cccccc;
+  color: #999999;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 </style>

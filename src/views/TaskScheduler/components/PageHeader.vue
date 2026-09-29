@@ -87,13 +87,15 @@ const showSearch = ref(false);
 </script>
 
 <style scoped lang="scss">
+// SaaS 工具栏：白底描边，与控制台侧边栏/顶栏视觉统一（替代旧紫蓝渐变横幅）
 .page-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px 32px;
-  color: white;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-light);
+  padding: 16px 32px;
+  color: var(--text-primary);
   position: sticky;
-  top: 0;
-  z-index: 100;
+  top: 60px; // 让位给 DefaultLayout 顶栏
+  z-index: 90;
 }
 
 .header-content {
@@ -106,17 +108,19 @@ const showSearch = ref(false);
 
 .header-left {
   flex: 1;
+  min-width: 160px;
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
 }
 
 .page-subtitle {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 13px;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -127,17 +131,12 @@ const showSearch = ref(false);
   flex-wrap: wrap;
 }
 
-// 深色模式适配
-[data-theme="dark"] {
-  .page-header {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  }
-}
-
 // 响应式
 @media (max-width: 768px) {
   .page-header {
-    padding: 16px 20px;
+    padding: 12px 16px;
+    // 移动端位于 MobileLayout 固定头（64px）之下；页面内容被 0.8 缩放，坐标需换算
+    top: 80px;
   }
 
   .header-content {
@@ -152,7 +151,7 @@ const showSearch = ref(false);
   }
 
   .page-title {
-    font-size: 20px;
+    font-size: 18px;
   }
 }
 </style>

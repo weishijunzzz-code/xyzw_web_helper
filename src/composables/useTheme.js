@@ -22,12 +22,19 @@ export function useTheme() {
 
   // 初始化主题
   const initTheme = () => {
-    const savedTheme = localStorage.getItem("theme");
+    // 优先读取 ThemeSettings 组件写入的 theme-mode，兼容旧 theme 键
+    const savedTheme =
+      localStorage.getItem("theme-mode") || localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
     ).matches;
 
-    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+    if (savedTheme === "dark") {
+      setDarkTheme();
+    } else if (savedTheme === "light") {
+      setLightTheme();
+    } else if (prefersDark) {
+      // 无保存值或为 system 时跟随系统
       setDarkTheme();
     } else {
       setLightTheme();

@@ -277,3 +277,108 @@
     }
   }
 }
+
+// ============================================================
+// 移动端自动紧凑化补充
+// App.vue 在视口 ≤768px 时自动为 <html> 加上 compact-mode：
+// 恢复真布局后的移动端密度（替代旧缩放方案的"内容更满"体验）
+// ============================================================
+.compact-mode {
+  // ---------- Naive 卡片：批量页/功能页的主要空间来源 ----------
+  .n-card {
+    > .n-card-header {
+      padding: 10px 12px 0;
+
+      .n-card-header__main {
+        font-size: var(--font-size-md);
+        font-weight: var(--font-weight-semibold);
+      }
+    }
+
+    > .n-card__content {
+      padding: 12px;
+    }
+
+    > .n-card__footer {
+      padding: 0 12px 12px;
+    }
+
+    > .n-card__action {
+      padding: 8px 12px;
+    }
+  }
+
+  // ---------- 按钮密度 ----------
+  .n-button--tiny-type {
+    height: 22px;
+    font-size: 11px;
+    padding: 0 6px;
+  }
+
+  .n-button--small-type {
+    height: 26px;
+    font-size: 12px;
+    padding: 0 8px;
+  }
+
+  .n-button--medium-type {
+    height: 30px;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+
+  // ---------- GameStatus（功能页主体） ----------
+  .game-status-container {
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .game-status-container .status-card {
+    padding: 12px;
+  }
+
+  .game-status-container .n-tabs .n-tabs-tab {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .game-status-container .n-tabs .n-tab-pane {
+    padding-top: 10px;
+  }
+
+  // 身份牌（嵌入态）
+  .identity-card.embedded {
+    padding: 12px;
+  }
+
+  // 阵容
+  .game-status-container .hero-circle {
+    width: 34px;
+    height: 34px;
+  }
+
+  .game-status-container .hero-item {
+    min-width: 44px;
+  }
+
+  // ---------- BatchDailyTasks（批量页） ----------
+  .batch-daily-tasks {
+    .page-header h2 {
+      font-size: var(--font-size-lg);
+    }
+
+    .log-container,
+    .log-card {
+      font-size: 12px;
+    }
+
+    .switch-row {
+      padding: 6px 0;
+    }
+  }
+
+  // ---------- 通用列表 ----------
+  .n-list .n-list-item {
+    padding: 8px 10px;
+  }
+}

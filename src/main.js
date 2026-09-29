@@ -37,8 +37,13 @@ app.use(naive);
 // app.use(i18n)
 
 // 全局主题应用：从 localStorage 读取并设置 data-theme 属性
+// 优先读取 ThemeSettings 组件写入的 theme-mode，兼容旧 theme 键
+const getSavedTheme = () => {
+  return localStorage.getItem("theme-mode") || localStorage.getItem("theme") || "auto";
+};
+
 const applyTheme = () => {
-  const saved = localStorage.getItem("theme") || "auto";
+  const saved = getSavedTheme();
   if (saved === "dark") {
     document.documentElement.setAttribute("data-theme", "dark");
   } else if (saved === "light") {
@@ -56,8 +61,8 @@ const applyTheme = () => {
       window
           .matchMedia("(prefers-color-scheme: dark)")
           .addEventListener("change", (e) => {
-            const t = localStorage.getItem("theme") || "auto";
-            if (t === "auto") {
+            const t = getSavedTheme();
+            if (t !== "dark" && t !== "light") {
               if (e.matches)
                 document.documentElement.setAttribute("data-theme", "dark");
               else document.documentElement.removeAttribute("data-theme");

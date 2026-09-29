@@ -259,28 +259,8 @@ const isActiveRoute = (path) => {
 </script>
 
 <style scoped lang="scss">
-// 设计系统变量
-:root {
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
-}
+// 设计令牌：全局变量统一在 src/assets/styles/variables.scss 与 design-tokens.scss 中定义
+// （scoped 样式中的 :root 块永远不会匹配 html，故不再在此重复定义）
 
 .mobile-layout {
   min-height: 100vh;
@@ -332,11 +312,14 @@ const isActiveRoute = (path) => {
 }
 
 .header-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
   letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-center {
@@ -516,9 +499,20 @@ const isActiveRoute = (path) => {
   -webkit-overflow-scrolling: touch;
   padding-top: 64px;
   padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
-  
+
   &.has-bottom-nav {
     padding-bottom: calc(110px + env(safe-area-inset-bottom, 20px));
+  }
+
+  // 内容紧凑缩放：只缩放页面内容，顶栏/底部导航保持原生尺寸。
+  // 动机：浏览器整体缩放（双指/自适应缩小）会连带 fixed 导航一起变小，
+  // 从布局层面预先提高内容密度后，用户无需再缩小页面。
+  @media (max-width: 768px) {
+    --mobile-content-zoom: 0.6;
+
+    > :deep(*) {
+      zoom: var(--mobile-content-zoom);
+    }
   }
 }
 

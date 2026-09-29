@@ -28,23 +28,6 @@ const my_routes = [
     }
   },
   {
-    path: '/tokens',
-    name: 'TokenImport',
-    component: safeImport(() => import('@/views/TokenImport/index.vue')),
-    meta: {
-      title: 'Token管理',
-      requiresToken: false
-    },
-    props: route => ({
-      token: route.query.token,
-      name: route.query.name,
-      server: route.query.server,
-      wsUrl: route.query.wsUrl,
-      api: route.query.api,
-      auto: route.query.auto === 'true'
-    })
-  },
-  {
     path: '/game',
     name: 'GamePlayer',
     component: () => import('@/views/GamePlayer.vue'),
@@ -70,6 +53,24 @@ const my_routes = [
     path: '/admin',
     component: safeImport(() => import('@/layout/DefaultLayout.vue')),
     children: [
+      // Token 管理纳入控制台骨架（绝对子路径，URL 仍为 /tokens）
+      {
+        path: '/tokens',
+        name: 'TokenImport',
+        component: safeImport(() => import('@/views/TokenImport/index.vue')),
+        meta: {
+          title: 'Token管理',
+          requiresToken: false
+        },
+        props: route => ({
+          token: route.query.token,
+          name: route.query.name,
+          server: route.query.server,
+          wsUrl: route.query.wsUrl,
+          api: route.query.api,
+          auto: route.query.auto === 'true'
+        })
+      },
       {
         path: 'dashboard',
         name: 'Dashboard',

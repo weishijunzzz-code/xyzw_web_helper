@@ -29,6 +29,7 @@
 import { computed, onMounted, onUnmounted, ref, provide } from "vue";
 import { darkTheme } from "naive-ui";
 import { useTheme } from "@/composables/useTheme";
+import { useCompactMode } from "@/composables/useCompactMode";
 import { initCapacitor, isNativePlatform } from "@/utils/capacitor";
 import { initUpdateChecker } from "@/utils/updateChecker";
 import GlobalLoading from "@/components/Common/GlobalLoading.vue";
@@ -40,6 +41,10 @@ import CommandPalette from "@/components/Common/CommandPalette.vue";
 
 const { isDark, initTheme, setupSystemThemeListener, updateReactiveState } =
   useTheme();
+
+// 移动端自动启用紧凑模式（≤768px），桌面端按 ThemeSettings 手动设置；
+// 裁决逻辑统一在 useCompactMode 中，ThemeSettings 的开关也走它，避免互相覆盖
+useCompactMode();
 
 // 成功动画
 const showSuccess = ref(false);
@@ -66,14 +71,15 @@ const naiveTheme = computed(() => {
   return isDark.value ? darkTheme : null;
 });
 
-// Naive UI 主题覆盖配置
+// Naive UI 主题覆盖：只保留 common 全局项，组件级配色交给 darkTheme 默认值
+// （common 的 textColor1~3 / bodyColor / cardColor 等会被绝大多数组件继承）
 const themeOverrides = computed(() => {
   const isDarkMode = isDark.value;
   return {
     common: {
-      primaryColor: isDarkMode ? '#667eea' : '#667eea',
-      primaryColorHover: isDarkMode ? '#5a67d8' : '#5a67d8',
-      primaryColorPressed: isDarkMode ? '#4c51bf' : '#4c51bf',
+      primaryColor: '#667eea',
+      primaryColorHover: '#5a67d8',
+      primaryColorPressed: '#4c51bf',
       textColorBase: isDarkMode ? '#ffffff' : '#333333',
       textColor1: isDarkMode ? '#ffffff' : '#333333',
       textColor2: isDarkMode ? '#d1d5db' : '#666666',
@@ -87,207 +93,8 @@ const themeOverrides = computed(() => {
       placeholderColor: isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
       disabledOpacity: 0.5,
     },
-    Input: {
-      color: isDarkMode ? 'rgba(255,255,255,0.1)' : '#ffffff',
-      colorFocus: isDarkMode ? 'rgba(255,255,255,0.15)' : '#ffffff',
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      placeholderColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-      borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
-      borderColorFocus: isDarkMode ? '#667eea' : '#667eea',
-    },
-    Select: {
-      color: isDarkMode ? 'rgba(255,255,255,0.1)' : '#ffffff',
-      colorActive: isDarkMode ? 'rgba(255,255,255,0.15)' : '#f5f7fa',
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      placeholderColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-      borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
-      borderColorFocus: isDarkMode ? '#667eea' : '#667eea',
-    },
-    Card: {
-      color: isDarkMode ? '#374151' : '#ffffff',
-      colorModal: isDarkMode ? '#374151' : '#ffffff',
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      titleTextColor: isDarkMode ? '#ffffff' : '#333333',
-      borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
-    },
-    Modal: {
-      color: isDarkMode ? '#374151' : '#ffffff',
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Drawer: {
-      color: isDarkMode ? '#374151' : '#ffffff',
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Dropdown: {
-      color: isDarkMode ? '#374151' : '#ffffff',
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      optionColorHover: isDarkMode ? 'rgba(102, 126, 234, 0.2)' : '#e6f7ff',
-    },
-    Tooltip: {
-      color: isDarkMode ? '#1f2937' : '#333333',
-      textColor: isDarkMode ? '#ffffff' : '#ffffff',
-    },
-    Button: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      textColorPrimary: '#ffffff',
-      textColorGhostPrimary: isDarkMode ? '#667eea' : '#667eea',
-    },
     Form: {
-      labelTextColor: isDarkMode ? '#ffffff' : '#333333',
       asteriskColor: '#d03050',
-    },
-    Menu: {
-      textColor: isDarkMode ? '#d1d5db' : '#666666',
-      textColorHover: isDarkMode ? '#ffffff' : '#333333',
-      textColorActive: isDarkMode ? '#667eea' : '#667eea',
-      textColorActiveHover: isDarkMode ? '#667eea' : '#667eea',
-    },
-    Tag: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Collapse: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      arrowColor: isDarkMode ? '#d1d5db' : '#666666',
-    },
-    Radio: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      buttonTextColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Checkbox: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Switch: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Tabs: {
-      tabTextColor: isDarkMode ? '#d1d5db' : '#666666',
-      tabTextColorActive: isDarkMode ? '#667eea' : '#667eea',
-      tabTextColorHover: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Pagination: {
-      textColor: isDarkMode ? '#d1d5db' : '#666666',
-      textColorHover: isDarkMode ? '#ffffff' : '#333333',
-      textColorActive: isDarkMode ? '#ffffff' : '#ffffff',
-      itemColorActive: isDarkMode ? '#667eea' : '#667eea',
-    },
-    DatePicker: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    TimePicker: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Tree: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    List: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Empty: {
-      textColor: isDarkMode ? '#9ca3af' : '#999999',
-    },
-    Progress: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Slider: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Transfer: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Avatar: {
-      textColor: isDarkMode ? '#ffffff' : '#ffffff',
-    },
-    Statistic: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Timeline: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Steps: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Result: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Descriptions: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Anchor: {
-      textColor: isDarkMode ? '#d1d5db' : '#666666',
-      textColorActive: isDarkMode ? '#667eea' : '#667eea',
-    },
-    BackTop: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Breadcrumb: {
-      textColor: isDarkMode ? '#d1d5db' : '#666666',
-      itemTextColorHover: isDarkMode ? '#ffffff' : '#333333',
-      itemTextColorActive: isDarkMode ? '#667eea' : '#667eea',
-    },
-    Calendar: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Carousel: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    ColorPicker: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    DataTable: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-      thTextColor: isDarkMode ? '#ffffff' : '#333333',
-      tdTextColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    DynamicInput: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    DynamicTags: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    GlobalStyle: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    GradientText: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Grid: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Icon: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    LegacyTransfer: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    LoadingBar: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Log: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Mention: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Notification: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Popconfirm: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Popover: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Popselect: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Rate: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Spin: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
-    },
-    Upload: {
-      textColor: isDarkMode ? '#ffffff' : '#333333',
     },
   };
 });
@@ -319,15 +126,15 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* 主题变量 - 使用 design-system 变量 */
+/* 主题变量 - 现代 SaaS 风格：中性底色，品牌色只做点缀 */
 :root {
-  --app-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --app-background: #f5f7fa;
 }
 
 /* 深色主题变量 */
 .dark,
 [data-theme="dark"] {
-  --app-background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+  --app-background: #111827;
   color-scheme: dark;
 }
 

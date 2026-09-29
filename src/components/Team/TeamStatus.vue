@@ -635,6 +635,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   align-items: flex-start;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
 }
 .team-icon {
   width: 32px;
@@ -644,6 +645,8 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
 }
 .team-info {
   flex: 1;
+  // 最小可读宽度：窄卡（如桌面三列网格）时标题/副标题不致被挤成一字一行
+  min-width: 150px;
   h3 {
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-semibold);
@@ -659,6 +662,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
 .team-selector {
   display: flex;
   gap: var(--spacing-xs);
+  flex-wrap: wrap;
 }
 .team-button {
   width: 32px;

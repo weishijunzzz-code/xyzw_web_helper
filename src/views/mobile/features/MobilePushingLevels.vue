@@ -1,8 +1,17 @@
 <template>
-  <MobileAdapter :pc-component="PushingLevels" />
+  <div class="mobile-page-embed">
+    <PushingLevels />
+  </div>
 </template>
 
 <script setup>
-import MobileAdapter from '@/components/MobileAdapter.vue'
 import PushingLevels from '@/views/PushingLevels.vue'
 </script>
+
+<style scoped>
+/* PC 组件直接嵌入移动布局：只做容器约束，不做缩放 */
+.mobile-page-embed {
+  width: 100%;
+  overflow-x: hidden;
+}
+</style>

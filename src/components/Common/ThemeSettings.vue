@@ -113,6 +113,7 @@ import { ref, computed, onMounted } from 'vue';
 import { Moon, Sunny, DesktopOutline, Checkmark } from '@vicons/ionicons5';
 import { NButton, NIcon, NPopover, NSwitch, NSlider } from 'naive-ui';
 import { useTheme } from '@/composables/useTheme';
+import { applyCompactModeClass } from '@/composables/useCompactMode';
 
 const { isDark, setDarkTheme, setLightTheme, getCurrentTheme } = useTheme();
 
@@ -233,13 +234,10 @@ const toggleCompact = (value) => {
   applyCompactMode(value);
 };
 
-// 应用紧凑模式
-const applyCompactMode = (isCompact) => {
-  if (isCompact) {
-    document.documentElement.classList.add('compact-mode');
-  } else {
-    document.documentElement.classList.remove('compact-mode');
-  }
+// 应用紧凑模式：交给共享裁决
+// （移动端 ≤768px 会自动启用，不受本偏好关闭的影响）
+const applyCompactMode = () => {
+  applyCompactModeClass();
 };
 
 // 切换动画

@@ -423,6 +423,14 @@ const saltFieldSubTab = ref("warrank");
 const peachSubTab = ref("peach");
 const rankSubTab = ref("serverrank");
 
+// 供父组件从外部切换功能分区（如移动端"逐鹿盐山"快速入口）
+const setSection = (section) => {
+  if (typeof section === "string" && section) {
+    activeSection.value = section;
+  }
+};
+defineExpose({ setSection });
+
 // 盐场匹配信息详情 / 蟠桃园信息 界面样式选择（style1=原有样式，style2=移植样式）
 const warrankStyle = ref(
   localStorage.getItem("club_warrank_style") || "style1"
@@ -1134,8 +1142,23 @@ onUnmounted(() => {
 // 响应式设计
 @media (max-width: 768px) {
   .game-status-container {
-    grid-template-columns: 1fr;
+    // minmax(0, 1fr)：允许列收缩到视口宽度，
+    // 否则 n-tabs 标签条的 min-content（10 个标签约 900px）会把整列撑爆
+    grid-template-columns: minmax(0, 1fr);
     padding: var(--spacing-sm);
+
+    > * {
+      min-width: 0;
+    }
+  }
+
+  // 标签条允许内部横向滚动，不撑破容器
+  .section-tabs {
+    min-width: 0;
+
+    :deep(.n-tabs-wrapper) {
+      min-width: 0;
+    }
   }
 
   .status-card {

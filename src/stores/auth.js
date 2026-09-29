@@ -4,7 +4,15 @@ import { useLocalTokenStore } from "./localTokenManager";
 
 export const useAuthStore = defineStore("auth", () => {
   // 状态
-  const user = ref(null);
+  // user 必须与 token 一样从 localStorage 恢复：
+  // 否则刷新后 isAuthenticated 恒为 false，日常任务等页面会被误弹回 Token 页
+  const user = ref((() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })());
   const token = ref(localStorage.getItem("token") || null);
   const isLoading = ref(false);
 

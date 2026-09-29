@@ -367,6 +367,7 @@ watch(
   align-items: flex-start;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .icon {
@@ -374,6 +375,12 @@ watch(
   height: 32px;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+  // 最小可读宽度：窄卡（如桌面三列网格）时标题/副标题不致被挤成一字一行
+  min-width: 150px;
 }
 
 .info h3 {
@@ -391,6 +398,7 @@ watch(
 .team-selector {
   display: flex;
   gap: var(--spacing-xs);
+  flex-wrap: wrap;
 }
 
 .team-button {

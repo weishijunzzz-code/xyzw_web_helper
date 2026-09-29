@@ -3005,7 +3005,6 @@ import {
   availableTasks,
   blackMarketGoodsOptions,
   warguessStoreGoodsOptions,
-  CarresearchItem,
   FISH_TARGET,
   ARENA_TARGET,
   taskColumns,
@@ -6955,6 +6954,41 @@ const stopBatch = () => {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
+  }
+
+  /* 页头紧凑化：标题与状态文字同行，操作按钮独占一行 */
+  .page-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .page-header > div:first-child {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  /* 应用头部已展示页面标题，页内 h2 在移动端隐藏，页头收敛为单行 */
+  .page-header h2 {
+    display: none;
+  }
+
+  /* 状态胶囊（共 X 个定时任务 / 暂无定时任务 + 按钮组） */
+  .page-header > div:first-child > div {
+    flex-wrap: nowrap;
+    row-gap: 4px;
+  }
+
+  .page-header > div:first-child > div > div {
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  /* 操作按钮行：独占一整行且不换行 */
+  .page-header > div:first-child > div > div:last-child {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    white-space: normal;
   }
 
   .page-header .actions {

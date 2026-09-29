@@ -1,3 +1,22 @@
+// ============================================================
+// SCSS 编译期变量（通过 vite additionalData 以 vars.* 注入）
+// 统一断点规范：全项目媒体查询一律使用以下变量，禁止散写像素值
+// ============================================================
+$bp-xs: 480px;   // 小屏手机
+$bp-sm: 640px;   // 大屏手机
+$bp-md: 768px;   // 主断点：手机 / 平板分界
+$bp-lg: 1024px;  // 平板 / 笔记本分界
+$bp-xl: 1280px;  // 桌面
+$bp-2xl: 1400px; // 大桌面
+
+// 兼容别名（mobile.scss 等历史用法）
+$mobile-breakpoint: $bp-md;
+$tablet-breakpoint: $bp-lg;
+
+// ============================================================
+// CSS 运行时变量（设计令牌）
+// ============================================================
+
 // 颜色变量
 :root {
   // 主题色
@@ -17,17 +36,21 @@
   --text-secondary: #666666;
   --text-tertiary: #999999;
   --text-disabled: #cccccc;
+  --text-muted: var(--text-tertiary);
 
   // 背景色
   --bg-primary: #ffffff;
   --bg-secondary: #f5f7fa;
   --bg-tertiary: #f0f2f5;
   --bg-overlay: rgba(0, 0, 0, 0.5);
+  --bg-color: var(--bg-secondary);
+  --bg-hover: var(--bg-tertiary);
 
   // 边框色
   --border-light: #e5e7eb;
   --border-medium: #d1d5db;
   --border-dark: #9ca3af;
+  --border-color: var(--border-light);
 
   // 阴影
   --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -39,6 +62,14 @@
   --border-radius-medium: 8px;
   --border-radius-large: 12px;
   --border-radius-xl: 16px;
+  // 别名：修复历史上引用了 --border-radius-sm / md / full 却从未定义的问题
+  --border-radius-sm: var(--border-radius-small);
+  --border-radius-md: var(--border-radius-medium);
+  --border-radius-lg: var(--border-radius-large);
+  --border-radius-full: 9999px;
+
+  // 日志面板（代码块风格，双主题均保持深底）
+  --log-bg: #0d1117;
 
   // 间距
   --spacing-xs: 4px;
@@ -84,24 +115,39 @@
   --z-toast: 1080;
 }
 
-// 暗色主题
-[data-theme="dark"] {
+// 暗色主题（data-theme 由 main.js 设置，.dark 由 useTheme 同步，双选择器兜底）
+[data-theme="dark"],
+.dark {
+  --primary-color: #667eea;
+  --primary-color-hover: #7c94f0;
+  --primary-color-light: rgba(102, 126, 234, 0.18);
+
+  --secondary-color: #9f7ad1;
+
   --text-primary: #ffffff;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
   --text-disabled: #6b7280;
+  --text-muted: var(--text-tertiary);
 
   --bg-primary: #1f2937;
   --bg-secondary: #374151;
   --bg-tertiary: #4b5563;
   --bg-overlay: rgba(0, 0, 0, 0.7);
+  --bg-color: var(--bg-secondary);
+  --bg-hover: var(--bg-tertiary);
 
   --border-light: #4b5563;
   --border-medium: #6b7280;
   --border-dark: #9ca3af;
+  --border-color: var(--border-light);
+
+  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-heavy: 0 10px 15px rgba(0, 0, 0, 0.4);
 }
 
-@media (max-width: 768px) {
+@media (max-width: $bp-md) {
   :root {
     --font-size-xs: 12px;
     --font-size-sm: 13px;
@@ -120,7 +166,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: $bp-sm) {
   :root {
     --font-size-md: 14px;
     --spacing-md: 10px;

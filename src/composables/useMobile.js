@@ -8,11 +8,18 @@ const windowWidth = ref(0);
 // 检查当前设备类型
 const checkDeviceType = () => {
   if (typeof window === "undefined") return;
-  
+
   windowWidth.value = window.innerWidth;
   isMobile.value = window.innerWidth <= 768;
   isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
 };
+
+// 模块级自初始化：让 useMobileGlobal() 的全局状态在未挂载 useMobile() 组件的
+// 路由下（如 /mobile/* 由 MobileLayout 承载）也能跟踪视口变化
+if (typeof window !== "undefined") {
+  checkDeviceType();
+  window.addEventListener("resize", checkDeviceType);
+}
 
 // 移动端管理逻辑
 export function useMobile() {
