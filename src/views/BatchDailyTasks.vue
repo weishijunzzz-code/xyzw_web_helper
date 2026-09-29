@@ -2364,7 +2364,7 @@
                 "
               >
                 <label class="setting-label">江湖黑市购买配置</label>
-                <n-button size="small" @click="openBlackMarketModal"
+                <n-button size="small" @click="openActivityShopModal"
                   >点击配置</n-button
                 >
               </div>
@@ -2718,9 +2718,9 @@
       </div>
     </n-modal>
 
-    <!-- Black Market Config Modal -->
+    <!-- Activity Shop (江湖黑市) Config Modal -->
     <n-modal
-      v-model:show="showBlackMarketModal"
+      v-model:show="showActivityShopModal"
       preset="card"
       title="江湖黑市购买配置"
       style="width: 90%; max-width: 600px"
@@ -2733,13 +2733,13 @@
           </n-alert>
 
           <div style="display: flex; gap: 12px; margin-bottom: 12px">
-            <n-button size="small" type="primary" @click="selectAllBlackMarketItems">
+            <n-button size="small" type="primary" @click="selectAllActivityShopItems">
               全选所有
             </n-button>
-            <n-button size="small" @click="clearAllBlackMarketItems">
+            <n-button size="small" @click="clearAllActivityShopItems">
               清空选择
             </n-button>
-            <n-button size="small" type="warning" @click="selectRecommendedBlackMarketItems">
+            <n-button size="small" type="warning" @click="selectRecommendedActivityShopItems">
               推荐配置
             </n-button>
           </div>
@@ -2747,8 +2747,8 @@
           <div style="max-height: 400px; overflow-y: auto;">
             <div v-for="item in blackMarketGoodsOptions" :key="item.value" style="padding: 6px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 6px">
               <n-checkbox
-                :checked="blackMarketPurchaseList.includes(item.value)"
-                @update:checked="(checked) => toggleBlackMarketItem(item.value, checked)"
+                :checked="activityShopPurchaseList.includes(item.value)"
+                @update:checked="(checked) => toggleActivityShopItem(item.value, checked)"
               >
                 <div style="font-weight: 500">{{ item.label }} ({{ item.price === 0 ? '免费' : item.price + '金砖' }})</div>
                 <div style="margin-left: 24px; margin-top: 2px; color: #888; font-size: 11px">
@@ -2759,8 +2759,8 @@
           </div>
         </div>
         <div class="modal-actions" style="margin-top: 20px; text-align: right">
-          <n-button @click="showBlackMarketModal = false" style="margin-right: 12px">取消</n-button>
-          <n-button type="primary" @click="saveBlackMarketConfig">保存配置</n-button>
+          <n-button @click="showActivityShopModal = false" style="margin-right: 12px">取消</n-button>
+          <n-button type="primary" @click="saveActivityShopConfig">保存配置</n-button>
         </div>
       </div>
     </n-modal>
@@ -4063,61 +4063,69 @@ const avatarLoadError = ref(false);
 // Black Market Feature
 // ======================
 
-// Black Market Modal State
-const showBlackMarketModal = ref(false);
-const blackMarketPurchaseList = ref([]);
+// Activity Shop (江湖黑市) Modal State —— 独立于黑市采购清单（blackMarketPurchaseList）
+const showActivityShopModal = ref(false);
+const activityShopPurchaseList = ref((() => {
+  try {
+    return JSON.parse(localStorage.getItem("activityShopPurchaseList") || "") ?? [0, 1, 2, 3, 4, 5, 7];
+  } catch {
+    return [0, 1, 2, 3, 4, 5, 7];
+  }
+})());
 
-// Open black market config modal
-const openBlackMarketModal = () => {
-  blackMarketPurchaseList.value = [...(batchSettings.blackMarketPurchaseList || [])];
-  showBlackMarketModal.value = true;
+// Open activity shop config modal
+const openActivityShopModal = () => {
+  activityShopPurchaseList.value = [...(activityShopPurchaseList.value || [])];
+  showActivityShopModal.value = true;
 };
 
-// Toggle black market item selection
-const toggleBlackMarketItem = (itemId, checked) => {
-  const currentList = [...blackMarketPurchaseList.value];
+// Toggle activity shop item selection
+const toggleActivityShopItem = (goodsIndex, checked) => {
+  const currentList = [...activityShopPurchaseList.value];
   if (checked) {
-    if (!currentList.includes(itemId)) {
-      currentList.push(itemId);
+    if (!currentList.includes(goodsIndex)) {
+      currentList.push(goodsIndex);
     }
   } else {
-    const index = currentList.indexOf(itemId);
+    const index = currentList.indexOf(goodsIndex);
     if (index > -1) {
       currentList.splice(index, 1);
     }
   }
-  blackMarketPurchaseList.value = currentList;
+  activityShopPurchaseList.value = currentList;
 };
 
-// Save black market config
-const saveBlackMarketConfig = () => {
-  batchSettings.blackMarketPurchaseList = [...blackMarketPurchaseList.value];
-  localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
+// Save activity shop config
+const saveActivityShopConfig = () => {
+  localStorage.setItem(
+    "activityShopPurchaseList",
+    JSON.stringify(activityShopPurchaseList.value),
+  );
   message.success("江湖黑市购买配置已保存");
-  showBlackMarketModal.value = false;
+  showActivityShopModal.value = false;
 };
 
-// Select all black market items
-const selectAllBlackMarketItems = () => {
-  blackMarketPurchaseList.value = blackMarketGoodsOptions.map(item => item.value);
+// Select all activity shop items
+const selectAllActivityShopItems = () => {
+  activityShopPurchaseList.value = blackMarketGoodsOptions.map(item => item.value);
 };
 
-// Clear all black market items
-const clearAllBlackMarketItems = () => {
-  blackMarketPurchaseList.value = [];
+// Clear all activity shop items
+const clearAllActivityShopItems = () => {
+  activityShopPurchaseList.value = [];
 };
 
-// Select recommended black market items
-const selectRecommendedBlackMarketItems = () => {
-  blackMarketPurchaseList.value = [0, 1, 2, 4, 6, 7];
+// Select recommended activity shop items
+const selectRecommendedActivityShopItems = () => {
+  activityShopPurchaseList.value = [0, 1, 2, 4, 6, 7];
 };
 
 // Execute activity shop buy with config
 const executeActivityShopBuy = () => {
-  const goodsIndices = batchSettings.blackMarketPurchaseList || [];
+  const goodsIndices = activityShopPurchaseList.value || [];
   if (goodsIndices.length === 0) {
     message.warning("请先配置要购买的商品");
-    openBlackMarketModal();
+    openActivityShopModal();
     return;
   }
   activityShopBuy({ goodsIndices });
