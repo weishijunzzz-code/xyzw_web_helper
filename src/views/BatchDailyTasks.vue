@@ -14,8 +14,8 @@
             gap: 12px;
           "
         >
-          <div style="display: flex; align-items: center; gap: 16px">
-            <h2>批量日常任务</h2>
+          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; row-gap: 8px">
+            <h2 style="white-space: nowrap; margin: 0">批量日常任务</h2>
             <div
               style="
                 display: flex;
@@ -25,20 +25,22 @@
                 background-color: var(--color-bg-secondary);
                 border-radius: 8px;
                 border: 1px solid var(--color-border-default);
+                flex-wrap: wrap;
+                row-gap: 6px;
               "
             >
-              <div style="font-size: 14px; color: var(--color-text-secondary)">
+              <div style="font-size: 14px; color: var(--color-text-secondary); white-space: nowrap">
                 共 {{ scheduledTasks.length }} 个定时任务
               </div>
               <div
                 v-if="shortestCountdownTask"
-                style="font-size: 14px; font-weight: 500; color: var(--color-primary-500)"
+                style="font-size: 14px; font-weight: 500; color: var(--color-primary-500); white-space: nowrap"
               >
                 即将执行：{{ shortestCountdownTask.task.name }} ({{
                   shortestCountdownTask.countdown.formatted
                 }})
               </div>
-              <div v-else style="font-size: 14px; color: var(--color-text-tertiary)">
+              <div v-else style="font-size: 14px; color: var(--color-text-tertiary); white-space: nowrap">
                 暂无定时任务
               </div>
               <div style="display: flex; gap: 8px">
@@ -65,9 +67,12 @@
                   flex-direction: row;
                   justify-content: space-between;
                   align-items: center;
+                  flex-shrink: 0;
+                  gap: 8px;
+                  white-space: nowrap;
                 "
               >
-                <label class="setting-label">黑市采购清单配置</label>
+                <label class="setting-label" style="white-space: nowrap">黑市采购清单配置</label>
                 <n-button size="small" @click="openBlackMarketPurchaseModal">
                   点击配置
                 </n-button>
