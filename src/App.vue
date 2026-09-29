@@ -80,6 +80,19 @@ const themeOverrides = computed(() => {
       primaryColor: '#667eea',
       primaryColorHover: '#5a67d8',
       primaryColorPressed: '#4c51bf',
+      // 语义色与 CSS 令牌定稿一致（variables.scss）
+      successColor: '#10b981',
+      successColorHover: '#34d399',
+      successColorPressed: '#059669',
+      successColorSuppl: '#34d399',
+      errorColor: '#ef4444',
+      errorColorHover: '#f87171',
+      errorColorPressed: '#dc2626',
+      errorColorSuppl: '#f87171',
+      warningColor: '#f59e0b',
+      warningColorHover: '#fbbf24',
+      warningColorPressed: '#d97706',
+      warningColorSuppl: '#fbbf24',
       textColorBase: isDarkMode ? '#ffffff' : '#333333',
       textColor1: isDarkMode ? '#ffffff' : '#333333',
       textColor2: isDarkMode ? '#d1d5db' : '#666666',
@@ -155,7 +168,7 @@ html,
 body {
   height: 100%;
   font-family:
-    "SF Pro Display",
+    system-ui,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -166,7 +179,14 @@ body {
     Helvetica,
     Arial,
     sans-serif;
+  font-variant-numeric: tabular-nums;
   transition: color 0.3s ease;
+}
+
+/* 键盘导航焦点环（可达性） */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 /* 滚动条样式 */

@@ -935,13 +935,13 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 500;
   color: var(--error-color);
-  background: rgba(208, 48, 80, 0.08);
+  background: var(--error-soft);
   border-radius: var(--border-radius-full);
 }
 
 .push-pill.on {
   color: var(--success-color);
-  background: rgba(24, 160, 88, 0.1);
+  background: var(--success-soft);
 }
 
 .push-pill .push-dot {

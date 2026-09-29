@@ -18,19 +18,19 @@
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
   
-  /* 成功色 - 绿色系 */
-  --color-success-50: #f0fdf4;
-  --color-success-100: #dcfce7;
-  --color-success-500: #22c55e;
-  --color-success-600: #16a34a;
-  --color-success-700: #15803d;
+  /* 成功色 - 绿色系（与 variables.scss --success-color 定稿一致） */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
   
-  /* 警告色 - 黄色系 */
-  --color-warning-50: #fefce8;
-  --color-warning-100: #fef9c3;
-  --color-warning-500: #eab308;
-  --color-warning-600: #ca8a04;
-  --color-warning-700: #a16207;
+  /* 警告色 - 琥珀系（与 variables.scss --warning-color 定稿一致） */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
   
   /* 错误色 - 红色系 */
   --color-error-50: #fef2f2;
@@ -117,14 +117,14 @@
   --radius-2xl: 1rem;     /* 16px */
   --radius-full: 9999px;
   
-  /* ==================== 阴影系统 ==================== */
+  /* ==================== 阴影系统（边框优先：极浅层次） ==================== */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 6px -2px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 12px 28px -6px rgba(0, 0, 0, 0.14), 0 4px 10px -4px rgba(0, 0, 0, 0.06);
   --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.5);
-  --shadow-glow-success: 0 0 20px rgba(34, 197, 94, 0.5);
-  --shadow-glow-warning: 0 0 20px rgba(234, 179, 8, 0.5);
+  --shadow-glow-success: 0 0 20px rgba(16, 185, 129, 0.5);
+  --shadow-glow-warning: 0 0 20px rgba(245, 158, 11, 0.5);
   --shadow-glow-error: 0 0 20px rgba(239, 68, 68, 0.5);
   
   /* ==================== 动画系统 ==================== */
@@ -169,6 +169,6 @@
   --color-border-active: #3b82f6;
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.35), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
 }

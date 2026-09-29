@@ -24,12 +24,18 @@ $tablet-breakpoint: $bp-lg;
   --primary-color-hover: #5a67d8;
   --primary-color-light: #e6f7ff;
 
-  // 辅助色
+  // 辅助色（语义色定稿：现代 SaaS 色板，全站唯一来源）
   --secondary-color: #764ba2;
-  --success-color: #18a058;
-  --warning-color: #f5a623;
-  --error-color: #d03050;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
   --info-color: #2080f0;
+
+  // 语义色 soft 背景（状态胶囊/标签底色统一引用，暗色自动切换）
+  --success-soft: rgba(16, 185, 129, 0.12);
+  --warning-soft: rgba(245, 158, 11, 0.12);
+  --error-soft: rgba(239, 68, 68, 0.1);
+  --info-soft: rgba(32, 128, 240, 0.1);
 
   // 中性色
   --text-primary: #333333;
@@ -52,16 +58,16 @@ $tablet-breakpoint: $bp-lg;
   --border-dark: #9ca3af;
   --border-color: var(--border-light);
 
-  // 阴影
-  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-heavy: 0 10px 15px rgba(0, 0, 0, 0.1);
+  // 阴影（边框优先审美：极浅层次阴影，1px 描边承担分层）
+  --shadow-light: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.12);
 
   // 圆角
   --border-radius-small: 4px;
   --border-radius-medium: 8px;
   --border-radius-large: 12px;
-  --border-radius-xl: 16px;
+  --border-radius-xl: 12px;
   // 别名：修复历史上引用了 --border-radius-sm / md / full 却从未定义的问题
   --border-radius-sm: var(--border-radius-small);
   --border-radius-md: var(--border-radius-medium);
@@ -124,6 +130,16 @@ $tablet-breakpoint: $bp-lg;
 
   --secondary-color: #9f7ad1;
 
+  // 暗色下语义色提亮一档，保证对比度
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  --error-color: #f87171;
+
+  --success-soft: rgba(52, 211, 153, 0.14);
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --error-soft: rgba(248, 113, 113, 0.12);
+  --info-soft: rgba(96, 165, 250, 0.14);
+
   --text-primary: #ffffff;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
@@ -142,9 +158,9 @@ $tablet-breakpoint: $bp-lg;
   --border-dark: #9ca3af;
   --border-color: var(--border-light);
 
-  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.4);
-  --shadow-heavy: 0 10px 15px rgba(0, 0, 0, 0.4);
+  --shadow-light: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-medium: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 
 @media (max-width: $bp-md) {

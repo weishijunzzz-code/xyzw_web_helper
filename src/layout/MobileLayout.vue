@@ -268,7 +268,19 @@ const isActiveRoute = (path) => {
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 // 顶部导航栏 - 玻璃拟态风格

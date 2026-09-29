@@ -259,12 +259,12 @@ const goToApex = () => {
 
   &.connected {
     color: var(--success-color);
-    background: rgba(24, 160, 88, 0.1);
+    background: var(--success-soft);
   }
 
   &.disconnected {
     color: var(--error-color);
-    background: rgba(208, 48, 80, 0.08);
+    background: var(--error-soft);
   }
 
   &:active {
