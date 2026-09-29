@@ -61,22 +61,6 @@
                   <n-button size="small">导入配置</n-button>
                 </n-upload>
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                  flex-shrink: 0;
-                  gap: 8px;
-                  white-space: nowrap;
-                "
-              >
-                <label class="setting-label" style="white-space: nowrap">黑市采购清单配置</label>
-                <n-button size="small" @click="openBlackMarketPurchaseModal">
-                  点击配置
-                </n-button>
-              </div>
             </div>
           </div>
           <div
@@ -2383,6 +2367,19 @@
               >
                 <label class="setting-label">助威商店购买配置</label>
                 <n-button size="small" @click="openWarguessStoreModal"
+                  >点击配置</n-button
+                >
+              </div>
+              <div
+                class="setting-item"
+                style="
+                  flex-direction: row;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label class="setting-label">黑市采购清单配置</label>
+                <n-button size="small" @click="openBlackMarketPurchaseModal"
                   >点击配置</n-button
                 >
               </div>
