@@ -182,6 +182,9 @@
         </template>
         <template #header-extra>
           <div class="card-head-actions">
+            <n-button size="small" type="primary" @click="openCreate">
+              + 新建定时任务
+            </n-button>
             <n-button size="small" @click="exportTasks">导出</n-button>
             <n-button size="small" @click="fileInput?.click()">导入</n-button>
             <input
@@ -193,67 +196,6 @@
             />
           </div>
         </template>
-
-        <n-collapse v-model:expanded-names="collapseExpanded" class="task-create">
-          <n-collapse-item name="create">
-            <template #header>
-              <n-button size="small" type="primary" ghost @click.stop="toggleCreateForm">
-                {{ editingTaskId ? "编辑定时任务：" + (taskForm.name || editingTaskId) : "+ 新建定时任务" }}
-              </n-button>
-            </template>
-            <n-form :label-placement="isMobile ? 'top' : 'left'" :label-width="isMobile ? undefined : 90">
-              <n-form-item label="任务名称">
-                <n-input v-model:value="taskForm.name" placeholder="如：每天日常" />
-              </n-form-item>
-              <n-form-item label="Cron 表达式">
-                <n-input v-model:value="taskForm.cron" placeholder="0 6 * * *（每天 6 点）" />
-              </n-form-item>
-              <n-form-item label="执行账号">
-                <n-space vertical style="width: 100%" :size="4">
-                  <n-select
-                    v-model:value="taskForm.tokenIds"
-                    multiple
-                    :options="cloudTokenOptions"
-                    placeholder="选择要执行的账号（可多选）"
-                  />
-                  <n-space size="small">
-                    <n-button size="tiny" @click="taskForm.tokenIds = cloudTokenOptions.map((o) => o.value)">
-                      全选账号
-                    </n-button>
-                    <n-button size="tiny" @click="taskForm.tokenIds = []">清空</n-button>
-                  </n-space>
-                </n-space>
-              </n-form-item>
-              <n-form-item label="执行任务">
-                <n-space vertical style="width: 100%" :size="4">
-                  <n-select
-                    v-model:value="taskForm.selectedTasks"
-                    multiple
-                    :options="taskOptions"
-                    placeholder="选择要执行的任务（可多选，按顺序执行）"
-                  />
-                  <n-space size="small">
-                    <n-button size="tiny" @click="taskForm.selectedTasks = taskOptions.map((o) => o.value)">
-                      全选任务
-                    </n-button>
-                    <n-button size="tiny" @click="taskForm.selectedTasks = []">清空</n-button>
-                  </n-space>
-                </n-space>
-              </n-form-item>
-              <n-form-item label="立即启用">
-                <n-switch v-model:value="taskForm.enabled" />
-              </n-form-item>
-              <n-space size="small">
-                <n-button type="primary" size="small" @click="submitTask">
-                  {{ editingTaskId ? "保存修改" : "创建定时任务" }}
-                </n-button>
-                <n-button v-if="editingTaskId" size="small" @click="cancelEdit">
-                  取消编辑
-                </n-button>
-              </n-space>
-            </n-form>
-          </n-collapse-item>
-        </n-collapse>
 
         <div v-if="scheduledTasks.length" class="task-list">
           <div
@@ -339,6 +281,96 @@
           </div>
         </div>
       </n-card>
+
+      <!-- 新建/编辑定时任务弹窗 -->
+      <n-modal
+        v-model:show="showTaskModal"
+        preset="card"
+        :title="editingTaskId ? `编辑定时任务${taskForm.name ? `：${taskForm.name}` : ''}` : '新建定时任务'"
+        :style="{ width: '90%', maxWidth: '600px', backgroundColor: 'var(--bg-primary)' }"
+        :mask-closable="false"
+        :bordered="false"
+        @close="resetTaskForm"
+      >
+        <n-alert v-if="formError" type="error" size="small" style="margin-bottom: 12px">
+          {{ formError }}
+        </n-alert>
+        <n-form
+          :label-placement="isMobile ? 'top' : 'left'"
+          :label-width="isMobile ? undefined : 90"
+        >
+          <n-form-item label="任务名称" :show-require-mark="true">
+            <n-input v-model:value="taskForm.name" placeholder="如：每天日常" maxlength="40" />
+          </n-form-item>
+          <n-form-item label="Cron 表达式" :show-require-mark="true">
+            <n-space vertical style="width: 100%" :size="6">
+              <div class="cron-row">
+                <n-input
+                  v-model:value="taskForm.cron"
+                  placeholder="0 6 * * *（每天 6 点）"
+                  class="cron-input"
+                />
+                <n-select
+                  :value="null"
+                  :options="cronPresetOptions"
+                  placeholder="常用预设"
+                  class="cron-preset"
+                  @update:value="(v) => v && (taskForm.cron = v)"
+                />
+              </div>
+              <span v-if="cronError" class="cron-error">{{ cronError }}</span>
+              <span v-else-if="nextRunText" class="cron-preview">下次执行：{{ nextRunText }}</span>
+              <span v-else class="cron-preview">5 个字段：分 时 日 月 周（如 0 6 * * * 表示每天 6 点）</span>
+            </n-space>
+          </n-form-item>
+          <n-form-item label="执行账号" :show-require-mark="true">
+            <n-space vertical style="width: 100%" :size="4">
+              <n-select
+                v-model:value="taskForm.tokenIds"
+                multiple
+                :options="cloudTokenOptions"
+                placeholder="选择要执行的账号（可多选）"
+              />
+              <n-space size="small" align="center">
+                <n-button size="tiny" @click="taskForm.tokenIds = cloudTokenOptions.map((o) => o.value)">
+                  全选账号
+                </n-button>
+                <n-button size="tiny" @click="taskForm.tokenIds = []">清空</n-button>
+                <span v-if="!cloudTokenOptions.length" class="field-hint">
+                  云端还没有账号，请先在上方「账号同步」
+                </span>
+              </n-space>
+            </n-space>
+          </n-form-item>
+          <n-form-item label="执行任务" :show-require-mark="true">
+            <n-space vertical style="width: 100%" :size="4">
+              <n-select
+                v-model:value="taskForm.selectedTasks"
+                multiple
+                :options="taskOptions"
+                placeholder="选择要执行的任务（可多选，按顺序执行）"
+              />
+              <n-space size="small">
+                <n-button size="tiny" @click="taskForm.selectedTasks = taskOptions.map((o) => o.value)">
+                  全选任务
+                </n-button>
+                <n-button size="tiny" @click="taskForm.selectedTasks = []">清空</n-button>
+              </n-space>
+            </n-space>
+          </n-form-item>
+          <n-form-item label="立即启用">
+            <n-switch v-model:value="taskForm.enabled" />
+          </n-form-item>
+        </n-form>
+        <template #footer>
+          <n-space justify="end" :size="8">
+            <n-button :disabled="saving" @click="showTaskModal = false">取消</n-button>
+            <n-button type="primary" :loading="saving" @click="submitTask">
+              {{ editingTaskId ? "保存修改" : "创建定时任务" }}
+            </n-button>
+          </n-space>
+        </template>
+      </n-modal>
     </template>
   </div>
 </template>
@@ -348,13 +380,12 @@ import {
   NAlert,
   NButton,
   NCard,
-  NCollapse,
-  NCollapseItem,
   NEmpty,
   NForm,
   NFormItem,
   NIcon,
   NInput,
+  NModal,
   NPopconfirm,
   NSelect,
   NSpace,
@@ -367,6 +398,7 @@ import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
 import { useCloudAuth } from "@/stores/cloudAuth";
 import { useMobile } from "@/composables/useMobile";
+import { validateCronExpression, calculateNextRuns } from "@/utils/batch/cronUtils.js";
 import {
   ServerPushClient,
   scheduledTasksApi,
@@ -446,14 +478,6 @@ const enabledTaskCount = computed(
 function avatarChar(name) {
   const n = String(name || "?").trim();
   return n.charAt(0).toUpperCase() || "?";
-}
-
-function toggleCreateForm() {
-  collapseExpanded.value = collapseExpanded.value.includes("create")
-    ? editingTaskId.value
-      ? ["create"]
-      : []
-    : ["create"];
 }
 
 async function refreshCloudTokens() {
@@ -631,10 +655,43 @@ async function refreshTasks() {
 }
 
 const editingTaskId = ref(null);
-const collapseExpanded = ref([]);
+const showTaskModal = ref(false);
+const saving = ref(false);
+const formError = ref("");
+
+// 常用 cron 预设
+const cronPresetOptions = [
+  { label: "每天 6:00", value: "0 6 * * *" },
+  { label: "每天 12:00", value: "0 12 * * *" },
+  { label: "每天 20:00", value: "0 20 * * *" },
+  { label: "每周一 6:00", value: "0 6 * * 1" },
+  { label: "每月 1 号 6:00", value: "0 6 1 * *" },
+  { label: "每 30 分钟", value: "*/30 * * * *" },
+];
+
+// cron 内联校验（后端仍做最终校验）
+const cronError = computed(() => {
+  if (!showTaskModal.value || !taskForm.cron?.trim()) return "";
+  const r = validateCronExpression(taskForm.cron.trim());
+  return r.valid ? "" : r.message;
+});
+
+// 下次执行时间预览
+const nextRunText = computed(() => {
+  if (!showTaskModal.value || cronError.value || !taskForm.cron?.trim()) return "";
+  try {
+    const parts = taskForm.cron.trim().split(/\s+/);
+    const next = calculateNextRuns(parts[0], parts[1], parts[2], parts[3], parts[4], 1);
+    if (next?.[0]) return new Date(next[0]).toLocaleString();
+  } catch {
+    /* 预览失败不阻塞输入 */
+  }
+  return "";
+});
 
 function resetTaskForm() {
   editingTaskId.value = null;
+  formError.value = "";
   taskForm.name = "";
   taskForm.cron = "0 6 * * *";
   taskForm.tokenIds = [];
@@ -642,33 +699,48 @@ function resetTaskForm() {
   taskForm.enabled = true;
 }
 
+function openCreate() {
+  resetTaskForm();
+  showTaskModal.value = true;
+}
+
 function startEditTask(t) {
   editingTaskId.value = t.id;
+  formError.value = "";
   taskForm.name = t.name || "";
   taskForm.cron = t.cron || "0 6 * * *";
   taskForm.tokenIds = [...(t.tokenIds || [])];
   taskForm.selectedTasks = [...(t.settings?.selectedTasks || [])];
   taskForm.enabled = t.enabled !== false;
-  collapseExpanded.value = ["create"]; // 自动展开编辑表单
-}
-
-function cancelEdit() {
-  resetTaskForm();
-  collapseExpanded.value = [];
+  showTaskModal.value = true;
 }
 
 async function submitTask() {
-  if (!taskForm.name || !taskForm.cron) {
-    pushLog("error", "请填写任务名称和 cron 表达式");
+  formError.value = "";
+  if (!taskForm.name?.trim()) {
+    formError.value = "请填写任务名称";
     return;
   }
-  if (!taskForm.tokenIds.length || !taskForm.selectedTasks.length) {
-    pushLog("error", "请选择执行账号和执行任务");
+  if (!taskForm.cron?.trim()) {
+    formError.value = "请填写 cron 表达式";
+    return;
+  }
+  const cronCheck = validateCronExpression(taskForm.cron.trim());
+  if (!cronCheck.valid) {
+    formError.value = `cron 表达式有误：${cronCheck.message}`;
+    return;
+  }
+  if (!taskForm.tokenIds.length) {
+    formError.value = "请选择至少一个执行账号";
+    return;
+  }
+  if (!taskForm.selectedTasks.length) {
+    formError.value = "请选择至少一个执行任务";
     return;
   }
   const payload = {
-    name: taskForm.name,
-    cron: taskForm.cron,
+    name: taskForm.name.trim(),
+    cron: taskForm.cron.trim(),
     tokenIds: taskForm.tokenIds,
     enabled: taskForm.enabled,
     settings: {
@@ -678,7 +750,8 @@ async function submitTask() {
       taskDelay: 1000,
     },
   };
-  const taskName = taskForm.name;
+  const taskName = taskForm.name.trim();
+  saving.value = true;
   try {
     if (editingTaskId.value) {
       await scheduledTasksApi.update(editingTaskId.value, payload);
@@ -688,12 +761,14 @@ async function submitTask() {
       pushLog("success", `定时任务「${taskName}」已创建`);
     }
     resetTaskForm();
+    showTaskModal.value = false;
     await refreshTasks();
   } catch (e) {
-    pushLog(
-      "error",
-      `${editingTaskId.value ? "更新" : "创建"}失败: ${e.response?.data?.error || e.message}`,
-    );
+    const msg = e.response?.data?.error || e.message;
+    formError.value = `${editingTaskId.value ? "更新" : "创建"}失败：${msg}`;
+    pushLog("error", `${editingTaskId.value ? "更新" : "创建"}失败: ${msg}`);
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -1237,11 +1312,40 @@ onUnmounted(() => {
   background: var(--error-color);
 }
 
-/* ============ 定时任务列表 ============ */
-.task-create {
-  margin-bottom: var(--spacing-sm);
+/* ============ 新建/编辑弹窗 ============ */
+.cron-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
 }
 
+.cron-row .cron-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cron-row .cron-preset {
+  width: 132px;
+  flex-shrink: 0;
+}
+
+.cron-error {
+  font-size: 12px;
+  color: var(--error-color);
+}
+
+.cron-preview {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--warning-color);
+}
+
+/* ============ 定时任务列表 ============ */
 .task-list {
   display: flex;
   flex-direction: column;
