@@ -445,6 +445,12 @@ export class GameManager {
   async connectWithRetry(tokenId, userId, maxRetries = 5) {
     for (let i = 0; i < maxRetries; i++) {
       try {
+        // 重试前刷新可自动续期的凭证（对齐批量页"失败→刷新数据→重试"的自愈链）：
+        // bin/wxQrcode/mobile 账号在 connect 内部已用 BIN 快照重新认证；
+        // url 导入账号在重连时重新拉取 sourceUrl。失败不阻塞重试流程。
+        if (i > 0) {
+          await this._refreshCredentials(tokenId, userId);
+        }
         // 先确保旧连接断开
         this.disconnect(tokenId);
         await new Promise(r => setTimeout(r, 500));
@@ -464,6 +470,33 @@ export class GameManager {
         const delay = Math.min(2000 * Math.pow(2, i), 32000);
         await new Promise(r => setTimeout(r, delay));
       }
+    }
+    return false;
+  }
+
+  /**
+   * 重连前刷新凭证：url 导入的账号重新拉取 sourceUrl 获取新 token 并写库。
+   * bin/wxQrcode/mobile 账号的刷新在 connect() 内部（_transformBinToken）处理；
+   * combUser 刷新依赖浏览器内游戏加密模块，无法在服务端执行——由浏览器端
+   * 刷新凭证后自动推送覆盖（见 tokenStore.attemptTokenRefresh）。
+   * @returns {boolean} 是否成功获取到新 token
+   */
+  async _refreshCredentials(tokenId, userId) {
+    try {
+      const token = this.db.getToken(tokenId, userId);
+      if (!token) return false;
+      if (token.importMethod === 'url' && token.sourceUrl) {
+        wsLogger.info(`刷新 sourceUrl token [${tokenId}]`);
+        const resp = await axios.get(token.sourceUrl, { timeout: 10000 });
+        if (resp.data?.token) {
+          this.db.updateToken(tokenId, { token: resp.data.token }, userId);
+          wsLogger.info(`sourceUrl token 刷新成功 [${tokenId}]`);
+          return true;
+        }
+        wsLogger.warn(`sourceUrl 响应中没有 token [${tokenId}]`);
+      }
+    } catch (e) {
+      wsLogger.warn(`刷新凭证失败 [${tokenId}]: ${e.message}`);
     }
     return false;
   }

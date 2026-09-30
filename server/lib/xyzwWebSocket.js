@@ -57,6 +57,7 @@ const formatBodyForLog = (body) => {
 };
 
 import { CommandRegistry } from './commandRegistryBase.js';
+import { responseToCommandMap } from "../../../src/utils/commandResponseMap.js";
 
 export { CommandRegistry };
 
@@ -351,54 +352,7 @@ export class XyzwWebSocketClient {
     if (!cmd) return;
     const respCmdKey = typeof cmd === "string" ? cmd.toLowerCase() : cmd;
 
-    const responseToCommandMap = {
-      fight_startpvpresp: "fight_startpvp",
-      activity_getresp: "activity_get",
-      role_getroleinforesp: "role_getroleinfo",
-      hero_recruitresp: "hero_recruit",
-      friend_batchresp: "friend_batch",
-      system_claimhanguprewardresp: "system_claimhangupreward",
-      item_openboxresp: ["item_openbox", "item_batchclaimboxpointreward"],
-      bottlehelper_claimresp: "bottlehelper_claim",
-      bottlehelper_startresp: "bottlehelper_start",
-      bottlehelper_stopresp: "bottlehelper_stop",
-      legion_signinresp: "legion_signin",
-      fight_startbossresp: "fight_startboss",
-      fight_startlegionbossresp: "fight_startlegionboss",
-      fight_startareaarenaresp: "fight_startareaarena",
-      arena_startarearesp: "arena_startarea",
-      arena_getareatargetresp: "arena_getareatarget",
-      presetteam_getinforesp: "presetteam_getinfo",
-      mail_claimallattachmentresp: "mail_claimallattachment",
-      store_buyresp: "store_purchase",
-      system_getdatabundleverresp: "system_getdatabundlever",
-      tower_claimrewardresp: "tower_claimreward",
-      fight_starttowerresp: "fight_starttower",
-      evotowerinforesp: "evotower_getinfo",
-      evotower_fightresp: "evotower_fight",
-      car_getrolecarresp: "car_getrolecar",
-      car_detailresp: "car_detail",
-      car_refreshresp: "car_refresh",
-      car_claimresp: "car_claim",
-      car_sendresp: "car_send",
-      legion_getinforesp: "legion_getinfo",
-      legacy_getinforesp: "legacy_getinfo",
-      legacy_claimhangupresp: "legacy_claimhangup",
-      task_claimdailyrewardresp: "task_claimdailyreward",
-      task_claimweekrewardresp: "task_claimweekreward",
-      bosstower_getinforesp: "bosstower_getinfo",
-      bosstower_startbossresp: "bosstower_startboss",
-      bosstower_startboxresp: "bosstower_startbox",
-      hero_heroupgradestarresp: "hero_heroupgradestar",
-      book_upgraderesp: "book_upgrade",
-      towers_getinforesp: "towers_getinfo",
-      towers_startresp: "towers_start",
-      towers_fightresp: "towers_fight",
-      activity_takeegamerewardresp: "activity_startactegame",
-      activity_actegamestageclaimresp: "activity_actegamestageclaim",
-      syncresp: ["system_mysharecallback", "task_claimdailypoint", "role_commitpassword", "hero_gointobattle", "hero_gobackbattle", "lordweapon_changedefaultweapon"],
-      syncrewardresp: ["system_buygold", "discount_claimreward", "card_claimreward", "artifact_lottery", "genie_sweep", "genie_buysweep", "system_signinreward", "dungeon_selecthero", "artifact_exchange", "hero_exchange", "gacha_drawreward"],
-    };
+    const responseToCommandMap = commandResponseMap;
 
     let originalCmds = responseToCommandMap[respCmdKey];
     if (!originalCmds) originalCmds = [respCmdKey];

@@ -169,6 +169,77 @@ export function registerDefaultCommands(reg) {
     .register("activity_startactegame")
     .register("activity_actegamestageclaim");
 
+  // 补齐浏览器端已有而服务端缺失的命令注册（41 条），两端口径保持一致
+  registry
+    .register("system_hangupupgrade", { upgradeNum: 1 })
+    .register("system_claimcdkreward", { key: "", platformType: "h5" })
+
+    // 任务相关
+    .register("task_claimdailypoint", { taskId: 1 })
+    .register("item_consume")
+    .register("store_getpurchase")
+    .register("store_setpurchase", {
+      purchaseCnt: 1,
+      purchaseItemList: [],
+    })
+    .register("store_getpurchasehistory")
+
+    // 军团
+    .register("legion_getinfo")
+    .register("legion_applyjoin", { legionId: 0 })
+    .register("club_getinfo")
+    .register("club_gettargetteam", { targetId: 0 })
+    .register("club_attack")
+    .register("club_attackmonster")
+    .register("club_taskclaim")
+    .register("club_getattackrecord")
+    .register("club_getdefenserecord", { targetId: 0, targetIsMirror: false })
+    .register("club_getgrouprank")
+    .register("club_getrolerank")
+
+    // 邮件
+    .register("mail_getlist", { category: [0, 4, 5], lastId: 0, size: 60 })
+    .register("evotower_buyenergy", { energy: 1 })
+    .register("tower_buyenergy", { buyNum: 1 })
+    .register("legionmatch_signup")
+    .register("legionmatch_getrank")
+    .register("legionmatch_getbattlerecord")
+
+    // 钓鱼
+    .register("artifact_lottery", { lotteryNumber: 1, newFree: true, type: 1 })
+    .register("activity_warorderget")
+    .register("activity_warordertaskclaim")
+    .register("activity_warorderrewardclaim")
+    .register("activity_getlotteryinfo")
+    .register("activity_lottery")
+    .register("activity_claimsignreward")
+    .register("activity_commonbuygoods")
+    .register("warguess_storebuy") // 助威商店购买
+    .register("legion_payloadsignup") // 蟠桃报名
+    .register("activity_buystoregoods", { activityId: 9, goodsIndex: 0, buyNum: 1 }) // 江湖黑市购买
+    .register("activity_claimrolluppack", { id: 17 }) // 周一免费礼包
+    .register("pkroom_getfightroominfo")
+    .register("pkroom_getfightroominfo")
+    .register("pkroom_getfightroomhistory", { date: "2026/05" })
+    .register("gacha_getinfo")
+    .register("legacy_beginhangup")
+    // 功法残卷赠送
+    .register("legacy_gift_getlist")
+    .register("saltcup26_getbetinfo")
+    .register("saltcup26_placebet", { matchId: "", pick: 0 })
+
+    // 换皮闯关领奖
+    .register("activity_startactegame", { actId: 0 })
+    .register("apex_getroleinfo")
+    .register("apex_getguesslist", { scheduleId: 0, idx: 0 })
+    .register("apex_guess", { teamId: "" })
+    .register("apex_get64oppomap", { scheduleId: 0, groupId: 0 })
+    // —— APEX 逐鹿盐山：按需注册，仅登记组件实际调用的命令 ——
+    .register("apex_getvotelist")
+    .register("apex_getvotelist")
+    .register("apex_vote");
+
+
   registry.commands.set("fight_startareaarena", (ack = 0, seq = 0, params = {}) => {
     if (params?.targetId === undefined || params?.targetId === null) {
       throw new Error("fight_startareaarena requires targetId in params");

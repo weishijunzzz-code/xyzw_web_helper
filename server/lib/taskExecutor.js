@@ -240,7 +240,7 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
       } else {
         await fn();
       }
-      const accounts = summarizeAccounts(deps, tokenIds);
+      const accounts = summarizeAccounts(tokenIds);
       results.push({
         task: taskName,
         status: accounts ? accounts.status : 'ok',
