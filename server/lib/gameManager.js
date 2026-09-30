@@ -96,7 +96,9 @@ export class GameManager {
     const parseResult = this._parseBase64Token(token.token);
     let actualToken = parseResult.success ? parseResult.data.actualToken : token.token;
 
-    if (token.importMethod === 'bin' || token.importMethod === 'wxQrcode') {
+    // bin 数据就是游戏连接凭证（root credential）：持有有效 BIN 即可在服务端
+    // 独立换出新 token，无需浏览器参与。覆盖面与浏览器 attemptTokenRefresh 一致。
+    if (['bin', 'wxQrcode', 'mobile'].includes(token.importMethod)) {
       const binData = this.db.getBinData(tokenId, userId || '');
       if (binData) {
         try {

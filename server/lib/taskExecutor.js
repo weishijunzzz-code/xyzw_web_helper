@@ -171,6 +171,28 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
 
   const results = [];
 
+  // 从 tokenStatus 汇总本次任务各账号的真实成败。
+  // 任务模块内部会 catch 每个账号的异常只写日志，外层函数几乎不会抛出，
+  // 仅凭"没抛异常"标记 ok 会产生假成功（账号全挂也显示成功）。
+  const summarizeAccounts = (ids) => {
+    let completed = 0;
+    let failed = 0;
+    for (const id of ids) {
+      const s = deps.tokenStatus.value[id];
+      if (s === 'completed') completed++;
+      else if (s === 'failed') failed++;
+    }
+    const tracked = completed + failed;
+    return tracked === 0
+      ? null
+      : {
+          total: ids.length,
+          completed,
+          failed,
+          status: failed === 0 ? 'ok' : completed > 0 ? 'partial' : 'error',
+        };
+  };
+
   // 按顺序执行用户选择的任务
   for (const taskName of selectedTasks) {
     if (deps.shouldStop.value) break;
@@ -186,8 +208,8 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
     if (mapping.module === 'special' && mapping.fn === 'startBatch') {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `=== 开始执行日常任务 ===`, type: 'info' });
       try {
-        await executeStartBatch(deps, modules);
-        results.push({ task: taskName, status: 'ok' });
+        const accounts = await executeStartBatch(deps, modules);
+        results.push({ task: taskName, status: accounts ? accounts.status : 'ok', accounts: accounts || undefined });
       } catch (e) {
         results.push({ task: taskName, status: 'error', error: e.message });
       }
@@ -218,7 +240,12 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
       } else {
         await fn();
       }
-      results.push({ task: taskName, status: 'ok' });
+      const accounts = summarizeAccounts(deps, tokenIds);
+      results.push({
+        task: taskName,
+        status: accounts ? accounts.status : 'ok',
+        ...(accounts ? { accounts } : {}),
+      });
     } catch (e) {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `任务失败: ${taskName} - ${e.message}`, type: 'error' });
       results.push({ task: taskName, status: 'error', error: e.message });
@@ -247,6 +274,10 @@ import { DailyTaskRunner } from './dailyTaskRunner.js';
 async function executeStartBatch(deps, modules) {
   const { selectedTokens, tokens, tokenStore, addLog, ensureConnection, releaseConnectionSlot, shouldStop, loadSettings } = deps;
 
+  let completed = 0;
+  let failed = 0;
+  const total = selectedTokens.value.length;
+
   for (const tokenId of selectedTokens.value) {
     if (shouldStop.value) break;
 
@@ -254,7 +285,7 @@ async function executeStartBatch(deps, modules) {
     if (!token) continue;
 
     try {
-      await ensureConnection(tokenId, tokens);
+      await ensureConnection(tokenId);
       addLog({ time: new Date().toLocaleTimeString(), message: `[${token.name}] 开始日常任务`, type: 'info' });
 
       const settings = await loadSettings(tokenId);
@@ -270,11 +301,22 @@ async function executeStartBatch(deps, modules) {
       }, settings);
 
       addLog({ time: new Date().toLocaleTimeString(), message: `[${token.name}] 日常任务完成`, type: 'success' });
+      completed++;
     } catch (e) {
       addLog({ time: new Date().toLocaleTimeString(), message: `[${token.name}] 日常任务失败: ${e.message}`, type: 'error' });
+      failed++;
     } finally {
       tokenStore.closeWebSocketConnection(tokenId);
       releaseConnectionSlot();
     }
   }
+
+  // 与普通任务保持同一口径：按账号真实成败给出状态（无账号则沿用旧 ok 行为）
+  if (completed + failed === 0) return null;
+  return {
+    total,
+    completed,
+    failed,
+    status: failed === 0 ? 'ok' : completed > 0 ? 'partial' : 'error',
+  };
 }

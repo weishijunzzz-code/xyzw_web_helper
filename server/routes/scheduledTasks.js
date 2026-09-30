@@ -79,7 +79,11 @@ function scheduleJob(taskId, cronExpr, userId, db, gameManager) {
       if (!task || !task.enabled) return;
       try {
         const result = await executeTask(task, userId, db, gameManager);
-        db.updateScheduledTask(taskId, { lastRun: new Date().toISOString(), lastResult: { success: true, summary: result } }, userId);
+        // 口径：只要存在至少一个任务且全部 error，整体即视为失败（summary 里仍有逐任务明细）
+        const allFailed = Array.isArray(result.results)
+          && result.results.length > 0
+          && result.results.every(r => r.status === 'error');
+        db.updateScheduledTask(taskId, { lastRun: new Date().toISOString(), lastResult: { success: !allFailed, summary: result } }, userId);
       } catch (e) {
         db.updateScheduledTask(taskId, { lastRun: new Date().toISOString(), lastResult: { success: false, error: e.message } }, userId);
       }

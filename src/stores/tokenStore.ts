@@ -452,6 +452,40 @@ export const useTokenStore = defineStore("tokens", () => {
     }
   };
 
+  /**
+   * 把刷新出的新凭证静默推送到云端（若已登录云端）。
+   * 云端是独立执行体，服务端靠"bin/token 快照"自主续期；批量页恰好在刷新凭证时
+   * 顺手覆盖云端快照，可避免云端拿着过期快照反复重连。失败静默，不影响本地。
+   */
+  const pushRefreshedTokenToCloud = async (
+    tokenId: string,
+    refreshedBin: ArrayBuffer | null,
+  ) => {
+    try {
+      if (!localStorage.getItem("auth_token")) return;
+      const t = gameTokens.value.find((item) => item.id === tokenId);
+      if (!t?.token) return;
+      await tokenApi.importTokens([
+        {
+          id: t.id,
+          name: t.name,
+          token: t.token,
+          wsUrl: t.wsUrl || null,
+          server: t.server || "",
+          remark: t.remark || "",
+          importMethod: t.importMethod || "manual",
+          sourceUrl: t.sourceUrl || null,
+        },
+      ]);
+      if (refreshedBin) {
+        await tokenApi.uploadBin(t.id, refreshedBin);
+      }
+      tokenLogger.info(`已将刷新后的凭证同步到云端 [${tokenId}]`);
+    } catch (e) {
+      tokenLogger.warn(`凭证同步云端失败（不影响本地） [${tokenId}]:`, e);
+    }
+  };
+
   // 游戏消息处理
   const handleGameMessage = async (
     tokenId: string,
