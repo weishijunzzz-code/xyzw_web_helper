@@ -253,13 +253,13 @@ const my_routes = [
         }
       },
       {
+        // 云端任务已并入定时任务页的分段切换（?tab=cloud），旧路径重定向兜底
         path: 'cloud-tasks',
         name: 'MobileCloudTasks',
-        component: safeImport(() => import('@/views/CloudTasks.vue')),
-        meta: {
-          title: '云端任务',
-          requiresCloudAuth: true
-        }
+        redirect: (to) => ({
+          path: '/mobile/task-scheduler',
+          query: { ...to.query, tab: 'cloud' }
+        })
       },
       {
         path: 'profile',

@@ -50,23 +50,35 @@
         </div>
       </div>
 
-      <!-- 统计概览 -->
+      <!-- 统计概览：对齐定时任务页 StatisticCards 的视觉（图标芯片 + 彩色描边） -->
       <div class="stats-row">
-        <div class="stat-card">
-          <span class="stat-value">{{ cloudTokens.length }}</span>
-          <span class="stat-label">云端账号</span>
+        <div class="stat-card stat-total">
+          <div class="stat-icon"><n-icon :component="CloudOutline" /></div>
+          <div class="stat-info">
+            <span class="stat-value">{{ cloudTokens.length }}</span>
+            <span class="stat-label">云端账号</span>
+          </div>
         </div>
-        <div class="stat-card">
-          <span class="stat-value stat-on">{{ connectedCount }}</span>
-          <span class="stat-label">已连接</span>
+        <div class="stat-card stat-conn">
+          <div class="stat-icon"><n-icon :component="CheckmarkCircleOutline" /></div>
+          <div class="stat-info">
+            <span class="stat-value stat-on">{{ connectedCount }}</span>
+            <span class="stat-label">已连接</span>
+          </div>
         </div>
-        <div class="stat-card">
-          <span class="stat-value">{{ scheduledTasks.length }}</span>
-          <span class="stat-label">定时任务</span>
+        <div class="stat-card stat-sched">
+          <div class="stat-icon"><n-icon :component="TimeOutline" /></div>
+          <div class="stat-info">
+            <span class="stat-value">{{ scheduledTasks.length }}</span>
+            <span class="stat-label">定时任务</span>
+          </div>
         </div>
-        <div class="stat-card">
-          <span class="stat-value">{{ enabledTaskCount }}</span>
-          <span class="stat-label">已启用</span>
+        <div class="stat-card stat-enabled">
+          <div class="stat-icon"><n-icon :component="PowerOutline" /></div>
+          <div class="stat-info">
+            <span class="stat-value">{{ enabledTaskCount }}</span>
+            <span class="stat-label">已启用</span>
+          </div>
         </div>
       </div>
 
@@ -74,6 +86,7 @@
       <n-card class="section-card card-sync" :bordered="true">
         <template #header>
           <div class="card-head">
+            <span class="head-icon hi-blue"><n-icon :component="PeopleOutline" /></span>
             <span class="card-head-title">账号同步</span>
             <span class="card-head-sub">
               本地 {{ localTokens.length }} 个 · 云端 {{ cloudTokens.length }} 个
@@ -162,6 +175,7 @@
       <n-card class="section-card card-sched" :bordered="true">
         <template #header>
           <div class="card-head">
+            <span class="head-icon hi-violet"><n-icon :component="TimeOutline" /></span>
             <span class="card-head-title">定时任务</span>
             <span class="card-head-sub">服务端 croner · 时区 Asia/Shanghai</span>
           </div>
@@ -300,6 +314,7 @@
       <n-card class="section-card card-log" :bordered="true">
         <template #header>
           <div class="card-head">
+            <span class="head-icon hi-green"><n-icon :component="TerminalOutline" /></span>
             <span class="card-head-title">实时执行日志</span>
             <span class="push-pill mini" :class="{ on: pushConnected }">
               <span class="push-dot" />
@@ -346,7 +361,7 @@ import {
   NSwitch,
   NTag,
 } from "naive-ui";
-import { Search } from "@vicons/ionicons5";
+import { Search, CloudOutline, CheckmarkCircleOutline, TimeOutline, PowerOutline, PeopleOutline, TerminalOutline } from "@vicons/ionicons5";
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
@@ -898,6 +913,12 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 
+/* 被定时任务页嵌入时，留白与宽度由父级 page-content 提供 */
+.cloud-tasks.embedded {
+  max-width: none;
+  padding: 0;
+}
+
 /* ============ 页头 ============ */
 .cloud-header {
   display: flex;
@@ -956,7 +977,7 @@ onUnmounted(() => {
   background: transparent;
 }
 
-/* ============ 统计概览 ============ */
+/* ============ 统计概览（对齐定时任务页 StatisticCards） ============ */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -966,12 +987,74 @@ onUnmounted(() => {
 
 .stat-card {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px 16px;
+  align-items: center;
+  padding: 16px 18px;
   background: var(--bg-primary);
   border: 1px solid var(--border-light);
-  border-radius: var(--border-radius-medium);
+  border-left: 4px solid transparent;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.stat-total {
+  border-left-color: #3b82f6;
+}
+
+.stat-conn {
+  border-left-color: #10b981;
+}
+
+.stat-sched {
+  border-left-color: #8b5cf6;
+}
+
+.stat-enabled {
+  border-left-color: #f59e0b;
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: 14px;
+  font-size: 22px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.stat-total .stat-icon {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.stat-conn .stat-icon {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.stat-sched .stat-icon {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.stat-enabled .stat-icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .stat-value {
@@ -994,9 +1077,36 @@ onUnmounted(() => {
 /* ============ 卡片头部 ============ */
 .card-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--spacing-sm);
   min-width: 0;
+}
+
+/* 区块标题图标芯片 */
+.head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.hi-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.hi-violet {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.hi-green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 .card-head-title {
@@ -1009,6 +1119,7 @@ onUnmounted(() => {
 .card-head-sub {
   font-size: 12px;
   color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .card-head-actions {
@@ -1032,8 +1143,8 @@ onUnmounted(() => {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
-  padding: 8px 6px;
-  border-radius: var(--border-radius-small);
+  padding: 9px 10px;
+  border-radius: 10px;
   border-bottom: 1px solid var(--border-light);
   transition: background 0.15s ease;
 }
@@ -1142,10 +1253,10 @@ onUnmounted(() => {
   gap: var(--spacing-md);
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border-light);
   border-left: 3px solid var(--success-color);
-  border-radius: var(--border-radius-small);
+  border-radius: 10px;
   background: var(--bg-primary);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1261,6 +1372,22 @@ onUnmounted(() => {
 
 .section-card {
   margin-bottom: var(--spacing-md);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+}
+
+/* 彩色描边用 inset 阴影实现，避免覆盖 n-card 自身边框 */
+.card-sync {
+  box-shadow: inset 4px 0 0 #3b82f6, var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+}
+
+.card-sched {
+  box-shadow: inset 4px 0 0 #8b5cf6, var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+}
+
+.card-log {
+  box-shadow: inset 4px 0 0 #10b981, var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
 }
 
 /* ============ 桌面端双栏：左配置 + 右常驻日志 ============ */
@@ -1327,7 +1454,14 @@ onUnmounted(() => {
   }
 
   .stat-card {
-    padding: 10px 12px;
+    padding: 12px 14px;
+  }
+
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+    font-size: 18px;
   }
 
   .stat-value {

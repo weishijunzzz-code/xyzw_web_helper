@@ -539,6 +539,14 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+// 移动端横向溢出统一由 body 裁剪：.mobile-main 保持 overflow visible，
+// 否则它会成为滚动容器，页面内 position: sticky 元素（如定时任务分段条）将无法相对视口吸顶
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
 // 所有可滚动区域优化
 .scrollable {
   overflow-y: auto;

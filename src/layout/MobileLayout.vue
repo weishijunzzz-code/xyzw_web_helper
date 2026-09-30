@@ -160,7 +160,6 @@ import {
   Person,
   Time,
   Layers,
-  CloudCircleOutline,
   CheckmarkCircle
 } from '@vicons/ionicons5'
 
@@ -168,14 +167,13 @@ const route = useRoute()
 const router = useRouter()
 const tokenStore = useTokenStore()
 
-// 底部导航项
+// 底部导航项（云端任务已并入"定时"页的分段切换，不再单占一个 tab）
 const bottomNavItems = [
   { path: '/mobile/dashboard', label: '首页', icon: Home },
   { path: '/mobile/game-features', label: '功能', icon: Grid },
   { path: '/mobile/tokens', label: '账号', icon: Person },
   { path: '/mobile/task-scheduler', label: '定时', icon: Time },
-  { path: '/mobile/batch-daily-tasks', label: '批量', icon: Layers },
-  { path: '/mobile/cloud-tasks', label: '云端', icon: CloudCircleOutline }
+  { path: '/mobile/batch-daily-tasks', label: '批量', icon: Layers }
 ]
 
 // 计算属性
@@ -508,15 +506,16 @@ const isActiveRoute = (path) => {
 // 主内容区域
 .mobile-main {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   padding-top: 64px;
   padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
 
   &.has-bottom-nav {
     padding-bottom: calc(110px + env(safe-area-inset-bottom, 20px));
   }
+
+  // 注意：这里不能设 overflow，否则本元素会成为滚动容器，
+  // 页面内 position: sticky 元素将相对它吸附（而它高度随内容增长、永不滚动）。
+  // 移动端实际滚动由 body 承担，横向溢出也在 body 上裁剪（见 global.scss）。
 
   // 内容紧凑缩放：只缩放页面内容，顶栏/底部导航保持原生尺寸。
   // 动机：浏览器整体缩放（双指/自适应缩小）会连带 fixed 导航一起变小，
@@ -570,7 +569,7 @@ const isActiveRoute = (path) => {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 8px; // 6 项时收窄水平内边距，防止溢出胶囊
+  padding: 6px 10px; // 5 项，留足水平内边距且不溢出胶囊
   text-decoration: none;
   color: var(--text-tertiary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

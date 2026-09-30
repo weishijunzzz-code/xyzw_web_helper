@@ -57,7 +57,14 @@ export interface UseTaskSchedulerReturn {
   handleHistorySelect: (record: TaskExecutionRecord) => void;
 }
 
-export function useTaskScheduler(): UseTaskSchedulerReturn {
+export interface UseTaskSchedulerOptions {
+  /**
+   * 下拉刷新开关（如：云端任务分段下关闭，避免云端列表无法下拉时误触发刷新）
+   */
+  canPull?: () => boolean;
+}
+
+export function useTaskScheduler(options?: UseTaskSchedulerOptions): UseTaskSchedulerReturn {
   const message = useMessage();
   const dialog = useDialog();
   const taskStore = useScheduledTaskStore();
@@ -93,6 +100,23 @@ export function useTaskScheduler(): UseTaskSchedulerReturn {
   const pullDistance = ref<number>(0);
   let touchStartY = 0;
   let touchStartX = 0;
+  let startedAtTop = false;
+
+  // 真实滚动容器：全局样式 html/body 高度 100%，移动端实际滚动发生在 body 上，
+  // .page-content / .mobile-main 高度随内容增长、自身永不滚动，直接读它们的
+  // scrollTop 恒为 0，会导致任意位置下滑都被误判为"处于顶部"而劫持页面滚动。
+  // 因此从当前元素向上找到第一个真正可滚动的祖先，兜底回落到 body。
+  const getScrollContainer = (): HTMLElement | null => {
+    let node = pageContentRef.value?.parentElement ?? null;
+    while (node && node !== document.body) {
+      if (node.scrollHeight > node.clientHeight) {
+        const oy = getComputedStyle(node).overflowY;
+        if (oy === 'auto' || oy === 'scroll') return node;
+      }
+      node = node.parentElement;
+    }
+    return document.body;
+  };
 
   // 批量操作模式
   const batchMode = ref<boolean>(false);
@@ -120,32 +144,34 @@ export function useTaskScheduler(): UseTaskSchedulerReturn {
   // 下拉刷新处理
   const handleTouchStart = (e: TouchEvent) => {
     if (!isMobile.value) return;
-    
-    // 只有在页面顶部才能下拉刷新
-    if (pageContentRef.value && pageContentRef.value.scrollTop === 0) {
-      touchStartY = e.touches[0].clientY;
-      touchStartX = e.touches[0].clientX;
-      isPulling.value = true;
-    }
+    if (options?.canPull && !options.canPull()) return;
+
+    const scroller = getScrollContainer();
+    startedAtTop = !!scroller && scroller.scrollTop <= 0;
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
   };
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (!isMobile.value || !isPulling.value) return;
-    
+    if (!isMobile.value || !startedAtTop) return;
+
     const touchY = e.touches[0].clientY;
     const touchX = e.touches[0].clientX;
     const deltaY = touchY - touchStartY;
     const deltaX = Math.abs(touchX - touchStartX);
-    
-    // 垂直滑动距离大于水平滑动距离，且在顶部
-    if (deltaY > 0 && deltaY > deltaX && pageContentRef.value!.scrollTop === 0) {
+
+    // 垂直下滑超过阈值、且真实滚动容器仍在顶部时才拦截，
+    // 否则不 preventDefault，让页面正常滚动
+    if (deltaY > 10 && deltaY > deltaX && (getScrollContainer()?.scrollTop ?? 1) <= 0) {
       e.preventDefault();
+      isPulling.value = true;
       // 阻尼效果
       pullDistance.value = Math.min(deltaY * 0.5, 100);
     }
   };
 
   const handleTouchEnd = async () => {
+    startedAtTop = false;
     if (!isMobile.value || !isPulling.value) return;
     
     isPulling.value = false;

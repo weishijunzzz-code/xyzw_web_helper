@@ -135,8 +135,9 @@ const showSearch = ref(false);
 @media (max-width: 768px) {
   .page-header {
     padding: 12px 16px;
-    // 移动端位于 MobileLayout 固定头（64px）之下；页面内容被 0.8 缩放，坐标需换算
-    top: 80px;
+    // 移动端不再吸顶：原先的 sticky top 按 0.8 内容缩放换算，zoom 调整后会错位；
+    // 且工具栏换成两行后吸顶占用过高，改为随页面滚动
+    position: static;
   }
 
   .header-content {

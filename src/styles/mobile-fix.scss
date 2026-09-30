@@ -36,13 +36,14 @@
     -webkit-overflow-scrolling: touch !important;
   }
 
-  // #app 允许滑动
+  // #app 横向溢出裁剪：必须用 clip 而不是 auto/hidden，
+  // 否则 #app 会成为滚动容器，页面内 position: sticky 元素
+  // （如定时任务页的分段条）将相对 #app 吸附而永远无法吸顶
   #app {
     width: 100% !important;
     min-width: 100% !important;
     box-sizing: border-box !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-x: clip !important;
   }
 
   // 修复主内容区域
