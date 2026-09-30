@@ -57,7 +57,7 @@ const formatBodyForLog = (body) => {
 };
 
 import { CommandRegistry } from './commandRegistryBase.js';
-import { responseToCommandMap } from "../../../src/utils/commandResponseMap.js";
+import { responseToCommandMap } from "../../src/utils/commandResponseMap.js";
 
 export { CommandRegistry };
 
