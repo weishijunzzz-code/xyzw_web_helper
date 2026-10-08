@@ -138,7 +138,14 @@
             :key="t.id"
             class="account-row"
           >
-            <span class="account-avatar">{{ avatarChar(t.name) }}</span>
+            <img
+              v-if="t.avatar"
+              class="account-avatar-img"
+              :src="t.avatar"
+              :alt="t.name"
+              referrerpolicy="no-referrer"
+            />
+            <span v-else class="account-avatar">{{ avatarChar(t.name) }}</span>
             <div class="account-info">
               <span class="account-name" :title="t.name">{{ t.name }}</span>
               <span v-if="t.server" class="account-server">{{ t.server }}</span>
@@ -296,6 +303,7 @@
           {{ formError }}
         </n-alert>
         <n-form
+          class="cloud-task-form"
           :label-placement="isMobile ? 'top' : 'left'"
           :label-width="isMobile ? undefined : 90"
         >
@@ -514,6 +522,7 @@ async function syncAllTokens() {
             remark: t.remark || "",
             importMethod: t.importMethod || "manual",
             sourceUrl: t.sourceUrl || null,
+            avatar: t.avatar || "",
           },
         ]);
         // BIN 数据（有才传；游戏连接解密需要）
@@ -1246,6 +1255,14 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 
+.account-avatar-img {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .account-info {
   display: flex;
   align-items: center;
@@ -1321,8 +1338,9 @@ onUnmounted(() => {
 }
 
 .cron-row .cron-input {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  width: 100%;
 }
 
 .cron-row .cron-preset {
@@ -1338,6 +1356,33 @@ onUnmounted(() => {
 .cron-preview {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+/* 移动端弹窗适配 */
+@media (max-width: 768px) {
+  /* Cron 行上下堆叠：输入框整行 + 预设下拉整行。
+     不依赖 flex 布局，规避部分手机内核（微信 X5/XWeb 等）flex/gap
+     实现差异导致的输入框塌陷不可见问题 */
+  .cron-row {
+    display: block;
+  }
+
+  .cron-row .cron-input {
+    display: block;
+    width: 100%;
+  }
+
+  .cron-row .cron-preset {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  /* 多选（执行账号/执行任务）标签墙限高滚动，避免弹窗被撑得过长 */
+  .cloud-task-form :deep(.n-base-selection-tags) {
+    max-height: 132px;
+    overflow-y: auto;
+  }
 }
 
 .field-hint {

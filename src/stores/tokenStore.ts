@@ -390,13 +390,15 @@ export const useTokenStore = defineStore("tokens", () => {
           roleIndex: roleIndexFromServerId(refreshed.role.serverId),
           lastRefreshed: Date.now(),
         } as any);
+        // 关键修复：combUser 重新登录生成的新 BIN 必须持久化，
+        // 否则一旦 combUser 过期，这个账号就再也刷不动了
+        await storeArrayBuffer(tokenId, refreshed.bin);
         refreshSuccess = true;
-      } else if (gameToken.importMethod === "wxForceLogout") {
-        wsLogger.error(`Token刷新失败: 未保存 combUser [${tokenId}]`);
       } else if (
         gameToken.importMethod === "bin" ||
         gameToken.importMethod === "wxQrcode" ||
-        gameToken.importMethod === "mobile"
+        gameToken.importMethod === "mobile" ||
+        gameToken.importMethod === "wxForceLogout"
       ) {
         // Bin形式token刷新
         let userToken: ArrayBuffer | null = await getArrayBuffer(tokenId);

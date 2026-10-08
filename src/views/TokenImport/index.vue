@@ -1121,10 +1121,8 @@ const refreshToken = async (token) => {
       });
 
       message.success("Token刷新成功");
-    } else if (token.combUser || token.importMethod === "wxForceLogout") {
-      if (!token.combUser) {
-        throw new Error("该账号未保存 combUser，无法自动刷新");
-      }
+    } else if (token.combUser) {
+      // 有 combUser → 重新登录拿新 BIN，同时写回 IndexedDB 防止下次 combUser 失效
       const refreshed = await refreshTokenFromCombUser(token.combUser, {
         serverId: token.serverId,
         roleIndex: token.roleIndex,
@@ -1137,7 +1135,10 @@ const refreshToken = async (token) => {
         roleIndex: roleIndexFromServerId(refreshed.role.serverId),
         lastRefreshed: Date.now(),
       });
-      message.success("combUser Token刷新成功");
+      // 关键修复：将 combUser 重新登录生成的新 BIN 持久化，
+      // 这样即使日后 combUser 过期，也能靠 BIN 继续刷新
+      await storeArrayBuffer(token.id, refreshed.bin);
+      message.success("combUser Token刷新成功（BIN 已同步）");
     } else {
       // 凭证数据（userToken/BIN）就是登录凭证：本地存有即可向官方登录接口换新 token，
       // 不按导入方式限制（手动导入但之前存过 BIN 的账号同样可刷）
