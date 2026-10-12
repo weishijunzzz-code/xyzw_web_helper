@@ -904,33 +904,56 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
 
-  // 移动端优化
+  // 移动端优化：标签条换行全部可见，
+  // 避免 Naive Tabs 内部裁剪导致靠后的功能入口（营地挑战/盐场/蟠桃园/排行榜/切磋）不可见
   @media (max-width: 768px) {
     margin: 0 0 var(--spacing-sm) 0;
     overflow: visible;
 
-    :deep(.n-tabs-nav) {
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      position: relative;
-      
-      &::-webkit-scrollbar {
-        display: none;
-      }
+    // 放开 Tabs 的多层裁剪/横向滚动容器（需 !important 覆盖 mobile-fix.scss 的 overflow-x: auto）
+    :deep(.n-tabs-nav),
+    :deep(.n-tabs-nav-scroll-wrapper),
+    :deep(.v-x-scroll) {
+      overflow: visible !important;
+    }
+
+    :deep(.n-tabs-nav-scroll-content) {
+      width: 100%;
+      min-width: 0;
+    }
+
+    // 换行代替横向滚动
+    :deep(.n-tabs-wrapper) {
+      flex-wrap: wrap;
+      row-gap: 2px;
+    }
+
+    // 下划线 bar 按单行布局绝对定位，换行后会错位，隐藏并改用胶囊高亮
+    :deep(.n-tabs-bar) {
+      display: none !important;
     }
 
     :deep(.n-tabs-tab) {
-      padding: 8px 12px;
-      font-size: 13px;
+      padding: 6px 12px !important;
+      // 补偿 MobileLayout 内容区 zoom: 0.6，保证中文标签可读
+      font-size: 14px !important;
       white-space: nowrap;
       flex-shrink: 0;
+      border-radius: var(--border-radius-full, 999px);
     }
 
+    :deep(.n-tabs-tab--active) {
+      background: var(--primary-color-light, rgba(102, 126, 234, 0.18));
+      color: var(--primary-color, #667eea);
+      font-weight: 600;
+    }
+
+    // 防截断兜底：中文标签永不被省略号吃掉
     :deep(.n-tabs-tab__label) {
-      font-size: 13px;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
     }
 
     :deep(.n-tabs-nav__prefix),

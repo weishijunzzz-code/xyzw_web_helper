@@ -330,9 +330,7 @@ const goToApex = () => {
 .entry-desc {
   font-size: 11px;
   opacity: 0.85;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
 }
 
 .entry-arrow {

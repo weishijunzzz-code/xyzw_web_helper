@@ -408,9 +408,9 @@ const addSelectedRole = async (roleInfo: any) => {
       message.warning(`角色 ${name} 已在待添加列表中`);
       return;
     }
-    if (!saveCombUser.value) {
-      await storeArrayBuffer(tokenId, buffer);
-    }
+    // 关键修复：无论勾不勾选强制下线，都同时存 BIN 和 combUser
+    // 之前是互斥二选一，BIN 丢了就彻底没救；现在双保险，任一丢了另一个能救
+    await storeArrayBuffer(tokenId, buffer);
     roleList.value.push({
       id: tokenId,
       roleId: roleInfo.roleId,
@@ -421,9 +421,8 @@ const addSelectedRole = async (roleInfo: any) => {
       wsUrl: importForm.wsUrl,
       importMethod: "mobile",
       serverId: roleInfo.serverId,
-      ...(saveCombUser.value && currentCombUser.value
-        ? { combUser: currentCombUser.value }
-        : {}),
+      // 关键修复：有 combUser 就存，不依赖勾选状态（双保险）
+      ...(currentCombUser.value ? { combUser: currentCombUser.value } : {}),
     });
     message.success(`已添加角色：${name}`);
   } catch (error: any) {

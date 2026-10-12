@@ -349,10 +349,9 @@ const addSelectedRole = async (roleInfo: any) => {
     const roleToken = await transformToken(newBinBuffer);
     const roleName = roleInfo.name || `角色_${roleInfo.roleId}`;
 
-    // 刷新indexDB数据库token数据 (保存原始bin)
-    if (!saveCombUser.value) {
-      await storeArrayBuffer(tokenId, newBinBuffer);
-    }
+    // 关键修复：无论勾不勾选强制下线，都同时存 BIN 和 combUser
+    // 之前是互斥二选一，BIN 丢了就彻底没救；现在双保险，任一丢了另一个能救
+    await storeArrayBuffer(tokenId, newBinBuffer);
 
     let sid = Number(roleInfo.serverId);
     let roleIndex = 0;
@@ -392,7 +391,8 @@ const addSelectedRole = async (roleInfo: any) => {
       wsUrl: importForm.wsUrl || "",
       importMethod: "wxQrcode",
       serverId: roleInfo.serverId,
-      ...(saveCombUser.value ? { combUser: currentCombUser.value } : {}),
+      // 关键修复：有 combUser 就存，不依赖勾选状态（双保险）
+      ...(currentCombUser.value ? { combUser: currentCombUser.value } : {}),
     });
 
     // 【新增】生成该角色的标准bin文件
