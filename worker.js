@@ -111,7 +111,15 @@ export default {
     // Serve static assets (Cloudflare Pages)
     // If env.ASSETS is available (e.g. in Cloudflare Pages Functions), use it to fetch static assets
     if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      const assetResponse = await env.ASSETS.fetch(request);
+      // SPA 回退：非静态资源路径未命中时返回 index.html。
+      // 不用 _redirects 的 `/* /index.html 200`，它会与 Pages 的 clean-url 重定向
+      // 形成无限循环而被忽略，导致深层路由（如 /mobile/game-features）404。
+      if (assetResponse.status === 404 && !url.pathname.includes('.')) {
+        const fallbackRequest = new Request(new URL('/index.html', url.origin), request);
+        return env.ASSETS.fetch(fallbackRequest);
+      }
+      return assetResponse;
     }
 
     // Default response for non-proxy paths
