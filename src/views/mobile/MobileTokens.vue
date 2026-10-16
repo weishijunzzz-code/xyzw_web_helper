@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <div class="mobile-page-embed">
     <TokenImport />
   </div>
 </template>
 
 <script setup>
-import TokenImport from '@/views/TokenImport/index.vue'
+import TokenImport from '@/views/TokenImport/TokenImport.vue'
 </script>
 
 <style scoped>

@@ -1,4 +1,3 @@
-
 // create by elishell <75950346@qq.com>
 import type { App } from "vue";
 
@@ -100,29 +99,40 @@ class Cache {
     });
   }
 
+  /**
+   * Populate a cache entry and settle every reader waiting for the same key.
+   * @param {string} key Cache key.
+   * @param {Function|Promise<unknown>|unknown} callback Loader or already available value.
+   * @param {object} conf Entry timeout configuration.
+   * @returns {Promise<unknown>} Loaded value; loader failures reject and evict the entry.
+   */
   async feach(key, callback, conf = this[config]) {
     const oldItem = this.content[key];
     const newItem = new CacheItem(key, null, conf.timeout);
     this.content[key] = newItem;
-    let data;
-    if (callback instanceof Function || callback instanceof Promise) {
-      try {
-        data = await callback(key, conf);
-        oldItem && oldItem.reslove.map((f) => f && f(data));
-        newItem && newItem.reslove.map((f) => f && f(data));
-      } catch (e) {
-        console.error(`${this.name}-${key}: the ajax request is failed : ${e}`);
-        oldItem && oldItem.reject.map((f) => f && f(data));
-        newItem && newItem.reject.map((f) => f && f(data));
+    const waitingItems = [oldItem, newItem].filter(Boolean);
+    try {
+      const data =
+        typeof callback === "function"
+          ? await callback(key, conf)
+          : await callback;
+      newItem.val = data;
+      for (const item of waitingItems) {
+        for (const resolve of item.reslove) resolve(data);
       }
-    } else {
-      data = callback;
-      oldItem && oldItem.reslove.map((f) => f && f(data));
-      newItem && newItem.reslove.map((f) => f && f(data));
+      return data;
+    } catch (error) {
+      if (this.content[key] === newItem) delete this.content[key];
+      for (const item of waitingItems) {
+        for (const reject of item.reject) reject(error);
+      }
+      throw error;
+    } finally {
+      for (const item of waitingItems) {
+        item.reject.length = 0;
+        item.reslove.length = 0;
+      }
     }
-    oldItem && ((oldItem.reject.length = 0), (oldItem.reslove.length = 0));
-    newItem && ((newItem.reject.length = 0), (newItem.reslove.length = 0));
-    return (newItem.val = data);
   }
 
   clean(content = new Content()) {
@@ -160,14 +170,14 @@ class CacheManager {
 
 const $CacheManager = new CacheManager();
 
-const install = (vm:App, options:any) => {
-  if (vm.version.startWith("3.")) {
+const install = (vm: App) => {
+  if (vm.version.startsWith("3.")) {
     vm.config.globalProperties.$CacheManager = $CacheManager;
   } else {
     vm.prototype.$CacheManager = $CacheManager;
   }
 };
 
-window.$CacheManager = $CacheManager;
+if (typeof window !== "undefined") window.$CacheManager = $CacheManager;
 
-export { $CacheManager, Content, CacheManager, Cache, install };
+export { $CacheManager, Cache, CacheManager, Content, install };

@@ -4,20 +4,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "baseUrl": ".",
     "outDir": "dist",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@@/*": [
-        "src/components/*"
-      ],
-      "#/*": [
-        "src/frames/*"
-      ],
-      "##/*": [
-        "src/views/*"
-      ]
-    }
+    "paths": { "@/*": ["src/*"] }
   },
   "references": [
     {

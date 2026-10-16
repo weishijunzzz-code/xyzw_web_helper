@@ -13,10 +13,10 @@ declare interface TermData {
  * @param record 收集器
  * @param terms 词条列表（正则表达式）
  * @param path 父级路径
- * @returns
+ * @returns {void} Adds matching fields to the provided collector.
  */
 const scanForTermData = (
-  obj: Object,
+  obj: object,
   record: TermData[],
   terms: RegExp[],
   path: string = "",
@@ -31,8 +31,8 @@ const scanForTermData = (
     if (terms.find((term) => term.test(key))) {
       record.push({
         path: currentPath,
-        key: key,
-        value: value,
+        key,
+        value,
         type: typeof value,
         isArray: Array.isArray(value),
       });
@@ -46,7 +46,7 @@ const scanForTermData = (
 
 // 辅助函数：分析数据结构
 const analyzeDataStructure = (
-  obj: Object,
+  obj: object,
   depth: number = 0,
   maxDepth: number = 3,
 ) => {
@@ -69,7 +69,7 @@ const analyzeDataStructure = (
 };
 
 // 辅助函数：尝试解析队伍数据
-const tryParseTeamData = (data: Object, result: any, cmd) => {
+const tryParseTeamData = (data: object, result: any) => {
   // 查找队伍相关字段
   const teamFields: TermData[] = [];
   scanForTermData(data, teamFields, [

@@ -1,24 +1,25 @@
+import type { ProtoMsg } from "@/utils/bonProtocol";
 import { useLocalStorage } from "@vueuse/core";
 import { defineStore } from "pinia";
+
 import { computed, ref } from "vue";
-
-import { g_utils, ProtoMsg } from "@/utils/bonProtocol";
-import { gameLogger, tokenLogger, wsLogger } from "@/utils/logger";
-import { XyzwWebSocketClient } from "@/utils/xyzwWebSocket";
-
 import useIndexedDB from "@/hooks/useIndexedDB";
+import router from "@/router";
+import { g_utils } from "@/utils/bonProtocol";
+
+import { gameLogger, tokenLogger, wsLogger } from "@/utils/logger";
 import { generateRandomSeed } from "@/utils/randomSeed";
 import {
-  transformToken,
-  setAuthUserRateLimiterCallback,
   scheduleAuthUserRequest,
+  setAuthUserRateLimiterCallback,
+  transformToken,
 } from "@/utils/token";
 import {
   refreshTokenFromCombUser,
   roleIndexFromServerId,
 } from "@/utils/wechatForceLogout";
-import { emitPlus, $emit } from "./events/index.js";
-import router from "@/router";
+import { XyzwWebSocketClient } from "@/utils/xyzwWebSocket";
+import { $emit, emitPlus } from "./events/index.js";
 
 const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer, clearAll } =
   useIndexedDB();
@@ -30,7 +31,8 @@ declare interface TokenData {
   wsUrl: string | null; // 可选的自定义WebSocket URL
   server: string;
   remark?: string; // 备注信息
-  importMethod?: "manual" | "bin" | "url" | "wxQrcode" | "mobile" | "wxForceLogout";
+  importMethod?:
+    "manual" | "bin" | "url" | "wxQrcode" | "mobile" | "wxForceLogout";
   sourceUrl?: string; // 当importMethod为url时，存储url链接
   avatar?: string; // 用户头像URL
   upgradedToPermanent?: boolean; // 是否升级为长期有效
@@ -210,12 +212,17 @@ export const useTokenStore = defineStore("tokens", () => {
   };
 
   // Token管理
+  /**
+   * Persist a token record under its existing byte-derived identity.
+   * @param {TokenData} tokenData Imported credential and role metadata.
+   * @returns {TokenData} Stored token record.
+   */
   const addToken = (tokenData: TokenData) => {
-    let id =
+    const id =
       tokenData.id ||
       `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newToken = {
-      id: id,
+      id,
       name: tokenData.name,
       token: tokenData.token, // 保存原始Base64 token
       wsUrl: tokenData.wsUrl || null, // 可选的自定义WebSocket URL
@@ -240,6 +247,12 @@ export const useTokenStore = defineStore("tokens", () => {
     return newToken;
   };
 
+  /**
+   * Merge token metadata without replacing unrelated stored fields.
+   * @param {string} tokenId Existing token identity.
+   * @param {Partial<TokenData>} updates Fields to merge.
+   * @returns {boolean} Whether the token was found and updated.
+   */
   const updateToken = (tokenId: string, updates: Partial<TokenData>) => {
     const index = gameTokens.value.findIndex((token) => token.id === tokenId);
     if (index !== -1) {
@@ -253,6 +266,11 @@ export const useTokenStore = defineStore("tokens", () => {
     return false;
   };
 
+  /**
+   * Remove token metadata, its active connection and associated persisted BIN data.
+   * @param {string} tokenId Token to remove.
+   * @returns {Promise<boolean>} Resolves to true when token cleanup finishes.
+   */
   const removeToken = async (tokenId: string) => {
     gameTokens.value = gameTokens.value.filter((token) => token.id !== tokenId);
 
@@ -623,7 +641,7 @@ export const useTokenStore = defineStore("tokens", () => {
     } catch (error) {
       return {
         success: false,
-        error: "解析失败：" + error.message,
+        error: `解析失败：${error.message}`,
       };
     }
   };
@@ -722,7 +740,7 @@ export const useTokenStore = defineStore("tokens", () => {
 
   // 连接管理辅助函数
   const generateSessionId = () =>
-    "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+    `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const currentSessionId = generateSessionId();
 
   // 获取连接锁
@@ -770,7 +788,7 @@ export const useTokenStore = defineStore("tokens", () => {
     action: string,
     sessionId: string = currentSessionId,
   ) => {
-    let state = useLocalStorage(`ws_connection_${tokenId}`, {
+    const state = useLocalStorage(`ws_connection_${tokenId}`, {
       action, // 'connecting', 'connected', 'disconnecting', 'disconnected'
       sessionId,
       timestamp: Date.now(),
@@ -1075,6 +1093,14 @@ export const useTokenStore = defineStore("tokens", () => {
   };
 
   // Promise版发送消息
+  /**
+   * Attach the current battle version where required and await a protocol response.
+   * @param {string} tokenId Account connection to use.
+   * @param {string} cmd Registered protocol command.
+   * @param {object} params Command body supplied by the caller.
+   * @param {number} timeout Request timeout in milliseconds.
+   * @returns {Promise<unknown>} Server response; rejects for connection or command errors.
+   */
   const sendMessageWithPromise = async (
     tokenId: string,
     cmd: string,
@@ -1293,7 +1319,7 @@ export const useTokenStore = defineStore("tokens", () => {
         return { success: false, message: "导入数据格式错误" };
       }
     } catch (error) {
-      return { success: false, message: "导入失败：" + error.message };
+      return { success: false, message: `导入失败：${error.message}` };
     }
   };
 
@@ -1455,7 +1481,7 @@ export const useTokenStore = defineStore("tokens", () => {
       // 统计连接状态
       const tokenCounts = new Map();
       Object.values(wsConnections.value).forEach((connection) => {
-        stats[connection.status + "Count"]++;
+        stats[`${connection.status}Count`]++;
 
         // 检测重复token
         const count = tokenCounts.get(connection.tokenId) || 0;
@@ -1587,7 +1613,7 @@ export const useTokenStore = defineStore("tokens", () => {
    */
   const createTokenGroup = (name: string, color: string = "#1677ff") => {
     const group: TokenGroup = {
-      id: "group_" + Date.now() + Math.random().toString(36).slice(2),
+      id: `group_${Date.now()}${Math.random().toString(36).slice(2)}`,
       name,
       color,
       tokenIds: [],
@@ -1783,7 +1809,7 @@ export const useTokenStore = defineStore("tokens", () => {
         const token = gameTokens.value.find((t) => t.id === tokenId);
         if (token) {
           // 故意创建第二个连接进行测试
-          createWebSocketConnection(tokenId + "_test", token.token);
+          createWebSocketConnection(`${tokenId}_test`, token.token);
         }
       },
     },

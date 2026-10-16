@@ -116,11 +116,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
-import { useRouter } from "vue-router";
+import { Mail, PersonCircle } from "@vicons/ionicons5";
 import { useMessage } from "naive-ui";
+import { reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { PersonCircle, Mail } from "@vicons/ionicons5";
 
 const router = useRouter();
 const message = useMessage();

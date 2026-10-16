@@ -157,8 +157,8 @@ const isBoxWeek = () => {
 
 /**
  * 创建物品类任务执行器
- * @param {Object} deps - 依赖项
- * @returns {Object} 任务函数集合
+ * @param {object} deps - 依赖项
+ * @returns {object} 任务函数集合
  */
 export function createTasksItem(deps) {
   const {
@@ -1012,7 +1012,7 @@ export function createTasksItem(deps) {
               "genie_sweep",
               {
                 genieId: bestGenieId,
-                sweepCnt: sweepCnt,
+                sweepCnt,
               },
               5000,
             );
@@ -1198,8 +1198,7 @@ export function createTasksItem(deps) {
     const totalCount = isScheduledTask
       ? batchSettings.fishCount
       : helperSettings.count;
-    const batches = Math.floor(totalCount / 10);
-    const remainder = totalCount % 10;
+    Math.floor(totalCount / 10);
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";

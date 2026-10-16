@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 
 /**
  * 更新日志数据存储
@@ -167,7 +167,7 @@ export const useChangelogStore = defineStore("changelog", () => {
 
   /**
    * 添加新的更新日志
-   * @param {Object} changelog - 更新日志对象
+   * @param {object} changelog - 更新日志对象
    */
   const addChangelog = (changelog) => {
     changelogs.value.unshift(changelog);
@@ -176,8 +176,8 @@ export const useChangelogStore = defineStore("changelog", () => {
 
   /**
    * 更新指定版本的日志
-   * @param {String} version - 版本号
-   * @param {Object} updates - 更新内容
+   * @param {string} version - 版本号
+   * @param {object} updates - 更新内容
    */
   const updateChangelog = (version, updates) => {
     const index = changelogs.value.findIndex((log) => log.version === version);
@@ -192,7 +192,7 @@ export const useChangelogStore = defineStore("changelog", () => {
 
   /**
    * 删除指定版本的日志
-   * @param {String} version - 版本号
+   * @param {string} version - 版本号
    */
   const deleteChangelog = (version) => {
     const index = changelogs.value.findIndex((log) => log.version === version);
@@ -229,8 +229,8 @@ export const useChangelogStore = defineStore("changelog", () => {
 
   /**
    * 获取版本之间的差异
-   * @param {String} fromVersion - 起始版本
-   * @param {String} toVersion - 结束版本
+   * @param {string} fromVersion - 起始版本
+   * @param {string} toVersion - 结束版本
    * @returns {Array} 版本差异列表
    */
   const getVersionDiff = (fromVersion, toVersion) => {
@@ -254,8 +254,8 @@ export const useChangelogStore = defineStore("changelog", () => {
 
   /**
    * 检查是否有新版本
-   * @param {String} currentVersion - 当前版本
-   * @returns {Boolean} 是否有新版本
+   * @param {string} currentVersion - 当前版本
+   * @returns {boolean} 是否有新版本
    */
   const hasNewVersion = (currentVersion) => {
     if (!latestVersion.value) return false;
@@ -288,7 +288,7 @@ export const useChangelogStore = defineStore("changelog", () => {
 
   /**
    * 标记为已读
-   * @param {String} version - 版本号
+   * @param {string} version - 版本号
    */
   const markAsRead = (version) => {
     try {

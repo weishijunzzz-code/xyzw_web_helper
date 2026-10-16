@@ -192,9 +192,7 @@ test("prepareMultiGameLaunch seeds isolated accounts in display order and record
   ]);
   assert.deepEqual(result.launch.failures, result.failures);
   assert.equal(
-    local.getItem(
-      "multi-game:mg-11111111111111111111111111111111:bin_data_a",
-    ),
+    local.getItem("multi-game:mg-11111111111111111111111111111111:bin_data_a"),
     "706c010203",
   );
   assert.equal(
@@ -248,9 +246,10 @@ test("prepareMultiGameLaunch isolates a BIN read error from other accounts", asy
     now: () => 1,
   });
 
-  assert.deepEqual(result.launch.sessions.map((item) => item.tokenId), [
-    "ready",
-  ]);
+  assert.deepEqual(
+    result.launch.sessions.map((item) => item.tokenId),
+    ["ready"],
+  );
   assert.deepEqual(result.failures, [
     { tokenId: "broken", name: "读取失败", reason: "read-failed" },
   ]);
@@ -272,8 +271,7 @@ test("prepareMultiGameLaunch rolls back every new scope when localStorage writes
           { id: "a", name: "账号 A" },
           { id: "b", name: "账号 B" },
         ],
-        getArrayBuffer: async () =>
-          Uint8Array.from([112, 108, 1, 2, 3]).buffer,
+        getArrayBuffer: async () => Uint8Array.from([112, 108, 1, 2, 3]).buffer,
         localStorage: local,
         sessionStorage: session,
         randomUUID: () => uuids.shift(),
@@ -298,8 +296,7 @@ test("prepareMultiGameLaunch rolls back new scopes when the manifest write fails
   await assert.rejects(
     launcher.prepareMultiGameLaunch({
       tokens: [{ id: "a", name: "账号 A" }],
-      getArrayBuffer: async () =>
-        Uint8Array.from([112, 108, 1, 2, 3]).buffer,
+      getArrayBuffer: async () => Uint8Array.from([112, 108, 1, 2, 3]).buffer,
       localStorage: local,
       sessionStorage: session,
       randomUUID: () => uuids.shift(),
@@ -359,13 +356,14 @@ test("closeMultiGameSession removes only the target scope and persists remaining
       scopeId,
       order,
     })),
-    failures: [
-      { tokenId: "missing", name: "缺失账号", reason: "missing-bin" },
-    ],
+    failures: [{ tokenId: "missing", name: "缺失账号", reason: "missing-bin" }],
   };
   session.setItem("multi-game_active_launch_v1", JSON.stringify(launch));
   for (const [index, scope] of scopes.entries()) {
-    local.setItem(`multi-game:${scope}:current_bin_id`, launch.sessions[index].tokenId);
+    local.setItem(
+      `multi-game:${scope}:current_bin_id`,
+      launch.sessions[index].tokenId,
+    );
     local.setItem(`multi-game:${scope}:setting`, `value-${index}`);
   }
   local.setItem("outside", "keep");
@@ -484,9 +482,7 @@ test("moveMultiGameSession swaps adjacent sessions and persists their order", ()
 test("resolveMultiGameFrameMessage accepts only the matching same-origin iframe", () => {
   assert.equal(typeof launcher.resolveMultiGameFrameMessage, "function");
   const expectedSource = {};
-  const frames = [
-    { scopeId: "mg-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
-  ];
+  const frames = [{ scopeId: "mg-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }];
   const frameElements = new Map([
     [frames[0].scopeId, { contentWindow: expectedSource }],
   ]);

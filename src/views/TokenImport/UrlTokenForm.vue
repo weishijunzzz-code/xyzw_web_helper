@@ -1,22 +1,22 @@
 <template>
   <!-- URL获取表单 -->
-  <n-form
+  <NForm
     ref="urlFormRef"
     :model="urlForm"
     :rules="urlRules"
     label-placement="top"
     size="large"
   >
-    <n-form-item label="游戏角色名称" path="name">
-      <n-input
+    <NFormItem label="游戏角色名称" path="name">
+      <NInput
         v-model:value="urlForm.name"
         placeholder="例如：主号战士"
         clearable
       />
-    </n-form-item>
+    </NFormItem>
 
-    <n-form-item label="Token获取地址" path="url">
-      <n-input
+    <NFormItem label="Token获取地址" path="url">
+      <NInput
         v-model:value="urlForm.url"
         placeholder="输入API接口地址..."
         clearable
@@ -29,28 +29,28 @@
           </span>
         </div>
       </template>
-    </n-form-item>
+    </NFormItem>
 
     <!-- 角色详情 -->
-    <n-collapse>
-      <n-collapse-item title="角色详情 (可选)" name="optional">
+    <NCollapse>
+      <NCollapseItem title="角色详情 (可选)" name="optional">
         <div class="optional-fields">
-          <n-form-item label="服务器">
-            <n-input v-model:value="urlForm.server" placeholder="服务器名称" />
-          </n-form-item>
+          <NFormItem label="服务器">
+            <NInput v-model:value="urlForm.server" placeholder="服务器名称" />
+          </NFormItem>
 
-          <n-form-item label="自定义连接地址">
-            <n-input
+          <NFormItem label="自定义连接地址">
+            <NInput
               v-model:value="urlForm.wsUrl"
               placeholder="留空使用默认连接"
             />
-          </n-form-item>
+          </NFormItem>
         </div>
-      </n-collapse-item>
-    </n-collapse>
+      </NCollapseItem>
+    </NCollapse>
 
     <div class="form-actions">
-      <n-button
+      <NButton
         type="primary"
         size="large"
         block
@@ -58,42 +58,41 @@
         @click="handleUrlImport"
       >
         <template #icon>
-          <n-icon>
+          <NIcon>
             <CloudUpload />
-          </n-icon>
+          </NIcon>
         </template>
         获取并添加Token
-      </n-button>
+      </NButton>
 
-      <n-button v-if="tokenStore.hasTokens" size="large" block @click="cancel">
+      <NButton v-if="tokenStore.hasTokens" size="large" block @click="cancel">
         取消
-      </n-button>
+      </NButton>
     </div>
-  </n-form>
+  </NForm>
 </template>
 <script lang="ts" setup>
-import { ref, reactive } from "vue";
-import { useTokenStore } from "@/stores/tokenStore";
 import { CloudUpload } from "@vicons/ionicons5";
-
+import axios from "axios";
 import {
-  NForm,
-  NFormItem,
-  NInput,
   NButton,
-  NIcon,
   NCollapse,
   NCollapseItem,
+  NForm,
+  NFormItem,
+  NIcon,
+  NInput,
   useMessage,
 } from "naive-ui";
-import axios from "axios";
 
+import { reactive, ref } from "vue";
+import { useTokenStore } from "@/stores/tokenStore";
+
+const $emit = defineEmits(["cancel", "ok"]);
 const tokenStore = useTokenStore();
 const message = useMessage();
 const urlFormRef = ref();
 const isImporting = ref(false);
-
-const $emit = defineEmits(["cancel", "ok"]);
 
 const cancel = () => {
   $emit("cancel");
@@ -143,7 +142,7 @@ const handleUrlImport = async () => {
         wsUrl: urlForm.wsUrl || "",
         id: Date.now().toString(),
         sourceUrl: urlForm.url,
-        importMethod: 'url'
+        importMethod: "url",
       };
       tokenStore.addToken(newToken);
       message.success("Token添加成功");
@@ -195,3 +194,10 @@ const handleUrlImport = async () => {
   gap: 12px;
 }
 </style>
+
+<route lang="json">
+{
+  "name": "/TokenImport/url",
+  "path": "/TokenImport/url"
+}
+</route>

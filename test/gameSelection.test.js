@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const selection = await import("../src/utils/gameSelection.js").catch(() => ({}));
+const selection = await import("../src/utils/gameSelection.js").catch(
+  () => ({}),
+);
 
 test("toggleTokenSelection returns a new set without mutating the current selection", () => {
   assert.equal(typeof selection.toggleTokenSelection, "function");

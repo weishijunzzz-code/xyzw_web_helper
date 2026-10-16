@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="bottle-helper" :statusClass="{ active: state.isRunning }">
+  <MyCard class="bottle-helper" :status-class="{ active: state.isRunning }">
     <template #icon>
       <img src="/icons/173746572831736.png" alt="盐罐图标" />
     </template>
@@ -30,8 +30,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
 

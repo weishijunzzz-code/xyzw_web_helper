@@ -753,12 +753,12 @@
 </template>
 
 <script setup>
-import ManualTokenForm from "./manual.vue";
-import UrlTokenForm from "./url.vue";
-import BinTokenForm from "./bin.vue";
-import singleBinTokenForm from "./singlebin.vue";
-import WxQrcodeForm from "./wxqrcode.vue";
-import MobileTokenForm from "./mobile.vue";
+import ManualTokenForm from "./ManualTokenForm.vue";
+import UrlTokenForm from "./UrlTokenForm.vue";
+import BinTokenForm from "./BinTokenForm.vue";
+import SingleBinTokenForm from "./SingleBinTokenForm.vue";
+import WxQrcodeForm from "./WxQrcodeForm.vue";
+import MobileTokenForm from "./MobileTokenForm.vue";
 
 import { useTokenStore, selectedTokenId } from "@/stores/tokenStore";
 import {

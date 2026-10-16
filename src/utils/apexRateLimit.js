@@ -121,7 +121,11 @@ export const isApexRateLimited = (e) =>
  */
 export const apexCooldownLeft = (key) => {
   const now = Date.now();
-  return Math.max(0, nextAllowedAt[key] - now, lastSentAt + MIN_CMD_GAP_MS - now);
+  return Math.max(
+    0,
+    nextAllowedAt[key] - now,
+    lastSentAt + MIN_CMD_GAP_MS - now,
+  );
 };
 
 /**

@@ -16,7 +16,8 @@
           v-for="teamId in availableTeams"
           :key="teamId"
           :disabled="loading || switching"
-          :class="['team-button', { active: currentTeam === teamId }]"
+          class="team-button"
+          :class="[{ active: currentTeam === teamId }]"
           @click="selectTeam(teamId)"
         >
           {{ teamId }}
@@ -127,9 +128,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { useMessage } from "naive-ui";
+import { computed, onMounted, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
-import { useMessage, NTag } from "naive-ui";
 import { HERO_DICT } from "@/utils/HeroList.js";
 
 const tokenStore = useTokenStore();
@@ -285,34 +286,8 @@ const rankInfo = computed(() => {
 });
 
 // 计算下一个段位门槛
-const nextRankThreshold = computed(() => {
-  const currentRankIndex = powerRanks.findIndex(
-    (rank) => rank === rankInfo.value,
-  );
-  if (currentRankIndex >= 0 && currentRankIndex < powerRanks.length - 1) {
-    return powerRanks[currentRankIndex + 1].min;
-  }
-  return null;
-});
 
 // 计算当前段位的进度百分比
-const progressPercentage = computed(() => {
-  const power = roleInfo.value.power || 0;
-  const currentRank = rankInfo.value;
-
-  if (!nextRankThreshold.value) {
-    return 100; // 已达最高段位
-  }
-
-  const rangeSize = nextRankThreshold.value - currentRank.min;
-  const currentProgress = power - currentRank.min;
-  const percentage = Math.min(
-    100,
-    Math.max(0, (currentProgress / rangeSize) * 100),
-  );
-
-  return Math.round(percentage);
-});
 
 // —— 缓存优先的 presetTeam 原始数据 ——
 const presetTeamRaw = computed(() => tokenStore.gameData?.presetTeam ?? null);

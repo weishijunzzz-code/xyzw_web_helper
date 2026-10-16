@@ -32,9 +32,9 @@
 </template>
 
 <script setup lang="ts">
-import { useTokenStore } from "@/stores/tokenStore";
 import { useMessage } from "naive-ui";
 import { ref } from "vue";
+import { useTokenStore } from "@/stores/tokenStore";
 
 const tokenStore = useTokenStore();
 const message = useMessage();

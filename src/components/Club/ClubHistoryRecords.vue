@@ -3,7 +3,7 @@
     <!-- Inline 模式：卡片渲染 -->
     <div v-if="inline" class="inline-wrapper" ref="exportDom">
       <div class="battle-records-content">
-        <n-data-table
+        <NDataTable
           :columns="columns"
           :data="tableData"
           :loading="loading"
@@ -26,19 +26,19 @@
     >
       <template #header-extra>
         <div class="header-actions">
-          <n-button size="small" :disabled="loading" @click="handleRefresh">
+          <NButton size="small" :disabled="loading" @click="handleRefresh">
             <template #icon>
-              <n-icon>
+              <NIcon>
                 <Refresh />
-              </n-icon>
+              </NIcon>
             </template>
             刷新
-          </n-button>
+          </NButton>
         </div>
       </template>
 
       <div class="battle-records-content">
-        <n-data-table
+        <NDataTable
           :columns="columns"
           :data="tableData"
           :loading="loading"
@@ -53,27 +53,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h, nextTick } from "vue";
-import { useMessage, NDataTable, NTag, NButton, NIcon } from "naive-ui";
+import { Copy, Refresh } from "@vicons/ionicons5";
+import html2canvas from "html2canvas";
+import { NButton, NDataTable, NIcon, NTag, useMessage } from "naive-ui";
+import { computed, h, nextTick, onMounted, ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
-import html2canvas from 'html2canvas';
+import { getLastSaturday } from "@/utils/clubBattleUtils";
 import { downloadCanvasAsImage } from "@/utils/imageExport";
-import {
-  Trophy,
-  Refresh,
-  Copy,
-  ChevronDown,
-  ChevronUp,
-  DocumentText,
-} from "@vicons/ionicons5";
-import {
-  getLastSaturday,
-  formatTimestamp,
-  parseBattleResult,
-  parseAttackType,
-  formatBattleRecordsForExport,
-  copyToClipboard,
-} from "@/utils/clubBattleUtils";
 
 const props = defineProps({
   visible: {
@@ -101,19 +87,19 @@ const battleRecords = ref(null);
 const expandedMembers = ref(new Set());
 const queryDate = ref("");
 
-const legionMatch = ref({
-  isRegistered: false,
-});
-
 const pagination = ref({
   pageSize: 10,
 });
 
 const tableData = computed(() => {
-  if (!battleRecords.value || !battleRecords.value.warMap || !battleRecords.value.warRank) {
+  if (
+    !battleRecords.value ||
+    !battleRecords.value.warMap ||
+    !battleRecords.value.warRank
+  ) {
     return [];
   }
-  
+
   return battleRecords.value.warMap.map((member, index) => ({
     key: index,
     legionWarType: member.legionWarType,
@@ -128,55 +114,66 @@ const isExporting = ref(false);
 const columns = computed(() => {
   const cols = [
     {
-      title: () => h(
-        "div",
-        {
-          style: {
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            width: "100%",
-            padding: "0 8px"
+      title: () =>
+        h(
+          "div",
+          {
+            style: {
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "100%",
+              padding: "0 8px",
+            },
           },
-        },
-        [
-            h("span", { style: { fontSize: "16px", fontWeight: "bold", color: "#333" } }, "俱乐部历史盐场战绩"),
-            (props.inline && !isExporting.value) ? h(
-                'div',
-                { style: { display: 'flex', gap: '8px' } },
-                [
-                    h(
-                        NButton,
-                        {
-                            size: 'tiny',
-                            type: 'primary',
-                            secondary: true,
-                            onClick: (e) => { e.stopPropagation(); handleRefresh(); },
-                            disabled: loading.value
-                        },
-                        {
-                            default: () => '刷新',
-                            icon: () => h(NIcon, null, { default: () => h(Refresh) })
-                        }
-                    ),
-                    h(
-                        NButton,
-                        {
-                            size: 'tiny',
-                            type: 'info',
-                            secondary: true,
-                            onClick: (e) => { e.stopPropagation(); handleExportImage(); },
-                            disabled: loading.value
-                        },
-                        {
-                            default: () => '导出图片',
-                            icon: () => h(NIcon, null, { default: () => h(Copy) })
-                        }
-                    )
-                ]
-            ) : null
-        ]
-      ),
+          [
+            h(
+              "span",
+              {
+                style: { fontSize: "16px", fontWeight: "bold", color: "#333" },
+              },
+              "俱乐部历史盐场战绩",
+            ),
+            props.inline && !isExporting.value
+              ? h("div", { style: { display: "flex", gap: "8px" } }, [
+                  h(
+                    NButton,
+                    {
+                      size: "tiny",
+                      type: "primary",
+                      secondary: true,
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        handleRefresh();
+                      },
+                      disabled: loading.value,
+                    },
+                    {
+                      default: () => "刷新",
+                      icon: () => h(NIcon, null, { default: () => h(Refresh) }),
+                    },
+                  ),
+                  h(
+                    NButton,
+                    {
+                      size: "tiny",
+                      type: "info",
+                      secondary: true,
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        handleExportImage();
+                      },
+                      disabled: loading.value,
+                    },
+                    {
+                      default: () => "导出图片",
+                      icon: () => h(NIcon, null, { default: () => h(Copy) }),
+                    },
+                  ),
+                ])
+              : null,
+          ],
+        ),
       align: "center",
       children: [
         {
@@ -196,20 +193,23 @@ const columns = computed(() => {
           align: "center",
           render: (row) => {
             let color = "default";
-            if (row.rank === 1) color = "warning"; // 金色/冠军
-            else if (row.rank === 2) color = "info"; // 银色/亚军
-            else if (row.rank === 3) color = "success"; // 铜色/季军
+            if (row.rank === 1)
+              color = "warning"; // 金色/冠军
+            else if (row.rank === 2)
+              color = "info"; // 银色/亚军
+            else if (row.rank === 3)
+              color = "success"; // 铜色/季军
             else if (row.rank > 20) color = "error"; // 排名靠后
-            
+
             return h(
               NTag,
               { type: color, bordered: false, size: "small" },
-              { default: () => `第 ${row.rank} 名` }
+              { default: () => `第 ${row.rank} 名` },
             );
           },
         },
-      ]
-    }
+      ],
+    },
   ];
 
   // 只有在 Inline 模式下且不在导出时，才添加操作列
@@ -231,7 +231,7 @@ const columns = computed(() => {
   //               onClick: handleRefresh,
   //               disabled: loading.value
   //             },
-  //             { 
+  //             {
   //               default: () => '刷新',
   //               icon: () => h(NIcon, null, { default: () => h(Refresh) })
   //             }
@@ -245,7 +245,7 @@ const columns = computed(() => {
   //               onClick: handleExportImage,
   //               disabled: loading.value
   //             },
-  //             { 
+  //             {
   //               default: () => '图片',
   //               icon: () => h(NIcon, null, { default: () => h(Copy) })
   //             }
@@ -278,22 +278,25 @@ const handleExportImage = async () => {
     await nextTick();
 
     // 获取 table-container
-    const tableContainer = exportDom.value.querySelector('.n-data-table');
-    
+    const tableContainer = exportDom.value.querySelector(".n-data-table");
+
     // 临时调整表格容器高度，确保所有内容可见
     if (tableContainer) {
       // 尝试找到 n-data-table 的滚动容器
-      const scrollContainer = tableContainer.querySelector('.n-data-table-base-table-body');
+      const scrollContainer = tableContainer.querySelector(
+        ".n-data-table-base-table-body",
+      );
       if (scrollContainer) {
         // 保存原始样式
         scrollContainer.dataset.originalHeight = scrollContainer.style.height;
-        scrollContainer.dataset.originalOverflow = scrollContainer.style.overflow;
+        scrollContainer.dataset.originalOverflow =
+          scrollContainer.style.overflow;
 
         // 强制展开
         scrollContainer.style.height = "auto";
         scrollContainer.style.overflow = "visible";
       }
-      
+
       // 保存外层table容器的样式
       tableContainer.dataset.originalHeight = tableContainer.style.height;
       tableContainer.style.height = "auto";
@@ -319,66 +322,45 @@ const handleExportImage = async () => {
     message.error("导出图片失败，请重试");
   } finally {
     // 恢复原始样式
-    const tableContainer = exportDom.value?.querySelector('.n-data-table');
+    const tableContainer = exportDom.value?.querySelector(".n-data-table");
     if (tableContainer) {
-      const scrollContainer = tableContainer.querySelector('.n-data-table-base-table-body');
+      const scrollContainer = tableContainer.querySelector(
+        ".n-data-table-base-table-body",
+      );
       if (scrollContainer) {
         if (scrollContainer.dataset.originalHeight) {
           scrollContainer.style.height = scrollContainer.dataset.originalHeight;
         } else {
-          scrollContainer.style.removeProperty('height');
+          scrollContainer.style.removeProperty("height");
         }
 
         if (scrollContainer.dataset.originalOverflow) {
-          scrollContainer.style.overflow = scrollContainer.dataset.originalOverflow;
+          scrollContainer.style.overflow =
+            scrollContainer.dataset.originalOverflow;
         } else {
-          scrollContainer.style.removeProperty('overflow');
+          scrollContainer.style.removeProperty("overflow");
         }
 
         delete scrollContainer.dataset.originalHeight;
         delete scrollContainer.dataset.originalOverflow;
       }
-      
+
       // 恢复外层table容器样式
       if (tableContainer.dataset.originalHeight) {
         tableContainer.style.height = tableContainer.dataset.originalHeight;
       } else {
-        tableContainer.style.removeProperty('height');
+        tableContainer.style.removeProperty("height");
       }
       delete tableContainer.dataset.originalHeight;
     }
-    
+
     isExporting.value = false;
   }
 };
 
 // 格式化战力
-const formatPower = (power) => {
-  if (!power) return "0";
-  if (power >= 100000000) {
-    return (power / 100000000).toFixed(2) + "亿";
-  }
-  if (power >= 10000) {
-    return (power / 10000).toFixed(2) + "万";
-  }
-  return power.toString();
-};
 
 // 获取战斗样式类
-const getBattleClass = (battle) => {
-  const classes = [];
-  if (battle.newWinFlag === 2) {
-    classes.push("battle-win");
-  } else {
-    classes.push("battle-loss");
-  }
-  if (battle.attackType === 0) {
-    classes.push("battle-attack");
-  } else {
-    classes.push("battle-defend");
-  }
-  return classes.join(" ");
-};
 
 const legionWarTypesw = (legionWarType) => {
   switch (legionWarType) {
@@ -412,18 +394,8 @@ const legionWarTypesw = (legionWarType) => {
 };
 
 // 切换成员详情展开状态
-const toggleMemberDetails = (roleId) => {
-  if (expandedMembers.value.has(roleId)) {
-    expandedMembers.value.delete(roleId);
-  } else {
-    expandedMembers.value.add(roleId);
-  }
-};
 
 // 处理图片加载错误
-const handleImageError = (event) => {
-  event.target.style.display = "none";
-};
 
 // 查询战绩
 const fetchBattleRecords = async () => {
@@ -477,24 +449,6 @@ const handleRefresh = () => {
 };
 
 // 导出战绩
-const handleExport = async () => {
-  if (!battleRecords.value || !battleRecords.value.roleDetailsList) {
-    message.warning("没有可导出的数据");
-    return;
-  }
-
-  try {
-    const exportText = formatBattleRecordsForExport(
-      battleRecords.value.roleDetailsList,
-      queryDate.value,
-    );
-    await copyToClipboard(exportText);
-    message.success("战绩已复制到剪贴板");
-  } catch (error) {
-    console.error("导出失败:", error);
-    message.error("导出失败，请重试");
-  }
-};
 
 // 关闭弹窗
 const handleClose = () => {

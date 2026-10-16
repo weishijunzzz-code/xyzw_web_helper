@@ -140,7 +140,7 @@ export const getPetQuality = (petId) =>
 /**
  * 从 rank_getroleinfo 的响应里取出展示用的宠物信息
  * @param {object} roleRes rank_getroleinfo 的响应对象
- * @returns {{petId:number, level:number, name:string, icon:string, quality:string, color:string}|null}
+ * @returns {{petId:number, level:number, name:string, icon:string, quality:string, color:string}|null} Matching pet metadata, or null when absent.
  */
 export const getShowPet = (roleRes) => {
   const petId = roleRes?.showPet?.petId ?? roleRes?.roleInfo?.pet?.petId;

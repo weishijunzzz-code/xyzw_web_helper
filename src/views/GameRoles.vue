@@ -176,13 +176,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { Add, EllipsisHorizontal, PersonCircle } from "@vicons/ionicons5";
+import { useDialog, useMessage } from "naive-ui";
+import { onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { useMessage, useDialog } from "naive-ui";
 import { useGameRolesStore } from "@/stores/gameRoles";
-import { PersonCircle, Add, EllipsisHorizontal } from "@vicons/ionicons5";
 
-const router = useRouter();
+useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const gameRolesStore = useGameRolesStore();
@@ -273,7 +273,7 @@ const editRole = (role) => {
   showAddModal.value = true;
 };
 
-const viewRoleDetails = (role) => {
+const viewRoleDetails = () => {
   message.info("角色详情功能开发中...");
 };
 
@@ -336,9 +336,9 @@ const resetForm = () => {
 
 const formatNumber = (num) => {
   if (num >= 100000000) {
-    return (num / 100000000).toFixed(1) + "亿";
+    return `${(num / 100000000).toFixed(1)}亿`;
   } else if (num >= 10000) {
-    return (num / 10000).toFixed(1) + "万";
+    return `${(num / 10000).toFixed(1)}万`;
   }
   return num.toString();
 };

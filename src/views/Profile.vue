@@ -142,12 +142,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { useDialog, useMessage } from "naive-ui";
+import { onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { useMessage, useDialog } from "naive-ui";
 import { useAuthStore } from "@/stores/auth";
 
-const router = useRouter();
+useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
@@ -178,23 +178,6 @@ const preferences = reactive({
 });
 
 // 密码验证规则
-const passwordRules = {
-  currentPassword: [
-    { required: true, message: "请输入当前密码", trigger: "blur" },
-  ],
-  newPassword: [
-    { required: true, message: "请输入新密码", trigger: "blur" },
-    { min: 6, message: "密码长度不能少于6位", trigger: "blur" },
-  ],
-  confirmPassword: [
-    { required: true, message: "请确认新密码", trigger: "blur" },
-    {
-      validator: (rule, value) => value === passwordForm.newPassword,
-      message: "两次输入的密码不一致",
-      trigger: "blur",
-    },
-  ],
-};
 
 // 选项数据
 const themeOptions = [
@@ -236,12 +219,6 @@ const changePassword = async () => {
   }
 };
 
-const savePreferences = () => {
-  // 保存偏好设置
-  localStorage.setItem("userPreferences", JSON.stringify(preferences));
-  message.success("偏好设置保存成功");
-};
-
 const updateTheme = (theme) => {
   preferences.theme = theme;
   localStorage.setItem("theme", theme);
@@ -257,10 +234,6 @@ const updateTheme = (theme) => {
       document.documentElement.setAttribute("data-theme", "dark");
     else document.documentElement.removeAttribute("data-theme");
   }
-};
-
-const changeAvatar = () => {
-  message.info("头像更换功能开发中...");
 };
 
 const setupTwoFactor = () => {

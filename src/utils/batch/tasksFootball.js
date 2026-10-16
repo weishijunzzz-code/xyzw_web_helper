@@ -5,8 +5,8 @@
 
 /**
  * 创建盐杯竞猜任务执行器
- * @param {Object} deps - 依赖项
- * @returns {Object} 任务函数集合
+ * @param {object} deps - 依赖项
+ * @returns {object} 任务函数集合
  */
 export function createTasksFootball(deps) {
   const {
@@ -61,7 +61,6 @@ export function createTasksFootball(deps) {
           {},
           8000,
         );
-        const matchList = betInfoResp?.matchList;
         const betRecord = betInfoResp?.roleData?.betRecord || {};
 
         // 2. 通过 betRecord 最后一个 key 获取待竞猜 matchId

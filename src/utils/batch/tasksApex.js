@@ -9,6 +9,12 @@
  */
 
 import {
+  ApexAction,
+  apexCooldownLeft,
+  isApexRateLimited,
+  runApexAction,
+} from "@/utils/apexRateLimit";
+import {
   ApexScheduleStatus,
   calibrateServerTime,
   getAdvanceNum,
@@ -16,12 +22,6 @@ import {
   getCurrentSeason,
   getGuessTabs,
 } from "@/utils/apexRules";
-import {
-  ApexAction,
-  apexCooldownLeft,
-  isApexRateLimited,
-  runApexAction,
-} from "@/utils/apexRateLimit";
 
 /** 单次请求超时（ms） */
 const TIMEOUT_MS = 8000;
@@ -42,7 +42,8 @@ const READ_MAX_RETRY = 1;
  * @param {number} [maxRetry] 200400 自动重试次数
  * @returns {Promise<*>} 命令响应
  */
-const sendApex = (action, task, maxRetry) => runApexAction(action, task, { maxRetry });
+const sendApex = (action, task, maxRetry) =>
+  runApexAction(action, task, { maxRetry });
 
 /**
  * 解析当前赛季「竞猜开放中」的阶段页签。
@@ -52,20 +53,21 @@ const sendApex = (action, task, maxRetry) => runApexAction(action, task, { maxRe
  * （例：第 5 期报名中、第 4 期淘汰赛已开押）。期号与阶段全部由配置推导。
  *
  * @param {number} nowMs 服务端时间
- * @returns {{season: number, round: number, tabs: Array}|null} 无开放场次时为 null
+ * @returns {Array<{season: number, round: number, tabs: Array}>} 所有开放期次；无开放场次时为空数组
  */
 const resolveOpenGuesses = (nowMs) => {
   const season = getCurrentSeason(nowMs);
-  if (season <= 0) return null;
+  if (season <= 0) return [];
+  const openRounds = [];
   for (const round of getCurrentRounds(season, nowMs)) {
     const tabs = getGuessTabs(round, season, nowMs).filter(
       (t) =>
         t.state === ApexScheduleStatus.Unlocked ||
         t.state === ApexScheduleStatus.Locked,
     );
-    if (tabs.length) return { season, round, tabs };
+    if (tabs.length) openRounds.push({ season, round, tabs });
   }
-  return null;
+  return openRounds;
 };
 
 /**
@@ -137,10 +139,10 @@ export function createTasksApex(deps) {
         const guessMap = apexInfo.guessMap || {};
 
         // 2. 依据真实规则解析当前开放的竞猜阶段
-        const open = resolveOpenGuesses(
+        const openRounds = resolveOpenGuesses(
           calibrateServerTime(Date.now(), apexInfo.resetTime?.day),
         );
-        if (!open) {
+        if (!openRounds.length) {
           addLog({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} 当前无开放的竞猜阶段（竞猜仅在淘汰赛段开放）`,
@@ -149,11 +151,6 @@ export function createTasksApex(deps) {
           tokenStatus.value[tokenId] = "completed";
           return;
         }
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 第${open.season}赛季 第${open.round}期，开放竞猜 ${open.tabs.length} 个阶段`,
-          type: "info",
-        });
 
         // 3. 逐阶段分页拉取对阵并竞猜
         let successCount = 0;
@@ -162,125 +159,140 @@ export function createTasksApex(deps) {
         /** 连续被 200400 打回后置位：中止该账号剩余竞猜，避免持续轰炸服务器 */
         let abortedByRateLimit = false;
 
-        for (const tab of open.tabs) {
-          if (shouldStop.value) break;
-          if (abortedByRateLimit) break;
-
-          const advanceNum = getAdvanceNum(open.round, open.season, tab.stage);
-          const guessedTeamIds = new Set(guessMap[tab.scheduleId] || []);
-          if (advanceNum > 0 && guessedTeamIds.size >= advanceNum) {
-            skipCount++;
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `${token.name} ${tab.title} 已押满 ${advanceNum} 队，跳过`,
-              type: "info",
-            });
-            continue;
-          }
-
-          // 分页拉取该阶段全部对阵：idx = 已加载条数，以 last 终止
-          const allGroups = [];
-          let last = false;
-          for (let p = 0; p < MAX_PAGES && !last; p++) {
-            if (shouldStop.value) break;
-            const resp = await sendApex(
-              ApexAction.READ,
-              // 同上：分页循环每页都要重新等冷却，补偿后才不会误判超时
-              (queuedMs) =>
-                tokenStore.sendMessageWithPromise(
-                  tokenId,
-                  "apex_getguesslist",
-                  { scheduleId: tab.scheduleId, idx: allGroups.length },
-                  TIMEOUT_MS + queuedMs,
-                ),
-              READ_MAX_RETRY,
-            );
-            const groups = resp?.apexGuessList || [];
-            if (groups.length === 0) break;
-            allGroups.push(...groups);
-            last = resp?.last === true;
-          }
-
-          if (allGroups.length === 0) {
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `${token.name} ${tab.title} 没有对阵数据`,
-              type: "warning",
-            });
-            continue;
-          }
+        for (const open of openRounds) {
+          if (shouldStop.value || abortedByRateLimit) break;
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `${token.name} ${tab.title} 共 ${allGroups.length} 组对阵`,
+            message: `${token.name} 第${open.season}赛季 第${open.round}期，开放竞猜 ${open.tabs.length} 个阶段`,
             type: "info",
           });
-
-          for (const group of allGroups) {
+          for (const tab of open.tabs) {
             if (shouldStop.value) break;
             if (abortedByRateLimit) break;
-            if (advanceNum > 0 && guessedTeamIds.size >= advanceNum) break;
 
-            const [team0, team1] = group;
-            if (!team0 || !team1) continue;
-
-            // 两队都已竞猜则跳过
-            if (guessedTeamIds.has(team0.teamId) && guessedTeamIds.has(team1.teamId)) {
+            const advanceNum = getAdvanceNum(
+              open.round,
+              open.season,
+              tab.stage,
+            );
+            const guessedTeamIds = new Set(guessMap[tab.scheduleId] || []);
+            if (advanceNum > 0 && guessedTeamIds.size >= advanceNum) {
               skipCount++;
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} ${tab.title} 已押满 ${advanceNum} 队，跳过`,
+                type: "info",
+              });
               continue;
             }
 
-            // 选助威数更高的队伍
-            let pick;
-            if (guessedTeamIds.has(team0.teamId)) {
-              pick = team1;
-            } else if (guessedTeamIds.has(team1.teamId)) {
-              pick = team0;
-            } else {
-              pick = team0.cheerCnt >= team1.cheerCnt ? team0 : team1;
-            }
-
-            try {
-              await runApexAction(
-                ApexAction.GUESS,
+            // 分页拉取该阶段全部对阵：idx = 已加载条数，以 last 终止
+            const allGroups = [];
+            let last = false;
+            for (let p = 0; p < MAX_PAGES && !last; p++) {
+              if (shouldStop.value) break;
+              const resp = await sendApex(
+                ApexAction.READ,
+                // 同上：分页循环每页都要重新等冷却，补偿后才不会误判超时
                 (queuedMs) =>
                   tokenStore.sendMessageWithPromise(
                     tokenId,
-                    "apex_guess",
-                    { teamId: pick.teamId },
+                    "apex_getguesslist",
+                    { scheduleId: tab.scheduleId, idx: allGroups.length },
                     TIMEOUT_MS + queuedMs,
                   ),
-                {
-                  // 等待服务器冷却时给出可见反馈，避免界面像卡死
-                  onWait: (ms) =>
-                    addLog({
-                      time: new Date().toLocaleTimeString(),
-                      message: `${token.name} 竞猜遇到服务器限流，等待 ${Math.ceil(ms / 1000)}s 后重试`,
-                      type: "warning",
-                    }),
-                },
+                READ_MAX_RETRY,
               );
-              guessedTeamIds.add(pick.teamId);
-              successCount++;
+              const groups = resp?.apexGuessList || [];
+              if (groups.length === 0) break;
+              allGroups.push(...groups);
+              last = resp?.last === true;
+            }
+
+            if (allGroups.length === 0) {
               addLog({
                 time: new Date().toLocaleTimeString(),
-                message: `${token.name} ${tab.title} 竞猜 ${pick.name} (${pick.teamId}) 助威:${pick.cheerCnt} ✓`,
-                type: "success",
+                message: `${token.name} ${tab.title} 没有对阵数据`,
+                type: "warning",
               });
-            } catch (err) {
-              failCount++;
-              addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `${token.name} ${tab.title} 竞猜 ${pick.name} 失败: ${err.message}`,
-                type: "error",
-              });
-              if (isApexRateLimited(err)) {
-                // 重试仍被限流：停止该账号后续竞猜，等待自适应间隔恢复
-                abortedByRateLimit = true;
+              continue;
+            }
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} ${tab.title} 共 ${allGroups.length} 组对阵`,
+              type: "info",
+            });
+
+            for (const group of allGroups) {
+              if (shouldStop.value) break;
+              if (abortedByRateLimit) break;
+              if (advanceNum > 0 && guessedTeamIds.size >= advanceNum) break;
+
+              const [team0, team1] = group;
+              if (!team0 || !team1) continue;
+
+              // 两队都已竞猜则跳过
+              if (
+                guessedTeamIds.has(team0.teamId) &&
+                guessedTeamIds.has(team1.teamId)
+              ) {
+                skipCount++;
+                continue;
+              }
+
+              // 选助威数更高的队伍
+              let pick;
+              if (guessedTeamIds.has(team0.teamId)) {
+                pick = team1;
+              } else if (guessedTeamIds.has(team1.teamId)) {
+                pick = team0;
+              } else {
+                pick = team0.cheerCnt >= team1.cheerCnt ? team0 : team1;
+              }
+
+              try {
+                await runApexAction(
+                  ApexAction.GUESS,
+                  (queuedMs) =>
+                    tokenStore.sendMessageWithPromise(
+                      tokenId,
+                      "apex_guess",
+                      { teamId: pick.teamId },
+                      TIMEOUT_MS + queuedMs,
+                    ),
+                  {
+                    // 等待服务器冷却时给出可见反馈，避免界面像卡死
+                    onWait: (ms) =>
+                      addLog({
+                        time: new Date().toLocaleTimeString(),
+                        message: `${token.name} 竞猜遇到服务器限流，等待 ${Math.ceil(ms / 1000)}s 后重试`,
+                        type: "warning",
+                      }),
+                  },
+                );
+                guessedTeamIds.add(pick.teamId);
+                successCount++;
                 addLog({
                   time: new Date().toLocaleTimeString(),
-                  message: `${token.name} 连续被服务器限流（200400），约 ${Math.ceil(apexCooldownLeft(ApexAction.GUESS) / 1000)}s 后可继续，本次中止剩余竞猜`,
-                  type: "warning",
+                  message: `${token.name} ${tab.title} 竞猜 ${pick.name} (${pick.teamId}) 助威:${pick.cheerCnt} ✓`,
+                  type: "success",
                 });
+              } catch (err) {
+                failCount++;
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} ${tab.title} 竞猜 ${pick.name} 失败: ${err.message}`,
+                  type: "error",
+                });
+                if (isApexRateLimited(err)) {
+                  // 重试仍被限流：停止该账号后续竞猜，等待自适应间隔恢复
+                  abortedByRateLimit = true;
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} 连续被服务器限流（200400），约 ${Math.ceil(apexCooldownLeft(ApexAction.GUESS) / 1000)}s 后可继续，本次中止剩余竞猜`,
+                    type: "warning",
+                  });
+                }
               }
             }
           }

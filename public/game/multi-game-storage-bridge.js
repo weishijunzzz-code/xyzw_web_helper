@@ -322,9 +322,10 @@
         root.document.body.textContent = "游戏账号隔离初始化失败";
       };
       if (root.document.body) renderFatal();
-      else root.document.addEventListener("DOMContentLoaded", renderFatal, {
-        once: true,
-      });
+      else
+        root.document.addEventListener("DOMContentLoaded", renderFatal, {
+          once: true,
+        });
 
       if (root.parent && root.parent !== root) {
         root.parent.postMessage(

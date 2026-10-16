@@ -5,8 +5,8 @@
 
 /**
  * 创建营地挑战类任务执行器
- * @param {Object} deps - 依赖项
- * @returns {Object} 任务函数集合
+ * @param {object} deps - 依赖项
+ * @returns {object} 任务函数集合
  */
 export function createTasksCampChallenge(deps) {
   const {
@@ -17,8 +17,6 @@ export function createTasksCampChallenge(deps) {
     shouldStop,
     ensureConnection,
     releaseConnectionSlot,
-    connectionQueue,
-    batchSettings,
     tokenStore,
     addLog,
     message,
@@ -450,7 +448,7 @@ export function createTasksCampChallenge(deps) {
         await ensureConnection(tokenId);
         if (shouldStop.value) return;
 
-        const roleInfoResult = await tokenStore.sendMessageWithPromise(
+        await tokenStore.sendMessageWithPromise(
           tokenId,
           "club_getinfo",
           {},

@@ -1,7 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router";
 import * as autoRoutes from "vue-router/auto-routes";
-import { useTokenStore } from '@/stores/tokenStore'
-import { isNowInLegionWarTime } from "@/utils/clubBattleUtils"
+import { useTokenStore } from "@/stores/tokenStore";
+import { isNowInLegionWarTime } from "@/utils/clubBattleUtils";
 
 // 安全的动态导入包装器，处理 chunk 加载失败
 const safeImport = (importFn) => {
@@ -19,34 +19,34 @@ const generatedRoutes = autoRoutes.routes ?? [];
 
 const my_routes = [
   {
-    path: '/',
-    name: 'Home',
-    component: safeImport(() => import('@/views/Home.vue')),
+    path: "/",
+    name: "Home",
+    component: safeImport(() => import("@/views/Home.vue")),
     meta: {
-      title: '首页',
-      requiresToken: false
-    }
-  },
-  {
-    path: '/game',
-    name: 'GamePlayer',
-    component: () => import('@/views/GamePlayer.vue'),
-    meta: {
-      title: '游戏',
-      requiresToken: true
+      title: "首页",
+      requiresToken: false,
     },
-    props: route => ({
-      bin_id: route.query.bin_id
-    })
   },
   {
-    path: '/multi-game',
-    name: 'GameMultiPlayer',
-    component: () => import('@/views/GameMultiPlayer.vue'),
+    path: "/game",
+    name: "GamePlayer",
+    component: () => import("@/views/GamePlayer.vue"),
     meta: {
-      title: '批量游戏',
-      requiresToken: true
-    }
+      title: "游戏",
+      requiresToken: true,
+    },
+    props: (route) => ({
+      bin_id: route.query.bin_id,
+    }),
+  },
+  {
+    path: "/multi-game",
+    name: "GameMultiPlayer",
+    component: () => import("@/views/GameMultiPlayer.vue"),
+    meta: {
+      title: "批量游戏",
+      requiresToken: true,
+    },
   },
   {
     name: 'DefaultLayout',
@@ -57,7 +57,7 @@ const my_routes = [
       {
         path: '/tokens',
         name: 'TokenImport',
-        component: safeImport(() => import('@/views/TokenImport/index.vue')),
+        component: safeImport(() => import('@/views/TokenImport/TokenImport.vue')),
         meta: {
           title: 'Token管理',
           requiresToken: false
@@ -76,63 +76,63 @@ const my_routes = [
         name: 'Dashboard',
         component: safeImport(() => import('@/views/Dashboard.vue')),
         meta: {
-          title: '控制台',
-          requiresToken: true
-        }
+          title: "控制台",
+          requiresToken: true,
+        },
       },
       {
         path: 'game-features',
         name: 'GameFeatures',
         component: safeImport(() => import('@/views/GameFeatures.vue')),
         meta: {
-          title: '游戏功能',
-          requiresToken: true
-        }
+          title: "游戏功能",
+          requiresToken: true,
+        },
       },
       {
         path: 'message-test',
         name: 'MessageTest',
         component: safeImport(() => import('@/components/Test/MessageTester.vue')),
         meta: {
-          title: '消息测试',
-          requiresToken: true
-        }
+          title: "消息测试",
+          requiresToken: true,
+        },
       },
       {
         path: 'legion-war',
         name: 'LegionWar',
         component: safeImport(() => import('@/views/LegionWar.vue')),
         meta: {
-          title: '实时盐场',
-          requiresToken: true
-        }
+          title: "实时盐场",
+          requiresToken: true,
+        },
       },
       {
         path: 'profile',
         name: 'Profile',
         component: safeImport(() => import('@/views/Profile.vue')),
         meta: {
-          title: '个人设置',
-          requiresToken: true
-        }
+          title: "个人设置",
+          requiresToken: true,
+        },
       },
       {
         path: 'daily-tasks',
         name: 'DailyTasks',
         component: safeImport(() => import('@/views/DailyTasks.vue')),
         meta: {
-          title: '日常任务',
-          requiresToken: true
-        }
+          title: "日常任务",
+          requiresToken: true,
+        },
       },
       {
         path: 'batch-daily-tasks',
         name: 'BatchDailyTasks',
         component: safeImport(() => import('@/views/BatchDailyTasks.vue')),
         meta: {
-          title: '批量日常',
-          requiresToken: true
-        }
+          title: "批量日常",
+          requiresToken: true,
+        },
       },
       {
         path: 'task-scheduler',
@@ -148,9 +148,9 @@ const my_routes = [
         name: 'PushingLevels',
         component: safeImport(() => import('@/views/PushingLevels.vue')),
         meta: {
-          title: '主线推关',
-          requiresToken: true
-        }
+          title: "主线推关",
+          requiresToken: true,
+        },
       },
       {
         path: 'cloud-tasks',
@@ -163,16 +163,16 @@ const my_routes = [
       },
       // 增加自动路由引用
       ...generatedRoutes,
-    ]
+    ],
   },
   {
     path: '/websocket-test',
     name: 'WebSocketTest',
     component: safeImport(() => import('@/components/Test/WebSocketTester.vue')),
     meta: {
-      title: 'WebSocket测试',
-      requiresToken: true
-    }
+      title: "WebSocket测试",
+      requiresToken: true,
+    },
   },
   // 移动端路由配置 - 使用MobileAdapter包装PC端组件
   {
@@ -274,28 +274,28 @@ const my_routes = [
   },
   // 兼容旧路由，重定向到新的token管理页面
   {
-    path: '/login',
-    redirect: '/tokens'
+    path: "/login",
+    redirect: "/tokens",
   },
   {
-    path: '/register',
-    redirect: '/tokens'
+    path: "/register",
+    redirect: "/tokens",
   },
   {
-    path: '/game-roles',
-    redirect: '/tokens'
+    path: "/game-roles",
+    redirect: "/tokens",
   },
   // 增加自动路由引用
   ...generatedRoutes,
   {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/NotFound.vue'),
+    path: "/:pathMatch(.*)*",
+    name: "NotFound",
+    component: () => import("@/views/NotFound.vue"),
     meta: {
-      title: '页面不存在'
-    }
-  }
-]
+      title: "页面不存在",
+    },
+  },
+];
 
 // Cloudflare Pages 部署支持
 // 使用根路径，适配任何部署域名
@@ -304,12 +304,12 @@ const router = createRouter({
   routes: my_routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
-      return savedPosition
+      return savedPosition;
     } else {
-      return { top: 0 }
+      return { top: 0 };
     }
-  }
-})
+  },
+});
 
 // 路由过渡动画配置
 router.afterEach((to, from) => {
@@ -349,7 +349,7 @@ const pcToMobileRouteMap = {
 
 // 导航守卫
 router.beforeEach((to, from, next) => {
-  const tokenStore = useTokenStore()
+  const tokenStore = useTokenStore();
 
   // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - XYZW 游戏管理系统` : 'XYZW 游戏管理系统'
@@ -400,10 +400,8 @@ router.beforeEach((to, from, next) => {
       }
     }
   } else {
-    next()
+    next();
   }
-})
+});
 
-
-
-export default router
+export default router;

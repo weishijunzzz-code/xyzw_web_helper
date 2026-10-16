@@ -1,10 +1,9 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import { useMessage } from "naive-ui";
+import { ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
-import { XyzwLegionWarWebSocketClient } from "@/utils/xyzwLegionWarWebSocket";
-import { extractValidData } from "@/utils/legionWar";
 import { getCurrentTimeByFormat } from "@/utils/DateTimeUtils";
+import { extractValidData } from "@/utils/legionWar";
+import { XyzwLegionWarWebSocketClient } from "@/utils/xyzwLegionWarWebSocket";
 
 export const useLegionWarStore = defineStore("legionWar", () => {
   const tokenStore = useTokenStore();
@@ -222,7 +221,7 @@ export const useLegionWarStore = defineStore("legionWar", () => {
       const response = await tokenStore.sendMessageWithPromise(
         tokenStore.selectedToken.id,
         "legion_getinfobyid",
-        { legionId: legionId },
+        { legionId },
       );
 
       if (response && (response.legionData || response.info)) {

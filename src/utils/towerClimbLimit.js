@@ -4,7 +4,8 @@ export function normalizeWeirdTowerMaxClimb(
   value,
   fallback = DEFAULT_WEIRD_TOWER_MAX_CLIMB,
 ) {
-  const raw = typeof value === "string" ? value.replace(/,/g, "").trim() : value;
+  const raw =
+    typeof value === "string" ? value.replace(/,/g, "").trim() : value;
   const numericValue = Number(raw);
 
   if (!Number.isFinite(numericValue)) {

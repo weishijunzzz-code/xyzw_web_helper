@@ -1,27 +1,23 @@
 <template>
   <!-- 手动输入表单 -->
-  <n-form
+  <NForm
     ref="importFormRef"
     :model="importForm"
     :rules="importRules"
-    :label-placement="'top'"
-    :size="'large'"
+    label-placement="top"
+    size="large"
     :show-label="true"
   >
-    <n-form-item :label="'游戏角色名称'" :path="'name'" :show-label="true">
-      <n-input
+    <NFormItem label="游戏角色名称" path="name" :show-label="true">
+      <NInput
         v-model:value="importForm.name"
         placeholder="例如：主号战士"
         clearable
       />
-    </n-form-item>
+    </NFormItem>
 
-    <n-form-item
-      :label="'Token字符串'"
-      :path="'base64Token'"
-      :show-label="true"
-    >
-      <n-input
+    <NFormItem label="Token字符串" path="base64Token" :show-label="true">
+      <NInput
         v-model:value="importForm.base64Token"
         type="textarea"
         :rows="3"
@@ -31,41 +27,41 @@
         <template #suffix>
           <n-popover placement="right" trigger="hover">
             <template #trigger>
-              <n-icon :depth="1">
+              <NIcon :depth="1">
                 <AlertCircleOutline />
-              </n-icon>
+              </NIcon>
             </template>
             <div class="large-text">
               输入格式为：{"roleToken":"****","sessId":***,"connId":***,"isRestore":***}
             </div>
           </n-popover>
         </template>
-      </n-input>
-    </n-form-item>
+      </NInput>
+    </NFormItem>
 
     <!-- 角色详情 -->
-    <n-collapse>
-      <n-collapse-item title="角色详情 (可选)" name="optional">
+    <NCollapse>
+      <NCollapseItem title="角色详情 (可选)" name="optional">
         <div class="optional-fields">
-          <n-form-item label="服务器">
-            <n-input
+          <NFormItem label="服务器">
+            <NInput
               v-model:value="importForm.server"
               placeholder="服务器名称"
             />
-          </n-form-item>
+          </NFormItem>
 
-          <n-form-item label="自定义连接地址">
-            <n-input
+          <NFormItem label="自定义连接地址">
+            <NInput
               v-model:value="importForm.wsUrl"
               placeholder="留空使用默认连接"
             />
-          </n-form-item>
+          </NFormItem>
         </div>
-      </n-collapse-item>
-    </n-collapse>
+      </NCollapseItem>
+    </NCollapse>
 
     <div class="form-actions">
-      <n-button
+      <NButton
         type="primary"
         size="large"
         block
@@ -73,22 +69,21 @@
         @click="handleImport"
       >
         <template #icon>
-          <n-icon>
+          <NIcon>
             <CloudUpload />
-          </n-icon>
+          </NIcon>
         </template>
         添加Token
-      </n-button>
+      </NButton>
 
-      <n-button v-if="tokenStore.hasTokens" size="large" block @click="cancel">
+      <NButton v-if="tokenStore.hasTokens" size="large" block @click="cancel">
         取消
-      </n-button>
+      </NButton>
     </div>
-  </n-form>
+  </NForm>
 </template>
 <script lang="ts" setup>
-import { useTokenStore } from "@/stores/tokenStore";
-import { CloudUpload, AlertCircleOutline } from "@vicons/ionicons5";
+import { AlertCircleOutline, CloudUpload } from "@vicons/ionicons5";
 import {
   NButton,
   NCollapse,
@@ -100,6 +95,7 @@ import {
   useMessage,
 } from "naive-ui";
 import { reactive, ref } from "vue";
+import { useTokenStore } from "@/stores/tokenStore";
 
 const $emit = defineEmits(["cancel", "ok"]);
 
@@ -194,3 +190,10 @@ const handleImport = async () => {
   color: #e67e22;
 }
 </style>
+
+<route lang="json">
+{
+  "name": "/TokenImport/manual",
+  "path": "/TokenImport/manual"
+}
+</route>

@@ -67,7 +67,7 @@
             type="line"
             :percentage="item.percentage"
             :color="item.isCompleted ? '#52c41a' : '#1890ff'"
-            :rail-color="'rgba(0, 0, 0, 0.06)'"
+            rail-color="rgba(0, 0, 0, 0.06)"
             :height="8"
             :show-indicator="false"
           />
@@ -108,7 +108,7 @@
             <ol>
               <li
                 v-for="step in combo.combo"
-                :key="step.id + '-' + step.threshold"
+                :key="`${step.id}-${step.threshold}`"
               >
                 {{ step.name }} -> 达到 {{ step.threshold }} (可得
                 {{ step.delta }} 普通道具, 还需消耗 {{ step.cost }})
@@ -127,8 +127,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, onMounted, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 
 const tokenStore = useTokenStore();
@@ -402,7 +402,7 @@ const rewardConfigs = {
 };
 
 // 消耗活动的ID (仅作参考，实际逻辑会自动查找)
-const ACTIVITY_ID = 2512261;
+
 const roleInfo = computed(() => tokenStore.gameData?.roleInfo || null);
 const ActivityItem = computed(
   () => roleInfo.value?.role?.items?.[5261]?.quantity || 0,

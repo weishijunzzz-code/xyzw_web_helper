@@ -57,12 +57,12 @@ export function formatWarrankRecordsForExport(legionRankList, queryDate) {
   ];
 
   // 初始化统计变量
-  let totalmeng = 0,
-    totalbig = 0,
-    totalzhengyi = 0,
-    totallong = 0,
-    totalxi = 0,
-    totalweizhi = 0;
+  let totalmeng = 0;
+  let totalbig = 0;
+  let totalzhengyi = 0;
+  let totallong = 0;
+  let totalxi = 0;
+  let totalweizhi = 0;
 
   legionRankList.forEach((member) => {
     const alliance = allianceincludes(member.announcement);
@@ -113,7 +113,7 @@ export function formatWarrankRecordsForExport(legionRankList, queryDate) {
   const totalClubs = legionRankList.length;
   for (const [alliance, count] of Object.entries(allianceStats)) {
     const percentage =
-      totalClubs > 0 ? ((count / totalClubs) * 100).toFixed(1) + "%" : "0%";
+      totalClubs > 0 ? `${((count / totalClubs) * 100).toFixed(1)}%` : "0%";
     XLSX.utils.sheet_add_aoa(worksheet, [[alliance, count, percentage]], {
       origin: -1,
     });
@@ -152,10 +152,10 @@ export function formatWarrankRecordsForExport(legionRankList, queryDate) {
 const formatPower = (power) => {
   if (!power) return "0";
   if (power >= 100000000) {
-    return (power / 100000000).toFixed(2) + "亿";
+    return `${(power / 100000000).toFixed(2)}亿`;
   }
   if (power >= 10000) {
-    return (power / 10000).toFixed(2) + "万";
+    return `${(power / 10000).toFixed(2)}万`;
   }
   return power.toString();
 };
@@ -165,7 +165,7 @@ const formatScore = (score) => {
 };
 
 const connectstr = (str1, str2, str3) => {
-  return str1 + "," + str2 + "," + str3;
+  return `${str1},${str2},${str3}`;
 };
 
 const allianceConfig = [

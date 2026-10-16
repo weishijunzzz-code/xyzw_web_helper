@@ -93,11 +93,14 @@ const flushBootstrap = () => new Promise((resolve) => setImmediate(resolve));
 
 test("multi-game bootstrap gates every game runtime behind the storage bridge", () => {
   assert.match(multiGameHtml, /src="multi-game-storage-bridge\.js"/);
-  assert.match(multiGameHtml, /if \(!window\.__MULTI_GAME_BRIDGE_READY__\) return;/);
-
-  const staticScriptSources = [...multiGameHtml.matchAll(/<script\s+src="([^"]+)"/g)].map(
-    (match) => match[1],
+  assert.match(
+    multiGameHtml,
+    /if \(!window\.__MULTI_GAME_BRIDGE_READY__\) return;/,
   );
+
+  const staticScriptSources = [
+    ...multiGameHtml.matchAll(/<script\s+src="([^"]+)"/g),
+  ].map((match) => match[1]);
   assert.deepEqual(staticScriptSources, ["multi-game-storage-bridge.js"]);
 
   for (const runtimeFile of expectedRuntimeFiles) {

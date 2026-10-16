@@ -3,24 +3,20 @@
     <button class="back-btn" @click="goBack">← 返回</button>
 
     <div class="iframe-wrapper">
-      <iframe
-        :src="gameSrc"
-        class="game-iframe"
-        allow="fullscreen; autoplay"
-      />
+      <iframe :src="gameSrc" class="game-iframe" allow="fullscreen; autoplay" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRouter } from "vue-router";
 
-const router = useRouter()
+const router = useRouter();
 
-const gameSrc = import.meta.env.BASE_URL + 'game/index.html'
+const gameSrc = `${import.meta.env.BASE_URL}game/index.html`;
 
 function goBack() {
-  router.push('/admin/dashboard')
+  router.push("/admin/dashboard");
 }
 </script>
 

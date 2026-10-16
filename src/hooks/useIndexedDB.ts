@@ -1,4 +1,5 @@
-import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import type { DBSchema, IDBPDatabase } from "idb";
+import { openDB } from "idb";
 import { ref } from "vue";
 
 // 数据库结构定义

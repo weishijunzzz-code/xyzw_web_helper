@@ -1,5 +1,22 @@
-import { useTokenStore } from "@/stores/tokenStore";
+import {
+  getClaimablePointRewards,
+  getDailyTaskStates,
+  loadDailyTaskConfig,
+} from "@/utils/dailyTaskState";
 
+const activeTokenRuns = new Set();
+const taskLabels = {
+  1: "登录游戏",
+  2: "分享游戏",
+  3: "赠送好友金币",
+  4: "招募",
+  5: "领取挂机奖励",
+  6: "点金",
+  7: "开启宝箱",
+  12: "黑市购买",
+  13: "竞技场战斗",
+  14: "收获盐罐",
+};
 // 辅助函数
 const pickArenaTargetId = (targets) => {
   if (!targets) return null;
@@ -26,29 +43,22 @@ const pickArenaTargetId = (targets) => {
   return targets?.roleId || targets?.id || targets?.targetId;
 };
 
-const isTodayAvailable = (statisticsTime) => {
-  if (!statisticsTime) return true;
-
-  // 如果有时间戳，检查是否为今天
-  const today = new Date().toDateString();
-  //系统返回得时间戳是秒，要转换成毫秒
-  const recordDate = new Date(statisticsTime * 1000).toDateString();
-
-  return today !== recordDate;
-};
-
-const getTodayBossId = () => {
+const getTodayBossId = (dailyTime) => {
   const DAY_BOSS_MAP = [9904, 9905, 9901, 9902, 9903, 9904, 9905]; // 周日~周六
-  const dayOfWeek = new Date().getDay();
+  const dayOfWeek = new Date((dailyTime + 8 * 60 * 60) * 1000).getUTCDay();
   return DAY_BOSS_MAP[dayOfWeek];
 };
 
 export class DailyTaskRunner {
-  constructor(tokenStore, delaySettings = null) {
+  constructor(tokenStore, delaySettings = null, options = {}) {
+    this.loadConfig = options.loadConfig || loadDailyTaskConfig;
+    this.sleep =
+      options.sleep ||
+      ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.tokenStore = tokenStore;
     this.delaySettings = delaySettings || {
       commandDelay: 500,
-      taskDelay: 500
+      taskDelay: 500,
     };
   }
 
@@ -62,6 +72,19 @@ export class DailyTaskRunner {
     }
   }
 
+  /**
+   * Send once; uncertain results stop this run and require a fresh server snapshot.
+   * @param {string} tokenId Account identity.
+   * @param {Function} request Transport call without automatic retries.
+   * @returns {Promise<*>} Server response.
+   */
+  async sendRequest(tokenId, request) {
+    if (!this.restoringFormation) this.throwIfInterrupted(tokenId);
+    const response = await request();
+    if (!this.restoringFormation) this.throwIfInterrupted(tokenId);
+    return response;
+  }
+
   async executeGameCommand(
     tokenId,
     cmd,
@@ -71,20 +94,25 @@ export class DailyTaskRunner {
   ) {
     try {
       if (description) this.log(`执行: ${description}`);
-      const result = await this.tokenStore.sendMessageWithPromise(
-        tokenId,
-        cmd,
-        params,
-        timeout,
+      this.roleStateDirty = true;
+      const result = await this.sendRequest(tokenId, () =>
+        this.tokenStore.sendMessageWithPromise(tokenId, cmd, params, timeout),
       );
-      await new Promise((resolve) => setTimeout(resolve, this.delaySettings.commandDelay));
-      if (description) this.log(`${description} - 成功`, "success");
+      await this.sleep(this.delaySettings.commandDelay);
+      if (description)
+        this.log(
+          `${description} - ${this.activeCondition !== undefined ? "请求成功，待服务器确认任务状态" : "成功"}`,
+          this.activeCondition !== undefined ? "info" : "success",
+        );
       return result;
     } catch (error) {
       if (description) {
         const token = this.tokenStore.gameTokens.find((t) => t.id === tokenId);
         const tokenName = token?.name || tokenId;
-        this.log(`[${tokenName}] ${description} - 失败: ${error.message}`, "error");
+        this.log(
+          `[${tokenName}] ${description} - 失败: ${error.message}`,
+          "error",
+        );
       }
       throw error;
     }
@@ -92,11 +120,8 @@ export class DailyTaskRunner {
 
   async switchToFormationIfNeeded(tokenId, targetFormation, formationName) {
     try {
-      // 尝试从本地缓存获取当前阵容信息
-      // 注意：这里直接读取 store 中的 gameData 可能不是最新的，如果是批量跑，建议每次都获取最新的
-      // 或者我们假设 tokenStore.gameData 会随着 sendMessage 更新（如果 store 有处理逻辑）
-      // 安全起见，这里先从服务器获取
-
+      if (!Number.isInteger(targetFormation) || targetFormation <= 0)
+        throw new Error("目标阵容无效，停止切换");
       this.log(`检查${formationName}配置...`);
       const teamInfo = await this.executeGameCommand(
         tokenId,
@@ -110,6 +135,10 @@ export class DailyTaskRunner {
       }
 
       const currentFormation = teamInfo?.presetTeamInfo?.useTeamId;
+      if (!Number.isInteger(currentFormation))
+        throw new Error("服务器未提供有效阵容，停止切换");
+      if (this.originalFormation === undefined)
+        this.originalFormation = currentFormation;
       this.log(`当前阵容: ${currentFormation}`);
 
       if (currentFormation === targetFormation) {
@@ -123,6 +152,8 @@ export class DailyTaskRunner {
       this.log(
         `当前阵容: ${currentFormation}, 目标阵容: ${targetFormation}，开始切换...`,
       );
+      // A lost acknowledgement can still follow a server-side switch.
+      this.formationChanged = true;
       await this.executeGameCommand(
         tokenId,
         "presetteam_saveteam",
@@ -133,19 +164,8 @@ export class DailyTaskRunner {
       this.log(`成功切换到${formationName}${targetFormation}`, "success");
       return true;
     } catch (error) {
-      this.log(`阵容检查失败，尝试强制切换: ${error.message}`, "warning");
-      try {
-        await this.executeGameCommand(
-          tokenId,
-          "presetteam_saveteam",
-          { teamId: targetFormation },
-          `强制切换到${formationName}${targetFormation}`,
-        );
-        return true;
-      } catch (fallbackError) {
-        this.log(`强制切换也失败: ${fallbackError.message}`, "error");
-        throw fallbackError;
-      }
+      this.log(`阵容检查或切换失败: ${error.message}`, "error");
+      throw error;
     }
   }
 
@@ -172,53 +192,144 @@ export class DailyTaskRunner {
     }
   }
 
-  async run(tokenId, callbacks = {}, customSettings = null) {
-    this.callbacks = callbacks;
-    const settings = customSettings || this.loadSettings(tokenId); // 优先使用传入的设置
-
-    // 获取角色信息以确认 roleId 和 任务状态
-    this.log("正在获取角色信息...");
-    let roleInfoResp;
-    try {
-      roleInfoResp = await this.tokenStore.sendGetRoleInfo(tokenId);
-      this.log("角色信息获取成功", "success");
-    } catch (error) {
-      this.log(`获取角色信息失败: ${error.message}`, "error");
+  /** Check cancellation and live connection before starting another operation. */
+  throwIfInterrupted(tokenId) {
+    const stopped = this.callbacks?.shouldStop?.();
+    const status = this.tokenStore.getWebSocketStatus?.(tokenId);
+    if (stopped || (status && status !== "connected")) {
+      const error = new Error(
+        stopped
+          ? "任务已停止，再次执行将根据服务器任务列表补差"
+          : "WebSocket 已断开，停止执行并等待重新查询服务器状态",
+      );
+      error.interrupted = true;
       throw error;
     }
+  }
 
-    const roleData = roleInfoResp?.role;
-    if (!roleData) {
-      throw new Error("角色数据不存在");
+  /**
+   * Read uncached server progress; a response after disconnect is not accepted.
+   * @param {string} tokenId Account to query.
+   * @returns {Promise<object>} Validated current role snapshot.
+   * @throws {Error} On missing task data, a changed task day or disconnected transport.
+   */
+  async refreshServerRole(tokenId) {
+    try {
+      this.throwIfInterrupted(tokenId);
+      const response = await this.sendRequest(tokenId, () =>
+        this.tokenStore.sendGetRoleInfo(tokenId, {}, 2),
+      );
+      await this.sleep(this.delaySettings.commandDelay);
+      this.throwIfInterrupted(tokenId);
+      const role = response?.role;
+      const states = getDailyTaskStates(role, this.taskConfig);
+      if (
+        this.taskDay !== undefined &&
+        role.dailyTask.dailyTime !== this.taskDay
+      ) {
+        const error = new Error(
+          "服务器每日任务已重置，请重新开始获取当日任务列表",
+        );
+        error.interrupted = true;
+        throw error;
+      }
+      this.roleData = role;
+      this.roleStateDirty = false;
+      for (const state of states) {
+        const signature = `${state.status}:${state.progress}/${state.required}`;
+        if (this.loggedTaskStates?.get(state.condition) === signature) continue;
+        this.loggedTaskStates?.set(state.condition, signature);
+        const label = taskLabels[state.condition] || `任务${state.id}`;
+        const status =
+          state.status === "claimed"
+            ? "已完成并领奖，跳过"
+            : state.status === "claimable"
+              ? "已完成，待领奖，跳过重复操作"
+              : `未完成，剩余 ${state.remaining}`;
+        this.log(
+          `${label}: ${state.progress}/${state.required} · ${status}`,
+          state.status === "pending" ? "info" : "success",
+        );
+      }
+      const progress = Math.floor(
+        (states.filter((state) => state.status === "claimed").length /
+          states.length) *
+          100,
+      );
+      if (progress !== this.reportedProgress) {
+        this.reportedProgress = progress;
+        this.callbacks?.onProgress?.(progress);
+      }
+      return role;
+    } catch (error) {
+      if (error.interrupted) throw error;
+      const failure = new Error(error.message || "读取服务器任务列表失败");
+      failure.serverStateUnavailable = true;
+      throw failure;
     }
+  }
 
-    // 重新加载设置，使用正确的 roleId (虽然通常 tokenId 就是 roleId 或者一一对应，但为了保险)
-    // 在这个项目中，tokenId 似乎就是 roleId 或者用于标识
-    // DailyTaskStatus.vue 中: const role = getCurrentRole() -> roleId: tokenStore.selectedToken.id
-    // 所以 tokenId 就是 key
+  getTaskState(condition) {
+    const task = getDailyTaskStates(this.roleData, this.taskConfig).find(
+      (task) => task.condition === condition,
+    );
+    if (!task) throw new Error(`官方任务配置中未找到完成条件 ${condition}`);
+    return task;
+  }
+
+  /**
+   * Fill remaining server task counters and claim only eligible unclaimed rewards.
+   * @param {string} tokenId Account identity.
+   * @param {object} callbacks Log, progress and cancellation hooks.
+   * @param {object|null} customSettings Optional task settings.
+   * @returns {Promise<object>} Execution counts without any local completion record.
+   */
+  async run(tokenId, callbacks = {}, customSettings = null) {
+    if (activeTokenRuns.has(tokenId))
+      throw new Error("该账号的每日任务正在执行中");
+    activeTokenRuns.add(tokenId);
+    try {
+      return await this.runTasks(tokenId, callbacks, customSettings);
+    } finally {
+      activeTokenRuns.delete(tokenId);
+    }
+  }
+
+  async runTasks(tokenId, callbacks = {}, customSettings = null) {
+    this.callbacks = callbacks;
+    this.taskDay = undefined;
+    this.activeCondition = undefined;
+    this.originalFormation = undefined;
+    this.formationChanged = false;
+    this.roleStateDirty = true;
+    this.reportedProgress = undefined;
+    this.loggedTaskStates = new Map();
+    this.throwIfInterrupted(tokenId);
+    const settings = customSettings || this.loadSettings(tokenId);
+    if (!settings) throw new Error("每日任务设置无法读取");
+    this.log("读取服务器任务配置与当前任务列表...");
+    this.taskConfig = await this.loadConfig(
+      {
+        sendMessageWithPromise: (id, cmd, params, timeout) =>
+          this.sendRequest(id, () =>
+            this.tokenStore.sendMessageWithPromise(id, cmd, params, timeout),
+          ),
+      },
+      tokenId,
+    );
+    const roleData = await this.refreshServerRole(tokenId);
+    this.taskDay = roleData.dailyTask.dailyTime;
 
     this.log("开始执行每日任务补差");
 
-    // 读取并保存当前阵容信息
-    let originalFormation = null;
-    try {
-      this.log("读取当前阵容信息...");
-      const teamInfo = await this.executeGameCommand(
-        tokenId,
-        "presetteam_getinfo",
-        {},
-        "获取当前阵容信息",
-      );
-      originalFormation = teamInfo?.presetTeamInfo?.useTeamId;
-      this.log(`当前阵容: ${originalFormation}`);
-    } catch (error) {
-      this.log(`读取当前阵容失败: ${error.message}`, "warning");
-    }
-
-    const completedTasks = roleData.dailyTask?.complete ?? {};
-    const isTaskCompleted = (taskId) => completedTasks[taskId] === -1;
+    // A reached target is completed even when its points are not yet claimed.
+    const isTaskCompleted = (condition) =>
+      this.getTaskState(condition).remaining === 0;
     const statistics = roleData.statistics ?? {};
     const statisticsTime = roleData.statisticsTime ?? {};
+    // Server dailyTime defines the reset boundary; browser dates are not completion evidence.
+    const isTodayAvailable = (stamp) =>
+      !Number.isFinite(stamp) || stamp < roleData.dailyTask.dailyTime;
 
     const taskList = [];
 
@@ -226,6 +337,7 @@ export class DailyTaskRunner {
     if (!isTaskCompleted(2)) {
       taskList.push({
         name: "分享一次游戏",
+        condition: 2,
         execute: () =>
           this.executeGameCommand(
             tokenId,
@@ -239,41 +351,50 @@ export class DailyTaskRunner {
     if (!isTaskCompleted(3)) {
       taskList.push({
         name: "赠送好友金币",
+        condition: 3,
         execute: () =>
           this.executeGameCommand(tokenId, "friend_batch", {}, "赠送好友金币"),
       });
     }
 
     if (!isTaskCompleted(4)) {
-      taskList.push({
-        name: "免费招募",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "hero_recruit",
-            { recruitType: 3, recruitNumber: 1 },
-            "免费招募",
-          ),
-      });
-
-      if (settings.payRecruit) {
+      const freeRecruit = isTodayAvailable(statistics["recruit:one:free"]);
+      const paidRecruit =
+        this.getTaskState(4).remaining - (freeRecruit ? 1 : 0);
+      if (freeRecruit)
         taskList.push({
-          name: "付费招募",
+          name: "免费招募",
+          condition: 4,
           execute: () =>
             this.executeGameCommand(
               tokenId,
               "hero_recruit",
-              { recruitType: 1, recruitNumber: 1 },
-              "付费招募",
+              { recruitType: 3, recruitNumber: 1 },
+              "免费招募",
+            ),
+        });
+
+      if (settings.payRecruit && paidRecruit > 0) {
+        taskList.push({
+          name: "付费招募",
+          condition: 4,
+          execute: () =>
+            this.executeGameCommand(
+              tokenId,
+              "hero_recruit",
+              { recruitType: 1, recruitNumber: paidRecruit },
+              "付费招募补足服务器任务进度",
             ),
         });
       }
     }
 
-    if (!isTaskCompleted(6) && isTodayAvailable(statisticsTime["buy:gold"])) {
-      for (let i = 0; i < 3; i++) {
+    if (!isTaskCompleted(6)) {
+      const remaining = this.getTaskState(6).remaining;
+      for (let i = 0; i < remaining; i++) {
         taskList.push({
-          name: `免费点金 ${i + 1}/3`,
+          name: `免费点金 ${i + 1}/${remaining}`,
+          condition: 6,
           execute: () =>
             this.executeGameCommand(
               tokenId,
@@ -286,25 +407,17 @@ export class DailyTaskRunner {
     }
 
     if (!isTaskCompleted(5) && settings.claimHangUp) {
-      taskList.push({
-        name: "领取挂机奖励",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "system_claimhangupreward",
-            {},
-            "领取挂机奖励",
-          ),
-      });
-      for (let i = 0; i < 4; i++) {
+      const remaining = this.getTaskState(5).remaining;
+      for (let i = 0; i < remaining; i++) {
         taskList.push({
-          name: `挂机加钟 ${i + 1}/4`,
+          name: `领取挂机奖励 ${i + 1}/${remaining}`,
+          condition: 5,
           execute: () =>
             this.executeGameCommand(
               tokenId,
-              "system_mysharecallback",
-              { isSkipShareCard: true, type: 2 },
-              `挂机加钟 ${i + 1}`,
+              "system_claimhangupreward",
+              {},
+              `领取挂机奖励 ${i + 1}/${remaining}`,
             ),
         });
       }
@@ -313,6 +426,7 @@ export class DailyTaskRunner {
     if (!isTaskCompleted(7) && settings.openBox) {
       taskList.push({
         name: "开启木质宝箱",
+        condition: 7,
         execute: () =>
           this.executeGameCommand(
             tokenId,
@@ -323,30 +437,33 @@ export class DailyTaskRunner {
       });
     }
 
-    taskList.push({
-      name: "停止盐罐计时",
-      execute: () =>
-        this.executeGameCommand(
-          tokenId,
-          "bottlehelper_stop",
-          {},
-          "停止盐罐计时",
-        ),
-    });
-    taskList.push({
-      name: "开始盐罐计时",
-      execute: () =>
-        this.executeGameCommand(
-          tokenId,
-          "bottlehelper_start",
-          {},
-          "开始盐罐计时",
-        ),
-    });
-
     if (!isTaskCompleted(14) && settings.claimBottle) {
       taskList.push({
+        name: "停止盐罐计时",
+        condition: 14,
+        execute: () =>
+          this.executeGameCommand(
+            tokenId,
+            "bottlehelper_stop",
+            {},
+            "停止盐罐计时",
+          ),
+      });
+      taskList.push({
+        name: "开始盐罐计时",
+        condition: 14,
+        execute: () =>
+          this.executeGameCommand(
+            tokenId,
+            "bottlehelper_start",
+            {},
+            "开始盐罐计时",
+          ),
+      });
+
+      taskList.push({
         name: "领取盐罐奖励",
+        condition: 14,
         execute: () =>
           this.executeGameCommand(
             tokenId,
@@ -361,16 +478,17 @@ export class DailyTaskRunner {
     if (!isTaskCompleted(13) && settings.arenaEnable) {
       taskList.push({
         name: "竞技场战斗",
+        condition: 13,
         execute: async () => {
           this.log("开始竞技场战斗流程");
           const hour = new Date().getHours();
           if (hour < 6) {
             this.log("当前时间未到6点，跳过竞技场战斗", "warning");
-            return;
+            return false;
           }
           if (hour > 22) {
             this.log("当前时间已过22点，跳过竞技场战斗", "warning");
-            return;
+            return false;
           }
 
           await this.switchToFormationIfNeeded(
@@ -385,23 +503,15 @@ export class DailyTaskRunner {
             "开始竞技场",
           );
 
-          for (let i = 1; i <= 3; i++) {
-            this.log(`竞技场战斗 ${i}/3`);
-            let targets;
-            try {
-              targets = await this.executeGameCommand(
-                tokenId,
-                "arena_getareatarget",
-                {},
-                `获取竞技场目标${i}`,
-              );
-            } catch (err) {
-              this.log(
-                `竞技场战斗${i} - 获取对手失败: ${err.message}`,
-                "error",
-              );
-              break;
-            }
+          const arenaAttempts = Math.min(3, this.getTaskState(13).remaining);
+          for (let i = 1; i <= arenaAttempts; i++) {
+            this.log(`竞技场战斗 ${i}/${arenaAttempts}`);
+            const targets = await this.executeGameCommand(
+              tokenId,
+              "arena_getareatarget",
+              {},
+              `获取竞技场目标${i}`,
+            );
 
             const targetId = pickArenaTargetId(targets);
             if (targetId) {
@@ -417,8 +527,9 @@ export class DailyTaskRunner {
                 `竞技场战斗${i} - 未找到目标: ${JSON.stringify(targets)}`,
                 "warning",
               );
+              return false;
             }
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await this.sleep(1000);
           }
         },
       });
@@ -438,6 +549,7 @@ export class DailyTaskRunner {
       if (remainingLegionBoss > 0) {
         taskList.push({
           name: "军团BOSS阵容检查",
+          checkOnly: true,
           execute: () =>
             this.switchToFormationIfNeeded(
               tokenId,
@@ -461,9 +573,10 @@ export class DailyTaskRunner {
       }
     }
 
-    const todayBossId = getTodayBossId();
+    const todayBossId = getTodayBossId(roleData.dailyTask.dailyTime);
     taskList.push({
       name: "每日BOSS阵容检查",
+      checkOnly: true,
       execute: () =>
         this.switchToFormationIfNeeded(
           tokenId,
@@ -487,16 +600,27 @@ export class DailyTaskRunner {
 
     // 4. 固定奖励
     const fixedRewards = [
-      { name: "福利签到", cmd: "system_signinreward" },
-      { name: "俱乐部", cmd: "legion_signin" },
+      ...(Object.values(roleData.signInReward ?? {}).some(
+        (stamp) => !isTodayAvailable(stamp),
+      )
+        ? []
+        : [{ name: "福利签到", cmd: "system_signinreward" }]),
+      ...(isTodayAvailable(statisticsTime["legion:sign:in"])
+        ? [{ name: "俱乐部", cmd: "legion_signin" }]
+        : []),
       { name: "领取每日礼包", cmd: "discount_claimreward" },
-      { name: "领取每日免费奖励", cmd: "collection_claimfreereward" },
-      { name: "领取免费礼包", cmd: "card_claimreward" },
-      {
-        name: "领取永久卡礼包",
-        cmd: "card_claimreward",
-        params: { cardId: 4003 },
-      },
+      ...(isTodayAvailable(roleData.cardTime?.[1]?.lastClaimTime)
+        ? [{ name: "领取免费礼包", cmd: "card_claimreward" }]
+        : []),
+      ...(isTodayAvailable(roleData.cardTime?.[4003]?.lastClaimTime)
+        ? [
+            {
+              name: "领取永久卡礼包",
+              cmd: "card_claimreward",
+              params: { cardId: 4003 },
+            },
+          ]
+        : []),
     ];
 
     if (settings.claimEmail) {
@@ -588,7 +712,12 @@ export class DailyTaskRunner {
       }
     }
 
-    for (let i = 0; i < 3; i++) {
+    const claimedSweepTickets = isTodayAvailable(
+      statisticsTime["genie:sweep:buy"],
+    )
+      ? 0
+      : Math.max(Number(statistics["genie:sweep:buy"]) || 0, 0);
+    for (let i = claimedSweepTickets; i < 3; i++) {
       taskList.push({
         name: `领取免费扫荡卷 ${i + 1}/3`,
         execute: () =>
@@ -605,6 +734,7 @@ export class DailyTaskRunner {
     if (!isTaskCompleted(12) && settings.blackMarketPurchase) {
       taskList.push({
         name: "黑市购买1次物品",
+        condition: 12,
         execute: () =>
           this.executeGameCommand(
             tokenId,
@@ -616,13 +746,10 @@ export class DailyTaskRunner {
     }
 
     // 咸王梦境
-    const mengyandayOfWeek = new Date().getDay();
-    if (
-      (mengyandayOfWeek === 0) |
-      (mengyandayOfWeek === 1) |
-      (mengyandayOfWeek === 3) |
-      (mengyandayOfWeek === 4)
-    ) {
+    const mengyandayOfWeek = new Date(
+      (roleData.dailyTask.dailyTime + 8 * 60 * 60) * 1000,
+    ).getUTCDay();
+    if ([0, 1, 3, 4].includes(mengyandayOfWeek)) {
       const mjbattleTeam = { 0: 107 };
       taskList.push({
         name: "咸王梦境",
@@ -653,84 +780,189 @@ export class DailyTaskRunner {
       });
     }
 
-    // 阵容还原
-    if (originalFormation) {
+    // Task IDs are mapped by the official config, not by completion-condition IDs.
+    for (const definition of this.taskConfig.tasks) {
       taskList.push({
-        name: "阵容还原",
-        execute: () =>
-          this.switchToFormationIfNeeded(
-            tokenId,
-            originalFormation,
-            "初始阵容",
-          ),
-      });
-    }
-
-    // 7. 任务奖励
-    for (let taskId = 1; taskId <= 10; taskId++) {
-      taskList.push({
-        name: `领取任务奖励${taskId}`,
+        name: `领取任务积分${definition.id}`,
+        claimCondition: definition.completeCondition,
         execute: () =>
           this.executeGameCommand(
             tokenId,
             "task_claimdailypoint",
-            { taskId },
-            `领取任务奖励${taskId}`,
+            { taskId: definition.id },
+            `领取任务积分${definition.id}`,
             5000,
           ),
       });
     }
 
-    taskList.push(
-      {
-        name: "领取日常任务奖励",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "task_claimdailyreward",
-            {},
-            "领取日常任务奖励",
-          ),
-      },
-      {
-        name: "领取周常任务奖励",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "task_claimweekreward",
-            {},
-            "领取周常任务奖励",
-          ),
-      },
-      {
-        name: "领取通行证奖励",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "activity_recyclewarorderrewardclaim",
-            { actId: 1 },
-            "领取通行证奖励",
-          ),
-      },
-    );
+    let pointRewardsStarted = false;
+    for (const weekly of [false, true]) {
+      taskList.push({
+        name: weekly ? "领取周常任务奖励" : "领取日常任务奖励",
+        execute: async () => {
+          if (!pointRewardsStarted && this.roleStateDirty)
+            await this.refreshServerRole(tokenId);
+          pointRewardsStarted = true;
+          const definitions = weekly
+            ? this.taskConfig.weeklyRewards
+            : this.taskConfig.dailyRewards;
+          const ids = getClaimablePointRewards(
+            this.roleData.dailyTask,
+            definitions,
+            weekly,
+          );
+          for (const rewardId of ids) {
+            this.throwIfInterrupted(tokenId);
+            await this.executeGameCommand(
+              tokenId,
+              weekly ? "task_claimweekreward" : "task_claimdailyreward",
+              { rewardId },
+              `领取${weekly ? "周常" : "日常"}积分奖励${rewardId}`,
+            );
+          }
+        },
+      });
+    }
+    taskList.push({
+      name: "领取通行证奖励",
+      execute: () =>
+        this.executeGameCommand(
+          tokenId,
+          "activity_recyclewarorderrewardclaim",
+          { actId: 1 },
+          "领取通行证奖励",
+        ),
+    });
 
-    // 执行
+    const summary = { completed: 0, skipped: 0, failed: 0, deferred: 0 };
+    let supplementalIncomplete = 0;
+    const attemptedConditions = new Set();
+    const attemptedClaims = new Set();
     const totalTasks = taskList.length;
-    this.log(`共有 ${totalTasks} 个任务待执行`);
-
-    for (let i = 0; i < taskList.length; i++) {
-      const task = taskList[i];
-      try {
-        await task.execute();
-        const progress = Math.floor(((i + 1) / totalTasks) * 100);
-        if (this.callbacks?.onProgress) this.callbacks.onProgress(progress);
-        await new Promise((resolve) => setTimeout(resolve, this.delaySettings.taskDelay));
-      } catch (error) {
-        this.log(`任务执行失败: ${task.name} - ${error.message}`, "error");
+    this.log(`共有 ${totalTasks} 个步骤；每日任务按本轮服务器详情补差`);
+    let claimsStarted = false;
+    try {
+      for (let i = 0; i < taskList.length; i++) {
+        this.throwIfInterrupted(tokenId);
+        const task = taskList[i];
+        this.activeCondition = task.condition ?? task.claimCondition;
+        try {
+          if (task.claimCondition !== undefined && !claimsStarted) {
+            if (this.roleStateDirty) await this.refreshServerRole(tokenId);
+            claimsStarted = true;
+          }
+          if (this.activeCondition !== undefined) {
+            const previous = this.getTaskState(this.activeCondition);
+            if (
+              task.claimCondition !== undefined
+                ? previous.status !== "claimable"
+                : previous.status !== "pending"
+            ) {
+              this.log(`跳过 ${task.name}: 服务器任务列表确认无需执行`);
+              summary.skipped++;
+              continue;
+            }
+          }
+          if (task.condition !== undefined)
+            attemptedConditions.add(task.condition);
+          if (task.claimCondition !== undefined)
+            attemptedClaims.add(task.claimCondition);
+          this.log(`执行中: ${task.name}`);
+          const result = await task.execute();
+          if (
+            result === false &&
+            this.activeCondition === undefined &&
+            !task.checkOnly
+          ) {
+            summary.deferred++;
+            supplementalIncomplete++;
+          } else summary.completed++;
+          this.log(
+            `${task.name}: ${result === false && !task.checkOnly ? "待继续" : task.condition !== undefined || task.claimCondition !== undefined ? "已执行，等待集中核对服务器状态" : "已处理"}`,
+            "info",
+          );
+          await this.sleep(this.delaySettings.taskDelay);
+        } catch (error) {
+          if (error.interrupted) throw error;
+          summary.failed++;
+          if (this.activeCondition === undefined) supplementalIncomplete++;
+          this.log(`任务执行失败: ${task.name} - ${error.message}`, "error");
+          // Match the original runner: a business rejection fails this step only.
+          if (
+            !error.serverStateUnavailable &&
+            /服务器错误:\s*\d+/.test(error.message || "") &&
+            !/\b(?:200400|12400000)\b/.test(error.message || "")
+          ) {
+            this.throwIfInterrupted(tokenId);
+            continue;
+          }
+          throw error;
+        } finally {
+          this.activeCondition = undefined;
+          this.log(
+            `本轮步骤处理进度: ${i + 1}/${totalTasks}（${Math.floor(((i + 1) / totalTasks) * 100)}%），跳过 ${summary.skipped} 项，失败 ${summary.failed} 项`,
+          );
+        }
+      }
+    } finally {
+      if (
+        this.formationChanged &&
+        this.originalFormation !== undefined &&
+        (!this.tokenStore.getWebSocketStatus ||
+          this.tokenStore.getWebSocketStatus(tokenId) === "connected")
+      ) {
+        this.restoringFormation = true;
+        try {
+          await this.switchToFormationIfNeeded(
+            tokenId,
+            this.originalFormation,
+            "初始阵容",
+          );
+        } catch (error) {
+          this.log(`阵容还原失败: ${error.message}`, "warning");
+        } finally {
+          this.restoringFormation = false;
+        }
       }
     }
-
-    if (this.callbacks?.onProgress) this.callbacks.onProgress(100);
-    this.log("所有任务执行完成", "success");
+    await this.refreshServerRole(tokenId);
+    const serverTasks = getDailyTaskStates(this.roleData, this.taskConfig);
+    for (const state of serverTasks) {
+      if (
+        (attemptedConditions.has(state.condition) &&
+          state.status === "pending") ||
+        (attemptedClaims.has(state.condition) && state.status !== "claimed")
+      )
+        summary.deferred++;
+    }
+    summary.remainingTasks = serverTasks.filter(
+      (task) => task.status === "pending",
+    ).length;
+    summary.unclaimedTasks = serverTasks.filter(
+      (task) => task.status === "claimable",
+    ).length;
+    summary.remainingRewards = [false, true].reduce(
+      (count, weekly) =>
+        count +
+        getClaimablePointRewards(
+          this.roleData.dailyTask,
+          weekly ? this.taskConfig.weeklyRewards : this.taskConfig.dailyRewards,
+          weekly,
+        ).length,
+      0,
+    );
+    summary.incomplete =
+      summary.remainingTasks +
+      summary.unclaimedTasks +
+      summary.remainingRewards +
+      supplementalIncomplete;
+    this.log(
+      summary.incomplete
+        ? `本轮结束，${summary.incomplete} 个步骤未确认完成；下次重新读取服务器任务列表`
+        : "本轮服务器任务补差结束",
+      summary.incomplete ? "warning" : "success",
+    );
+    return summary;
   }
 }

@@ -28,8 +28,8 @@
 </template>
 
 <script setup>
-import { useRouter } from "vue-router";
 import { Search } from "@vicons/ionicons5";
+import { useRouter } from "vue-router";
 
 const router = useRouter();
 </script>

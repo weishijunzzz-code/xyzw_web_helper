@@ -37,10 +37,10 @@
 
 import {
   APEX_TAOTAI_STAGES,
-  apexScheduleMap,
-  apexStageNames,
-  apexSeasonConf,
   apexConstantConf,
+  apexScheduleMap,
+  apexSeasonConf,
+  apexStageNames,
   apexSupportLevels,
 } from "./apexStageMap.js";
 
@@ -156,15 +156,7 @@ export function calibrateServerTime(localNowMs, dayStr) {
   const mm = Number(day.slice(2, 4));
   const dd = Number(day.slice(4, 6));
 
-  const serverToday = new Date(
-    2000 + yy,
-    mm - 1,
-    dd,
-    0,
-    0,
-    0,
-    0,
-  ).getTime();
+  const serverToday = new Date(2000 + yy, mm - 1, dd, 0, 0, 0, 0).getTime();
   // ② 客户端同款有限性闸门
   if (!Number.isFinite(serverToday)) {
     return localNowMs;
@@ -201,7 +193,8 @@ const allSchedules = Object.keys(apexScheduleMap)
 /** season -> round -> 该期配置列表（按 id 升序） */
 const seasonRoundMap = new Map();
 for (const conf of allSchedules) {
-  if (!seasonRoundMap.has(conf.season)) seasonRoundMap.set(conf.season, new Map());
+  if (!seasonRoundMap.has(conf.season))
+    seasonRoundMap.set(conf.season, new Map());
   const roundMap = seasonRoundMap.get(conf.season);
   if (!roundMap.has(conf.round)) roundMap.set(conf.round, []);
   roundMap.get(conf.round).push(conf);
@@ -388,13 +381,22 @@ export function getStageInfoByRound(round, season, nowMs) {
     if (!bucket) return;
     const dayZero = getDateZeroTime(conf.date);
     if (!Number.isFinite(dayZero)) return;
-    bucket[0] = Math.min(bucket[0], getScheduleEnableBaseTime(list, i, dayZero, conf));
+    bucket[0] = Math.min(
+      bucket[0],
+      getScheduleEnableBaseTime(list, i, dayZero, conf),
+    );
     bucket[1] = Math.min(bucket[1], dayZero + conf.fightTime * 1000);
     bucket[2] = Math.max(bucket[2], dayZero + conf.endTime * 1000);
   });
   for (const type of Object.keys(acc)) {
     const [base, start, end] = acc[type];
-    info[Number(type)] = createScheduleInfo(Number(type), nowMs, base, start, end);
+    info[Number(type)] = createScheduleInfo(
+      Number(type),
+      nowMs,
+      base,
+      start,
+      end,
+    );
   }
   return info;
 }
@@ -418,18 +420,26 @@ export function getCurrentSeason(nowMs) {
     }
     const win = windows.get(conf.season);
     if (conf.signStartTime) {
-      win.startTime = Math.min(win.startTime, dayZero + conf.signStartTime * 1000);
+      win.startTime = Math.min(
+        win.startTime,
+        dayZero + conf.signStartTime * 1000,
+      );
     }
     if (conf.endDate) {
       const endZero = getDateZeroTime(conf.endDate);
-      if (Number.isFinite(endZero)) win.endTime = Math.max(win.endTime, endZero);
+      if (Number.isFinite(endZero))
+        win.endTime = Math.max(win.endTime, endZero);
     } else {
       win.endTime = Math.max(win.endTime, dayZero + conf.endTime * 1000);
     }
   }
   for (const season of order) {
     const win = windows.get(season);
-    if (Number.isFinite(win.startTime) && nowMs >= win.startTime && nowMs <= win.endTime) {
+    if (
+      Number.isFinite(win.startTime) &&
+      nowMs >= win.startTime &&
+      nowMs <= win.endTime
+    ) {
       return season;
     }
   }
@@ -449,7 +459,8 @@ export function checkNowInSeason(nowMs) {
     const end = getDateZeroTime(conf.endDate);
     if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     if (start <= nowMs && nowMs <= end) return { inSeason: true, timeLeft: 0 };
-    if (nowMs < start) result.timeLeft = Math.min(result.timeLeft, start - nowMs);
+    if (nowMs < start)
+      result.timeLeft = Math.min(result.timeLeft, start - nowMs);
   }
   return result;
 }
@@ -699,7 +710,10 @@ export function checkSupportInTime(round, season, nowMs) {
   let lastIdx = -1;
   for (let i = list.length - 1; i >= 0; i--) {
     const status = getScheduleStatus(list[i].id, nowMs);
-    if (status === ApexScheduleStatus.Locked || status === ApexScheduleStatus.Fighting) {
+    if (
+      status === ApexScheduleStatus.Locked ||
+      status === ApexScheduleStatus.Fighting
+    ) {
       return false;
     }
     if (status !== ApexScheduleStatus.None) {
@@ -715,7 +729,9 @@ export function checkSupportInTime(round, season, nowMs) {
     const hasLaterThisWeek = list.some((conf, i) => {
       if (i <= lastIdx) return false;
       const dayZero = getDateZeroTime(conf.date);
-      return Number.isFinite(dayZero) && dayZero >= weekStart && dayZero < weekEnd;
+      return (
+        Number.isFinite(dayZero) && dayZero >= weekStart && dayZero < weekEnd
+      );
     });
     if (!hasLaterThisWeek) return false;
   }
@@ -780,7 +796,8 @@ export const canGuessRow = (state, stage, row) =>
 export function getAdvanceNum(round, season, stage) {
   if (stage === ApexStage.TAOTAI_3) return 1;
   const conf = getRoundSchedules(round, season).find(
-    (c) => c.stage === stage && Number.isFinite(c.advanceNum) && c.advanceNum > 0,
+    (c) =>
+      c.stage === stage && Number.isFinite(c.advanceNum) && c.advanceNum > 0,
   );
   return conf ? conf.advanceNum : 0;
 }
@@ -793,7 +810,8 @@ export function getAdvanceNum(round, season, stage) {
  */
 export function getSupportLevel(cheerCnt) {
   for (let i = apexSupportLevels.length - 1; i >= 0; i--) {
-    if (cheerCnt >= apexSupportLevels[i].supportNum) return apexSupportLevels[i].level;
+    if (cheerCnt >= apexSupportLevels[i].supportNum)
+      return apexSupportLevels[i].level;
   }
   return 0;
 }

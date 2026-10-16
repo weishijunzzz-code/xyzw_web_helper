@@ -170,13 +170,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
-import { useMessage } from "naive-ui";
 import {
-  Settings,
   Checkmark as CheckCircle,
   Time as Clock,
+  Settings,
 } from "@vicons/ionicons5";
+import { useMessage } from "naive-ui";
+import { ref, watch } from "vue";
 
 const props = defineProps({
   task: {
@@ -207,6 +207,7 @@ const getButtonText = () => {
 
 // 方法
 const toggleStatus = () => {
+  // eslint-disable-next-line vue/custom-event-name-casing -- Preserve the public event name consumed by parent components.
   emit("toggle-status", props.task.id);
 };
 

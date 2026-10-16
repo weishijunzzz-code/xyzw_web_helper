@@ -45,7 +45,7 @@ function xDecrypt(buffer) {
   const input = new Uint8Array(buffer);
   const key = extractKey(input);
   const output = new Uint8Array(input);
-  for (let index = output.length; --index >= 4; ) output[index] ^= key;
+  for (let index = output.length; --index >= 4;) output[index] ^= key;
   return output.subarray(4);
 }
 
@@ -54,7 +54,7 @@ function lxEncrypt(plain, random) {
   const output = new Uint8Array(compressed.length);
   output.set(compressed);
   const key = 2 + ~~(random() * 248);
-  for (let index = Math.min(output.length, 100); --index >= 0; ) {
+  for (let index = Math.min(output.length, 100); --index >= 0;) {
     output[index] ^= key;
   }
   output[0] = 112;
@@ -68,16 +68,14 @@ export function createCompatibleRandomUUID(cryptoSource = globalThis.crypto) {
     return cryptoSource.randomUUID();
   }
   if (typeof cryptoSource?.getRandomValues !== "function") {
-    throw new Error("安全随机UUID生成不可用");
+    throw new TypeError("安全随机UUID生成不可用");
   }
 
   const bytes = new Uint8Array(16);
   cryptoSource.getRandomValues(bytes);
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  );
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
   return [
     hex.slice(0, 4).join(""),
     hex.slice(4, 6).join(""),
@@ -105,12 +103,12 @@ function storageKeys(storage) {
 function isSession(value) {
   return Boolean(
     value &&
-      typeof value.tokenId === "string" &&
-      value.tokenId.length > 0 &&
-      typeof value.name === "string" &&
-      SCOPE_PATTERN.test(value.scopeId) &&
-      Number.isInteger(value.order) &&
-      value.order >= 0,
+    typeof value.tokenId === "string" &&
+    value.tokenId.length > 0 &&
+    typeof value.name === "string" &&
+    SCOPE_PATTERN.test(value.scopeId) &&
+    Number.isInteger(value.order) &&
+    value.order >= 0,
   );
 }
 
@@ -128,10 +126,10 @@ function hasValidSessionSequence(sessions) {
 function isFailure(value) {
   return Boolean(
     value &&
-      typeof value.tokenId === "string" &&
-      value.tokenId.length > 0 &&
-      typeof value.name === "string" &&
-      FAILURE_REASONS.has(value.reason),
+    typeof value.tokenId === "string" &&
+    value.tokenId.length > 0 &&
+    typeof value.name === "string" &&
+    FAILURE_REASONS.has(value.reason),
   );
 }
 

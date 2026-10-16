@@ -6,9 +6,6 @@
 import { g_utils } from "./bonProtocol.js";
 
 // 生成随机数工具函数
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
 
 /**
  * 游戏命令构造器类
@@ -22,7 +19,7 @@ export class GameCommands {
   /**
    * 心跳消息
    */
-  heart_beat(ack = 0, seq = 0, params = {}) {
+  heart_beat(ack = 0, seq = 0) {
     return {
       ack,
       body: {},
@@ -518,7 +515,7 @@ export class GameCommands {
   /**
    * 获取军团信息
    */
-  legion_getinfo(ack = 0, seq = 0, params = {}) {
+  legion_getinfo(ack = 0, seq = 0) {
     return {
       ack,
       body: this.g_utils.bon.encode({}),
@@ -533,8 +530,8 @@ export class GameCommands {
    *
    * @param {number} ack 确认号
    * @param {number} seq 序列号
-   * @param {Object} params 附加参数
-   * @returns {Object} 包装后的协议指令对象
+   * @param {object} params 附加参数
+   * @returns {object} 包装后的协议指令对象
    */
   legionmatch_rolesignup(ack = 0, seq = 0, params = {}) {
     return {
@@ -551,8 +548,8 @@ export class GameCommands {
    *
    * @param {number} ack 确认号
    * @param {number} seq 序列号
-   * @param {Object} params 附加参数
-   * @returns {Object} 包装后的协议指令对象
+   * @param {object} params 附加参数
+   * @returns {object} 包装后的协议指令对象
    */
   legionmatch_signup(ack = 0, seq = 0, params = {}) {
     return {
@@ -569,8 +566,8 @@ export class GameCommands {
    *
    * @param {number} ack 确认号
    * @param {number} seq 序列号
-   * @param {Object} params 附加参数
-   * @returns {Object} 包装后的协议指令对象
+   * @param {object} params 附加参数
+   * @returns {object} 包装后的协议指令对象
    */
   legionmatch_getrank(ack = 0, seq = 0, params = {}) {
     return {
@@ -587,8 +584,8 @@ export class GameCommands {
    *
    * @param {number} ack 确认号
    * @param {number} seq 序列号
-   * @param {Object} params 附加参数
-   * @returns {Object} 包装后的协议指令对象
+   * @param {object} params 附加参数
+   * @returns {object} 包装后的协议指令对象
    */
   legionmatch_getbattlerecord(ack = 0, seq = 0, params = {}) {
     return {
@@ -605,8 +602,8 @@ export class GameCommands {
    *
    * @param {number} ack 确认号
    * @param {number} seq 序列号
-   * @param {Object} params 请求参数，包含 targetId
-   * @returns {Object} 包装后的协议指令对象
+   * @param {object} params 请求参数，包含 targetId
+   * @returns {object} 包装后的协议指令对象
    */
   role_gettargetteam(ack = 0, seq = 0, params = {}) {
     return {
@@ -621,7 +618,7 @@ export class GameCommands {
   /**
    * 开始爬塔
    */
-  fight_starttower(ack = 0, seq = 0, params = {}) {
+  fight_starttower(ack = 0, seq = 0) {
     return {
       ack,
       body: this.g_utils.bon.encode({}),
@@ -664,7 +661,7 @@ export class GameCommands {
   /**
    * 开始答题游戏
    */
-  study_startgame(ack = 0, seq = 0, params = {}) {
+  study_startgame(ack = 0, seq = 0) {
     return {
       ack,
       body: this.g_utils.bon.encode({}),
@@ -760,8 +757,8 @@ export class GameCommands {
    *
    * @param {number} ack 应答序号
    * @param {number} seq 请求序号
-   * @param {Object} params 参数
-   * @returns {Object} WebSocket 协议数据包
+   * @param {object} params 参数
+   * @returns {object} WebSocket 协议数据包
    */
   club_getinfo(ack = 0, seq = 0, params = {}) {
     return {
@@ -780,8 +777,8 @@ export class GameCommands {
    *
    * @param {number} ack 应答序号
    * @param {number} seq 请求序号
-   * @param {Object} params 参数，包含 targetId (成员角色 ID)
-   * @returns {Object} WebSocket 协议数据包
+   * @param {object} params 参数，包含 targetId (成员角色 ID)
+   * @returns {object} WebSocket 协议数据包
    */
   club_gettargetteam(ack = 0, seq = 0, params = {}) {
     return {
@@ -801,8 +798,8 @@ export class GameCommands {
    *
    * @param {number} ack 应答序号
    * @param {number} seq 请求序号
-   * @param {Object} params 参数
-   * @returns {Object} WebSocket 协议数据包
+   * @param {object} params 参数
+   * @returns {object} WebSocket 协议数据包
    */
   club_getattackrecord(ack = 0, seq = 0, params = {}) {
     return {
@@ -821,8 +818,8 @@ export class GameCommands {
    *
    * @param {number} ack 应答序号
    * @param {number} seq 请求序号
-   * @param {Object} params 参数，包含 targetId (成员角色 ID), targetIsMirror
-   * @returns {Object} WebSocket 协议数据包
+   * @param {object} params 参数，包含 targetId (成员角色 ID), targetIsMirror
+   * @returns {object} WebSocket 协议数据包
    */
   club_getdefenserecord(ack = 0, seq = 0, params = {}) {
     return {

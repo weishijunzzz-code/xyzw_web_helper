@@ -7,21 +7,21 @@
         <li>输入短信验证码后登录</li>
         <li>选择需要添加的游戏角色</li>
       </ol>
-      <n-checkbox v-model:checked="saveCombUser">强制下线账号请勾选</n-checkbox>
+      <NCheckbox v-model:checked="saveCombUser">强制下线账号请勾选</NCheckbox>
     </div>
 
-    <n-form :model="mobileForm" label-placement="top" class="login-form">
-      <n-form-item label="手机号">
-        <n-input
+    <NForm :model="mobileForm" label-placement="top" class="login-form">
+      <NFormItem label="手机号">
+        <NInput
           v-model:value="mobileForm.phone"
           inputmode="numeric"
           maxlength="11"
           placeholder="请输入手机号"
           :disabled="isLoggingIn"
         />
-      </n-form-item>
-      <n-form-item label="短信验证码">
-        <n-input
+      </NFormItem>
+      <NFormItem label="短信验证码">
+        <NInput
           v-model:value="mobileForm.code"
           inputmode="numeric"
           maxlength="6"
@@ -30,42 +30,49 @@
           @keyup.enter="loginWithVerificationCode"
         >
           <template #suffix>
-            <n-button
+            <NButton
               text
               type="primary"
               :loading="isSendingCode"
               :disabled="isLoggingIn || cooldownSeconds > 0"
               @click="sendVerificationCode"
             >
-              <template #icon><n-icon><SendOutline /></n-icon></template>
+              <template #icon
+                ><NIcon><SendOutline /></NIcon
+              ></template>
               {{ cooldownSeconds > 0 ? `${cooldownSeconds}s` : "获取验证码" }}
-            </n-button>
+            </NButton>
           </template>
-        </n-input>
-      </n-form-item>
-    </n-form>
+        </NInput>
+      </NFormItem>
+    </NForm>
 
     <div class="form-actions login-actions">
-      <n-button
+      <NButton
         type="primary"
         block
         :loading="isLoggingIn"
         :disabled="!activeLoginMatchId"
         @click="loginWithVerificationCode"
       >
-        <template #icon><n-icon><LogInOutline /></n-icon></template>
+        <template #icon
+          ><NIcon><LogInOutline /></NIcon
+        ></template>
         登录并获取角色
-      </n-button>
+      </NButton>
     </div>
 
-    <n-form :model="importForm" label-placement="top" class="name-form">
-      <n-form-item label="角色命名格式">
-        <n-input v-model:value="importForm.nameTemplate" placeholder="{name}-{index}-{id}" />
+    <NForm :model="importForm" label-placement="top" class="name-form">
+      <NFormItem label="角色命名格式">
+        <NInput
+          v-model:value="importForm.nameTemplate"
+          placeholder="{name}-{index}-{id}"
+        />
         <template #feedback>
           支持变量: {name}角色名, {id}角色ID, {index}角色序号, {server}区服
         </template>
-      </n-form-item>
-    </n-form>
+      </NFormItem>
+    </NForm>
 
     <ServerRoleList
       :data="serverListData"
@@ -76,45 +83,74 @@
     />
 
     <a-list>
-      <a-list-item v-for="(role, index) in roleList" :key="role.id">
+      <a-list-item v-for="(role, roleIndex) in roleList" :key="role.id">
         <div class="role-row">
           <div>
             <strong>角色名称:</strong> {{ role.name }}<br />
             <strong>服务器:</strong> {{ role.server }}<br />
             <strong>角色序号:</strong> {{ role.roleIndex }}
           </div>
-          <n-button type="error" size="small" @click="removeRole(index)">删除</n-button>
+          <NButton type="error" size="small" @click="removeRole(roleIndex)"
+            >删除</NButton
+          >
         </div>
       </a-list-item>
     </a-list>
 
     <div class="form-actions">
-      <n-button type="primary" size="large" block :loading="isImporting" @click="handleImport">
-        <template #icon><n-icon><CloudUpload /></n-icon></template>
+      <NButton
+        type="primary"
+        size="large"
+        block
+        :loading="isImporting"
+        @click="handleImport"
+      >
+        <template #icon
+          ><NIcon><CloudUpload /></NIcon
+        ></template>
         添加Token
-      </n-button>
-      <n-button block :disabled="isLoggingIn || isSendingCode" @click="$emit('cancel')">
-        <template #icon><n-icon><Close /></n-icon></template>
+      </NButton>
+      <NButton
+        block
+        :disabled="isLoggingIn || isSendingCode"
+        @click="$emit('cancel')"
+      >
+        <template #icon
+          ><NIcon><Close /></NIcon
+        ></template>
         取消
-      </n-button>
+      </NButton>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import {
+  Close,
+  CloudUpload,
+  LogInOutline,
+  SendOutline,
+} from "@vicons/ionicons5";
+import {
+  NButton,
+  NCheckbox,
+  NForm,
+  NFormItem,
+  NIcon,
+  NInput,
+  useMessage,
+} from "naive-ui";
 import { onUnmounted, reactive, ref } from "vue";
-import { Close, CloudUpload, LogInOutline, SendOutline } from "@vicons/ionicons5";
-import { NButton, NCheckbox, NForm, NFormItem, NIcon, NInput, useMessage } from "naive-ui";
-import { getServerList, getTokenId, transformToken } from "@/utils/token";
-import { encodeHortorLoginPayload } from "@/utils/hortorMobileLogin";
 import useIndexedDB from "@/hooks/useIndexedDB";
-import { g_utils } from "@/utils/bonProtocol";
+import { useTokenStore } from "@/stores/tokenStore";
 import {
   buildRoleBin,
   downloadBinFile,
   getRoleBinFileName,
 } from "@/utils/binFile";
-import { useTokenStore } from "@/stores/tokenStore";
+import { g_utils } from "@/utils/bonProtocol";
+import { encodeHortorLoginPayload } from "@/utils/hortorMobileLogin";
+import { getServerList, getTokenId, transformToken } from "@/utils/token";
 
 const emit = defineEmits(["cancel", "ok"]);
 const message = useMessage();
@@ -125,7 +161,8 @@ const HORTOR_PROXY_PREFIX = "/api/hortor";
 const HORTOR_UCENTER_PROXY_PREFIX = "/api/hortor-ucenter";
 const GAME_ID = "xyzwapp";
 const PACKAGE_NAME = "com.hortor.games.xyzw";
-const SIGN_PRINT = "E6:F7:FE:A9:EC:8E:24:D0:4F:2A:32:50:28:78:E1:C5:5E:70:81:13";
+const SIGN_PRINT =
+  "E6:F7:FE:A9:EC:8E:24:D0:4F:2A:32:50:28:78:E1:C5:5E:70:81:13";
 const DEVICE_STORAGE_KEY = "xyzw.mobile-login-device.v1";
 const systemInfo = JSON.stringify({
   system: "Android 12",
@@ -169,12 +206,16 @@ let cooldownTimer: ReturnType<typeof setInterval> | null = null;
 const createRandomHex = (byteLength: number) => {
   const bytes = new Uint8Array(byteLength);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 };
 
 const getDeviceProfile = (): DeviceProfile => {
   try {
-    const saved = JSON.parse(localStorage.getItem(DEVICE_STORAGE_KEY) || "null");
+    const saved = JSON.parse(
+      localStorage.getItem(DEVICE_STORAGE_KEY) || "null",
+    );
     if (saved?.androidId && saved?.distinctId) return saved;
   } catch {
     // A malformed old value is replaced below.
@@ -182,9 +223,10 @@ const getDeviceProfile = (): DeviceProfile => {
 
   const profile = {
     androidId: createRandomHex(8),
-    distinctId: typeof crypto.randomUUID === "function"
-      ? `DID-${crypto.randomUUID()}`
-      : `DID-${createRandomHex(16)}`,
+    distinctId:
+      typeof crypto.randomUUID === "function"
+        ? `DID-${crypto.randomUUID()}`
+        : `DID-${createRandomHex(16)}`,
   };
   localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(profile));
   return profile;
@@ -229,28 +271,34 @@ const sendVerificationCode = async () => {
   isSendingCode.value = true;
   activeLoginMatchId.value = `${Date.now()}_${createRandomHex(16)}`;
   try {
-    const response = await fetch(`${HORTOR_UCENTER_PROXY_PREFIX}/ucenter-app-server/api/v1/login/verify/code`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8", Accept: "application/json" },
-      body: JSON.stringify({
-        gameId: GAME_ID,
-        gameTp: "app",
-        accountNum: normalizedPhone(),
-        sysInfo: systemInfo,
-        activeLoginMatchId: activeLoginMatchId.value,
-        channel: "android",
-        verifyCodeTp: "login",
-        distinctId: deviceProfile.distinctId,
-        oaidThirdSdk: "",
-        ipv6: "",
-        limit: true,
-        packageName: PACKAGE_NAME,
-        signPrint: SIGN_PRINT,
-        androidId: deviceProfile.androidId,
-        oaId: "",
-        oaid: "",
-      }),
-    });
+    const response = await fetch(
+      `${HORTOR_UCENTER_PROXY_PREFIX}/ucenter-app-server/api/v1/login/verify/code`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          gameId: GAME_ID,
+          gameTp: "app",
+          accountNum: normalizedPhone(),
+          sysInfo: systemInfo,
+          activeLoginMatchId: activeLoginMatchId.value,
+          channel: "android",
+          verifyCodeTp: "login",
+          distinctId: deviceProfile.distinctId,
+          oaidThirdSdk: "",
+          ipv6: "",
+          limit: true,
+          packageName: PACKAGE_NAME,
+          signPrint: SIGN_PRINT,
+          androidId: deviceProfile.androidId,
+          oaId: "",
+          oaid: "",
+        }),
+      },
+    );
     if (!response.ok) throw new Error(`HTTP 状态码：${response.status}`);
 
     const data = ensureSuccess(await response.json(), "验证码发送失败");
@@ -278,17 +326,22 @@ const createGameLoginBuffer = (combUser: unknown) => {
   if (!encryptionModule?.encMsg || !encryptionModule?.lz4XorEncode) {
     throw new Error("游戏加密模块未加载，不能生成登录凭据");
   }
-  return new Uint8Array(encryptionModule.encMsg(
-    {
-      platform: "hortor",
-      platformExt: "mix",
-      info: combUser,
-      serverId: null,
-      scene: 0,
-      referrerInfo: "",
-    },
-    { decrypt: encryptionModule.lz4XorDecode, encrypt: encryptionModule.lz4XorEncode },
-  ));
+  return new Uint8Array(
+    encryptionModule.encMsg(
+      {
+        platform: "hortor",
+        platformExt: "mix",
+        info: combUser,
+        serverId: null,
+        scene: 0,
+        referrerInfo: "",
+      },
+      {
+        decrypt: encryptionModule.lz4XorDecode,
+        encrypt: encryptionModule.lz4XorEncode,
+      },
+    ),
+  );
 };
 
 const loginWithVerificationCode = async () => {
@@ -335,7 +388,10 @@ const loginWithVerificationCode = async () => {
       `${HORTOR_PROXY_PREFIX}/comb-login-server/api/v1/login?${query.toString()}`,
       {
         method: "POST",
-        headers: { "Content-Type": "text/plain; charset=utf-8", Accept: "application/json" },
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          Accept: "application/json",
+        },
         body: encodeHortorLoginPayload(payload),
       },
     );
@@ -356,9 +412,12 @@ const loginWithVerificationCode = async () => {
 const loadRoles = async (bin: Uint8Array) => {
   try {
     const list = JSON.parse(await getServerList(bin.buffer));
-    serverListData.value = list && typeof list === "object"
-      ? Object.values(list).sort((left: any, right: any) => right.power - left.power)
-      : [];
+    serverListData.value =
+      list && typeof list === "object"
+        ? Object.values(list).sort(
+            (left: any, right: any) => right.power - left.power,
+          )
+        : [];
   } catch (error) {
     console.error("Failed to get server list", error);
     serverListData.value = [];
@@ -400,11 +459,15 @@ const addSelectedRole = async (roleInfo: any) => {
     const { roleIndex, serverNumber } = getServerInfo(roleInfo.serverId);
     const roleName = roleInfo.name || `角色_${roleInfo.roleId}`;
     const name = (importForm.nameTemplate || "{name}-{index}-{id}")
-      .replace(/{name}/g, roleName)
-      .replace(/{index}/g, String(roleIndex))
-      .replace(/{id}/g, String(roleInfo.roleId))
-      .replace(/{server}/g, `${serverNumber}服`);
-    if (roleList.value.some((role) => role.roleId === roleInfo.roleId && role.name === name)) {
+      .replace(/\{name\}/g, roleName)
+      .replace(/\{index\}/g, String(roleIndex))
+      .replace(/\{id\}/g, String(roleInfo.roleId))
+      .replace(/\{server\}/g, `${serverNumber}服`);
+    if (
+      roleList.value.some(
+        (role) => role.roleId === roleInfo.roleId && role.name === name,
+      )
+    ) {
       message.warning(`角色 ${name} 已在待添加列表中`);
       return;
     }
@@ -455,7 +518,9 @@ const handleImport = () => {
   isImporting.value = true;
   try {
     for (const role of roleList.value) {
-      const existing = tokenStore.gameTokens.find((token) => token.id === role.id);
+      const existing = tokenStore.gameTokens.find(
+        (token) => token.id === role.id,
+      );
       if (existing) tokenStore.updateToken(existing.id, role);
       else tokenStore.addToken(role);
     }
@@ -471,13 +536,54 @@ onUnmounted(clearCooldown);
 </script>
 
 <style scoped lang="scss">
-.mobile-login-import { display: flex; flex-direction: column; gap: var(--spacing-lg); padding: var(--spacing-lg) 0; }
-.login-flow-info { padding: var(--spacing-md); background: var(--bg-tertiary); border-radius: var(--border-radius-medium); }
-.login-flow-info h3 { margin: 0 0 var(--spacing-sm); font-size: var(--font-size-md); }
-.flow-steps { margin: 0; padding-left: var(--spacing-lg); color: var(--text-secondary); }
-.flow-steps li { margin-bottom: var(--spacing-xs); font-size: var(--font-size-sm); }
-.login-form, .name-form { margin-top: var(--spacing-xs); }
-.form-actions { display: flex; flex-direction: column; gap: var(--spacing-md); }
-.login-actions { margin-top: calc(var(--spacing-md) * -1); }
-.role-row { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--spacing-md); }
+.mobile-login-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg) 0;
+}
+.login-flow-info {
+  padding: var(--spacing-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-medium);
+}
+.login-flow-info h3 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-md);
+}
+.flow-steps {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+  color: var(--text-secondary);
+}
+.flow-steps li {
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+.login-form,
+.name-form {
+  margin-top: var(--spacing-xs);
+}
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+.login-actions {
+  margin-top: calc(var(--spacing-md) * -1);
+}
+.role-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
 </style>
+
+<route lang="json">
+{
+  "name": "/TokenImport/mobile",
+  "path": "/TokenImport/mobile"
+}
+</route>

@@ -1,9 +1,14 @@
 import axios from "axios";
-import { MD5, lib, enc } from "crypto-js";
+import { enc, lib, MD5 } from "crypto-js";
 import { g_utils } from "@/utils/bonProtocol";
 import { nativeHttp, isNativePlatform } from "./capacitor";
 import BinaryHttp from "./binaryHttp";
 
+/**
+ * Derive the existing storage identity from the exact credential bytes.
+ * @param {string|ArrayBuffer|Uint8Array} token Credential data used by the token store.
+ * @returns {string} Hexadecimal digest used as the stable local token key.
+ */
 export const getTokenId = (token: string | ArrayBuffer | Uint8Array) => {
   const binHash = MD5(lib.WordArray.create(token)).toString(enc.Hex);
   return binHash;
@@ -93,12 +98,23 @@ export const setAuthUserRateLimiterCallback = (
   authUserRateLimiter.onWait(callback);
 };
 
+/**
+ * Schedule a login operation within the shared authentication rate window.
+ * @template T
+ * @param {Function} fn Asynchronous login operation.
+ * @returns {Promise<T>} Resolves with the operation result, or rejects with its error.
+ */
 export const scheduleAuthUserRequest = <T>(
   fn: () => Promise<T>,
 ): Promise<T> => {
   return authUserRateLimiter.schedule(fn);
 };
 
+/**
+ * Exchange credential bytes through the shared login limiter and create session metadata.
+ * @param {ArrayBuffer} arrayBuffer Imported credential bytes.
+ * @returns {Promise<string>} Serialized role token for the WebSocket connection.
+ */
 export const transformToken = async (arrayBuffer: ArrayBuffer) => {
   return authUserRateLimiter.schedule(async () => {
     const url = "https://xxz-xyzw.hortorgames.com/login/authuser?_seq=1";

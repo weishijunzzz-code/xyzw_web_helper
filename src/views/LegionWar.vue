@@ -2,13 +2,13 @@
   <div class="legion-war-container">
     <div class="legion-war-map">
       <div class="map-title">
-        <div class="map-title-item">
-          战场图示
-        </div>
-        <div >
+        <div class="map-title-item">战场图示</div>
+        <div>
           <span>是否进入战场:</span>
           <n-button text @click="getBattlefieldInfo">
-            <span :class="connectionClass"> {{ isEntireBattlefield ? "已进入战场" : "重新进入战场" }}</span>
+            <span :class="connectionClass">
+              {{ isEntireBattlefield ? "已进入战场" : "重新进入战场" }}</span
+            >
           </n-button>
           当前时间-{{ currentDateTime }}
         </div>
@@ -19,40 +19,45 @@
     </div>
     <div class="legion-war-operation">
       <div class="legion-war-operation-title">
-        <div class="operation-title-item">
-          操作面板
-        </div>
+        <div class="operation-title-item">操作面板</div>
       </div>
       <div class="legion-war-operation-container">
         <div class="legion-war-operation-item">
+          <div>占领布局</div>
           <div>
-            占领布局
+            <n-switch
+              v-model:value="isOccupyOrDistribution"
+              @update:value="handleChange"
+            />
           </div>
-          <div>
-            <n-switch v-model:value="isOccupyOrDistribution" @update:value="handleChange"/>
-          </div>
-          <div>
-            分布布局
-          </div>
+          <div>分布布局</div>
         </div>
         <div class="legion-war-operation-item">
+          <div>战队战况</div>
           <div>
-            战队战况
+            <n-switch
+              v-model:value="isLegionOrIndividual"
+              @update:value="handleChange"
+            />
           </div>
-          <div>
-            <n-switch v-model:value="isLegionOrIndividual" @update:value="handleChange"/>
-          </div>
-          <div>
-            个人战况
-          </div>
+          <div>个人战况</div>
         </div>
         <div class="legion-war-operation-item">
-          <n-button type="primary" @click="getBattlefieldInfo" :disabled="!isEntireBattlefield" style="padding:12px">
+          <n-button
+            type="primary"
+            @click="getBattlefieldInfo"
+            :disabled="!isEntireBattlefield"
+            style="padding: 12px"
+          >
             拉取数据(需进入战场后)
           </n-button>
         </div>
         <div class="legion-war-operation-item">
-          <n-button type="primary" @click="sendMessageToLegion" style="padding:12px">
+          <n-button
+            type="primary"
+            @click="sendMessageToLegion"
+            style="padding: 12px"
+          >
             发送各战队免费复活到战队频道
           </n-button>
         </div>
@@ -62,46 +67,34 @@
 </template>
 
 <script setup>
-import { ref, onMounted,toRaw } from 'vue'
-import { roadPointList,extractValidData,typeName,typeBg,formatPower,HexGraph } from "@/utils/legionWar"
-import { getCurrentTimeByFormat } from "@/utils/DateTimeUtils"
+import { useMessage } from "naive-ui";
 
-import { XyzwLegionWarWebSocketClient } from '@/utils/xyzwLegionWarWebSocket'
-import { useTokenStore } from '@/stores/tokenStore'
-import { useMessage } from 'naive-ui'
+import { onMounted, ref } from "vue";
+import { useTokenStore } from "@/stores/tokenStore";
+import { getCurrentTimeByFormat } from "@/utils/DateTimeUtils";
 
-const tokenStore = useTokenStore()
-const message = useMessage()
+import { isSameGameValue } from "@/utils/gameValue.js";
+import {
+  extractValidData,
+  formatPower,
+  HexGraph,
+  typeBg,
+} from "@/utils/legionWar";
+import { XyzwLegionWarWebSocketClient } from "@/utils/xyzwLegionWarWebSocket";
+
+const tokenStore = useTokenStore();
+const message = useMessage();
 
 let legionWarWebSocket = null;
 const hint = ref(null);
-
 
 //是否进入战场
 const isEntireBattlefield = ref(false);
 const currentDateTime = ref(getCurrentTimeByFormat("yyyy-MM-dd HH:mm:ss"));
 
-const connectionStatusText = computed(() => {
-  return legionWarWebSocket?.status === "connected" ? "已连接" : "未连接";
-});
-const connectionStatus = computed(() => {
-  return legionWarWebSocket?.status === "connected" ? "connected" : "disconnected";
-});
-
 const connectionClass = computed(() => {
   return isEntireBattlefield.value ? "status-connected" : "status-disconnected";
 });
-const isConnected = computed(() => {
-  return connectionStatus?.value === "connected";
-});
-
-const toggleConnection = () => {
-  if (connectionStatus?.value === "connected") {
-    disconnectWebSocket();
-  } else {
-    connectWebSocket();
-  }
-};
 
 /**
  * 是占领情况还是分布情况
@@ -110,27 +103,27 @@ const isOccupyOrDistribution = ref(false);
 /**
  * 俱乐部战况还是个人战况
  */
-const isLegionOrIndividual = ref(false); 
+const isLegionOrIndividual = ref(false);
 
 //处理change事件
-const handleChange = function(value) {
+const handleChange = function () {
   drawCanvasContent();
-}
+};
 
 /**
  * 发送各俱乐部免费复活到俱乐部频道
  */
-const sendMessageToLegion =async function(){
-  let arr = Object.values(validData.value.legionInfo)
+const sendMessageToLegion = async function () {
+  const arr = Object.values(validData.value.legionInfo);
   const messageList = [];
-  for(let i =0;i<2;i++){
+  for (let i = 0; i < 2; i++) {
     let message = ``;
     for (let j = 0; j < 10; j++) {
-      const element = arr[j+(i*10)];
-      if(j!=0){
-        message+="\n";
+      const element = arr[j + i * 10];
+      if (!isSameGameValue(j, 0)) {
+        message += "\n";
       }
-      message +=element.name+":剩"+(150-element.reviveCount);
+      message += `${element.name}:剩${150 - element.reviveCount}`;
     }
     messageList.push(message);
   }
@@ -138,22 +131,22 @@ const sendMessageToLegion =async function(){
   const tokenId = tokenStore.selectedToken.id;
   const sendInterval = 1500;
   for (let i = 0; i < messageList.length; i++) {
-      // 等待间隔时间
-      await new Promise(resolve => setTimeout(resolve, sendInterval));
-      // 发送当前消息
-      try {
-          await tokenStore.sendMessageToLegion(tokenId, messageList[i]);
-      } catch (error) {
-          // 可选：失败后重试1次
-          if (error.message.includes("频繁")) {
-              await new Promise(resolve => setTimeout(resolve, sendInterval * 2));
-              await tokenStore.sendMessageToLegion(tokenId, messageList[i]);
-          }
+    // 等待间隔时间
+    await new Promise((resolve) => setTimeout(resolve, sendInterval));
+    // 发送当前消息
+    try {
+      await tokenStore.sendMessageToLegion(tokenId, messageList[i]);
+    } catch (error) {
+      // 可选：失败后重试1次
+      if (error.message.includes("频繁")) {
+        await new Promise((resolve) => setTimeout(resolve, sendInterval * 2));
+        await tokenStore.sendMessageToLegion(tokenId, messageList[i]);
       }
+    }
   }
-} 
+};
 
-const legionWarMapDom = ref(null)
+const legionWarMapDom = ref(null);
 let ctx = null;
 const dpr = window.devicePixelRatio || 1;
 let resizeHandler = null;
@@ -162,26 +155,27 @@ const gap = 2.75;
 const hexWidth = 2 * hexSize;
 const hexHeight = Math.sqrt(3) * hexSize;
 const arr = Array.from({ length: 41 }, () =>
-  Array.from({ length: 41 }, () => 0)
+  Array.from({ length: 41 }, () => 0),
 );
 //记录左侧绘制后最大点
-let leftMaxPoint=[0,0];
-let validData =ref(null);
+const leftMaxPoint = [0, 0];
+let validData = ref(null);
 
-const result = ref(null)
+const result = ref(null);
 
 const drawHexagon = (x, y, color) => {
   ctx.beginPath();
   // 绘制6个顶点
   for (let i = 0; i < 6; i++) {
-    const angle = 2 * Math.PI / 6 * i;
+    const angle = ((2 * Math.PI) / 6) * i;
     const px = x + hexSize * Math.cos(angle);
     const py = y + hexSize * Math.sin(angle);
     i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-    if(px>=leftMaxPoint[0]){
-      leftMaxPoint[0]=px
-    }if(py>=leftMaxPoint[1]){
-      leftMaxPoint[1]=py
+    if (px >= leftMaxPoint[0]) {
+      leftMaxPoint[0] = px;
+    }
+    if (py >= leftMaxPoint[1]) {
+      leftMaxPoint[1] = py;
     }
   }
   ctx.closePath();
@@ -189,254 +183,318 @@ const drawHexagon = (x, y, color) => {
   ctx.fill();
   ctx.strokeStyle = color;
   ctx.stroke();
-}
+};
 
 /**
  * 绘制canvas内容
  */
-const drawCanvasContent = (mouseX=0,mouseY=0,type='')=>{
-
+const drawCanvasContent = (mouseX = 0, mouseY = 0, type = "") => {
   //如果有坐标就传入坐标,没有就不传入坐标
-  if(mouseX!==0&&mouseY!==0){
+  if (mouseX !== 0 && mouseY !== 0) {
     //绘制左侧内容
-    drawCanvasLeft(mouseX,mouseY,type)
-  }else{
+    drawCanvasLeft(mouseX, mouseY, type);
+  } else {
     //绘制左侧内容
-    drawCanvasLeft()
+    drawCanvasLeft();
   }
   drawdivideLine();
   //绘制右侧信息内容
   drawCanvasRight(validData.value);
-
-}
+};
 
 //绘制地图左侧内容
-const drawCanvasLeft = (mouseX=0,mouseY=0,type='') => {
-
+const drawCanvasLeft = (mouseX = 0, mouseY = 0, type = "") => {
   //清空画布
-  ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr)
+  ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
   //获取图结构的实例
-  let graph = HexGraph.getInstance();
+  const graph = HexGraph.getInstance();
   //删除所有结点
   graph.removeAllNode();
   //提取result.value中的数据
-  validData.value = extractValidData(result.value,isOccupyOrDistribution.value)
-  if(validData.value){
-    graph.addNodeList(Object.values(validData.value.buildingData).map(
-      item=> {
+  validData.value = extractValidData(
+    result.value,
+    isOccupyOrDistribution.value,
+  );
+  if (validData.value) {
+    graph.addNodeList(
+      Object.values(validData.value.buildingData).map((item) => {
         return {
-          "id":item.id,
-          "type":item.type,
-          "belongsLegionId":item.belongsLegionId,
-          "hP":item.hP,
-          "maxHP":item.maxHP,
-          "point":item.point,
-          "belongsLegionInfo":validData.value.legionInfo[item.belongsLegionId]
-        }
-      })
-    )
+          id: item.id,
+          type: item.type,
+          belongsLegionId: item.belongsLegionId,
+          hP: item.hP,
+          maxHP: item.maxHP,
+          point: item.point,
+          belongsLegionInfo: validData.value.legionInfo[item.belongsLegionId],
+        };
+      }),
+    );
   }
-  if(!validData.value){
+  if (!validData.value) {
     return;
   }
   //如果是占领布局
-  if(!isOccupyOrDistribution.value){
+  if (!isOccupyOrDistribution.value) {
     //处理地图连通
-    let asc = true //是否升序
-    Object.values(validData.value.legionInfo).forEach(element => {
-      let tempArr = Object.keys(element.buildings).sort((a, b) => {
+    const asc = true; //是否升序
+    Object.values(validData.value.legionInfo).forEach((element) => {
+      const tempArr = Object.keys(element.buildings).sort((a, b) => {
         // 拆分key为两个数字（如"19_28" → [19, 28]）
-        const [a1, a2] = a.split('_').map(Number);
-        const [b1, b2] = b.split('_').map(Number);
-        
+        const [a1, a2] = a.split("_").map(Number);
+        const [b1, b2] = b.split("_").map(Number);
+
         // 核心排序逻辑：先比第一个数字，再比第二个数字
         const compareFirst = a1 - b1;
         if (compareFirst !== 0) {
-            return asc ? compareFirst : -compareFirst;
+          return asc ? compareFirst : -compareFirst;
         }
         const compareSecond = a2 - b2;
         return asc ? compareSecond : -compareSecond;
       });
-    
+
       //此处填充两点之间路径颜色,可以采用单循环,但是会有些点不被填充颜色
-      for(let buildingIndex =0;buildingIndex<tempArr.length;buildingIndex++){
-        for(let buildingIndexTemp =buildingIndex;buildingIndexTemp<tempArr.length;buildingIndexTemp++){
-          let graphresult = graph.findShortestPath(tempArr[buildingIndex],tempArr[buildingIndexTemp],element.id);
-          if(graphresult){
-            graphresult.forEach(item=>{
-              item.belongsLegionId=element.id;
-              item.colorBg=element.color;
-            })
+      for (
+        let buildingIndex = 0;
+        buildingIndex < tempArr.length;
+        buildingIndex++
+      ) {
+        for (
+          let buildingIndexTemp = buildingIndex;
+          buildingIndexTemp < tempArr.length;
+          buildingIndexTemp++
+        ) {
+          const graphresult = graph.findShortestPath(
+            tempArr[buildingIndex],
+            tempArr[buildingIndexTemp],
+            element.id,
+          );
+          if (graphresult) {
+            graphresult.forEach((item) => {
+              item.belongsLegionId = element.id;
+              item.colorBg = element.color;
+            });
           }
         }
       }
     });
-  }else{
+  } else {
     //如果是分布布局,将各个大本营的颜色设为对应俱乐部的背景色
-    let legionList = Object.values(validData.value.legionInfo);
-    for(let i =0;i<legionList.length;i++){
-      let node = graph.getNodeByCoords(legionList[i].strongholdId);
-      node.belongsLegionId=legionList[i].id
-      node.colorBg=legionList[i].color;
+    const legionList = Object.values(validData.value.legionInfo);
+    for (let i = 0; i < legionList.length; i++) {
+      const node = graph.getNodeByCoords(legionList[i].strongholdId);
+      node.belongsLegionId = legionList[i].id;
+      node.colorBg = legionList[i].color;
     }
   }
 
   //获取所有结点
-  let mergedArr = graph.getAllNodes()
+  const mergedArr = graph.getAllNodes();
   //所有节点放入二维数组中
-  mergedArr.forEach(item => {
-    let row=item.position.x;
-    let col=item.position.y;
+  mergedArr.forEach((item) => {
+    const row = item.position.x;
+    const col = item.position.y;
     //如果是布局情况
-    if(isOccupyOrDistribution.value&&item.type !=4){
-      item.belongsLegionId=-1;
-      item.colorBg=typeBg(9)
+    if (isOccupyOrDistribution.value && !isSameGameValue(item.type, 4)) {
+      item.belongsLegionId = -1;
+      item.colorBg = typeBg(9);
     }
-    if (parseInt(row) >= 0 && parseInt(row) < 41 && parseInt(col) >= 0 && parseInt(col) < 32) {
-      arr[parseInt(col)][parseInt(row)] = item; // 赋值
+    if (
+      Number.parseInt(row) >= 0 &&
+      Number.parseInt(row) < 41 &&
+      Number.parseInt(col) >= 0 &&
+      Number.parseInt(col) < 32
+    ) {
+      arr[Number.parseInt(col)][Number.parseInt(row)] = item; // 赋值
     } else {
       console.warn(`坐标[${row},${col}]越界，跳过赋值`);
     }
   });
-  
-  if(!isOccupyOrDistribution.value){
+
+  if (!isOccupyOrDistribution.value) {
     //特殊处理核心周围的颜色
-    arr[16][19].belongsLegionId=arr[17][20].belongsLegionId;
-    arr[17][19].belongsLegionId=arr[17][20].belongsLegionId;
-    arr[16][21].belongsLegionId=arr[17][20].belongsLegionId;
-    arr[17][21].belongsLegionId=arr[17][20].belongsLegionId;
-    arr[16][20].belongsLegionId=arr[17][20].belongsLegionId;
-    arr[18][20].belongsLegionId=arr[17][20].belongsLegionId;
-    arr[16][21].colorBg=arr[17][20].colorBg;
-    arr[17][21].colorBg=arr[17][20].colorBg;
-    arr[16][19].colorBg=arr[17][20].colorBg;
-    arr[17][19].colorBg=arr[17][20].colorBg;
-    arr[16][20].colorBg=arr[17][20].colorBg;
-    arr[18][20].colorBg=arr[17][20].colorBg;
+    arr[16][19].belongsLegionId = arr[17][20].belongsLegionId;
+    arr[17][19].belongsLegionId = arr[17][20].belongsLegionId;
+    arr[16][21].belongsLegionId = arr[17][20].belongsLegionId;
+    arr[17][21].belongsLegionId = arr[17][20].belongsLegionId;
+    arr[16][20].belongsLegionId = arr[17][20].belongsLegionId;
+    arr[18][20].belongsLegionId = arr[17][20].belongsLegionId;
+    arr[16][21].colorBg = arr[17][20].colorBg;
+    arr[17][21].colorBg = arr[17][20].colorBg;
+    arr[16][19].colorBg = arr[17][20].colorBg;
+    arr[17][19].colorBg = arr[17][20].colorBg;
+    arr[16][20].colorBg = arr[17][20].colorBg;
+    arr[18][20].colorBg = arr[17][20].colorBg;
   }
-  
-  
+
   //点击事件存储的临时对象
-  let tempValue={};
+  let tempValue = {};
   //用于记录最后绘制级内容的数组
-  let drawPointArr = [];
+  const drawPointArr = [];
   //根据二位数组绘制内容
   for (let row = 0; row <= 31; row++) {
     for (let col = 0; col <= 40; col++) {
-      if (row>2&&arr[row][col] != 0) {
+      if (row > 2 && !isSameGameValue(arr[row][col], 0)) {
         // 计算中心坐标（处理错位）
         const x = col * (hexWidth * 0.75) + hexSize + gap * col;
-        const y = row * hexHeight + (col % 2 === 1 ? hexHeight / 2 : 0) + gap * row;
-        let colorTemp = arr[row][col].colorBg
+        const y =
+          row * hexHeight + (col % 2 === 1 ? hexHeight / 2 : 0) + gap * row;
+        let colorTemp = arr[row][col].colorBg;
 
-        if(mouseX!==0&&mouseY!==0){
+        if (mouseX !== 0 && mouseY !== 0) {
           // 简化碰撞检测：判断鼠标与中心的距离
-          const distance = Math.sqrt((mouseX - x) **2 + (mouseY - y)** 2);
-          if(type==='mousemove'){
-            colorTemp = distance < hexSize ? '#42b983':colorTemp;
-          }else if(type==='click'&&distance < hexSize){
+          const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
+          if (type === "mousemove") {
+            colorTemp = distance < hexSize ? "#42b983" : colorTemp;
+          } else if (type === "click" && distance < hexSize) {
             tempValue = arr[row][col];
           }
         }
         // 绘制六边形
         drawHexagon(x, y, colorTemp);
-        
-        if(arr[row][col].type!=9){
-          let name =arr[row][col].typeName.replace("据点","");
-          if(name=="大本营"){
+
+        if (!isSameGameValue(arr[row][col].type, 9)) {
+          let name = arr[row][col].typeName.replace("据点", "");
+          if (isSameGameValue(name, "大本营")) {
             ctx.fillStyle = "#055138";
-            name=validData.value.legionInfo[arr[row][col].belongsLegionId].name
+            name =
+              validData.value.legionInfo[arr[row][col].belongsLegionId].name;
           }
           drawPointArr.push({
-            "x":x-13,
-            "y":y+4,
-            "name":name
-          })
+            x: x - 13,
+            y: y + 4,
+            name,
+          });
         }
       }
     }
   }
 
-  for(let i=0;i<drawPointArr.length;i++){
-          ctx.fillStyle = "black";
-          ctx.font = "bold 12px Microsoft Yahei";
-          ctx.fillText(
-            drawPointArr[i].name,
-            drawPointArr[i].x,
-            drawPointArr[i].y
-          );
+  for (let i = 0; i < drawPointArr.length; i++) {
+    ctx.fillStyle = "black";
+    ctx.font = "bold 12px Microsoft Yahei";
+    ctx.fillText(drawPointArr[i].name, drawPointArr[i].x, drawPointArr[i].y);
   }
 
-  if(tempValue.type!=9&&Object.keys(tempValue).length>0&&type==='click'){
-    drawClickContent(mouseX,mouseY,tempValue)
+  if (
+    !isSameGameValue(tempValue.type, 9) &&
+    Object.keys(tempValue).length > 0 &&
+    type === "click"
+  ) {
+    drawClickContent(mouseX, mouseY, tempValue);
   }
-
-
-}
+};
 
 /**
  * 绘制分割线
  */
-const drawdivideLine = ()=>{
+const drawdivideLine = () => {
   ctx.beginPath();
-  ctx.moveTo(leftMaxPoint[0]+10,leftMaxPoint[1]);
-  ctx.lineTo(leftMaxPoint[0]+10,10);
+  ctx.moveTo(leftMaxPoint[0] + 10, leftMaxPoint[1]);
+  ctx.lineTo(leftMaxPoint[0] + 10, 10);
   ctx.closePath();
-  ctx.strokeStyle = '#000';
+  ctx.strokeStyle = "#000";
   ctx.stroke();
 };
 /**
  * 绘制Canvas右侧的内容
- * @param {*} tableData 
+ * @param {*} tableData
  */
-const drawCanvasRight = (tableData) =>{
-  if(tableData){
-    let tableConfig={}
-    if(!isLegionOrIndividual.value){
-      tableData = Object.values(tableData.legionInfo).sort((a,b)=>b.score-a.score).map(item=>{
-        return [item.name,item.killCnt,item.reviveCount+"/150",item.score,item.redCount,formatPower(item.power),item.participantsCount+"/"+item.memberCount,item.danCount,item.blessingCount+"个共"+item.blessingScore+"分",item.color]
-      })
-      tableConfig={
-        x: leftMaxPoint[0]+20,
+const drawCanvasRight = (tableData) => {
+  if (tableData) {
+    let tableConfig = {};
+    if (!isLegionOrIndividual.value) {
+      tableData = Object.values(tableData.legionInfo)
+        .sort((a, b) => b.score - a.score)
+        .map((item) => {
+          return [
+            item.name,
+            item.killCnt,
+            `${item.reviveCount}/150`,
+            item.score,
+            item.redCount,
+            formatPower(item.power),
+            `${item.participantsCount}/${item.memberCount}`,
+            item.danCount,
+            `${item.blessingCount}个共${item.blessingScore}分`,
+            item.color,
+          ];
+        });
+      tableConfig = {
+        x: leftMaxPoint[0] + 20,
         y: 20,
         columns: 9, // 3列
         rows: 20, // 4行内容（不含表头）
-        headerData: ['俱乐部名称','击杀数', '免费复活', '积分', '红数', '战力', '人数', '花费总丹', '四圣'], // 表头
-        tableData: tableData?tableData:[],
+        headerData: [
+          "俱乐部名称",
+          "击杀数",
+          "免费复活",
+          "积分",
+          "红数",
+          "战力",
+          "人数",
+          "花费总丹",
+          "四圣",
+        ], // 表头
+        tableData: tableData || [],
         columnWidth: 78, // 单元格宽度（可根据内容调整）
         rowHeight: 37, // 单元格高度
-        scale: 1 
-      }
-    }else{
-      let tableDataTemp=[] 
-      Object.values(tableData.memberInfo).forEach(item=>{
-        if(item.legionId==tokenStore.gameData?.roleInfo?.role.legionId){
-          tableDataTemp.push([item.name,item.kill,item.die,item.revive+"/5",item.score,item.digGround,item.dan,parseFloat(item.kill/item.die).toFixed(2)]);
+        scale: 1,
+      };
+    } else {
+      let tableDataTemp = [];
+      Object.values(tableData.memberInfo).forEach((item) => {
+        if (
+          isSameGameValue(
+            item.legionId,
+            tokenStore.gameData?.roleInfo?.role.legionId,
+          )
+        ) {
+          tableDataTemp.push([
+            item.name,
+            item.kill,
+            item.die,
+            `${item.revive}/5`,
+            item.score,
+            item.digGround,
+            item.dan,
+            Number.parseFloat(item.kill / item.die).toFixed(2),
+          ]);
         }
-      })
-      tableDataTemp=tableDataTemp.sort((a,b)=> {return b[1]-a[1]})
-      tableConfig={
-        x: leftMaxPoint[0]+20,
+      });
+      tableDataTemp = tableDataTemp.sort((a, b) => {
+        return b[1] - a[1];
+      });
+      tableConfig = {
+        x: leftMaxPoint[0] + 20,
         y: 20,
         columns: 8, // 3列
-        rows: tableDataTemp?tableDataTemp.length:30, // 4行内容（不含表头）
-        headerData: ['名称','击杀数', '死亡次数', '已复活次数', '积分', '刨地','复活丹', 'K/D'], // 表头
-        tableData: tableDataTemp?tableDataTemp:[],
+        rows: tableDataTemp ? tableDataTemp.length : 30, // 4行内容（不含表头）
+        headerData: [
+          "名称",
+          "击杀数",
+          "死亡次数",
+          "已复活次数",
+          "积分",
+          "刨地",
+          "复活丹",
+          "K/D",
+        ], // 表头
+        tableData: tableDataTemp || [],
         columnWidth: 88, // 单元格宽度（可根据内容调整）
         rowHeight: 25, // 单元格高度
-        scale: 1 
-      }
+        scale: 1,
+      };
     }
-    drawTable(ctx,tableConfig)
+    drawTable(ctx, tableConfig);
   }
-}
+};
 
 /**
  * 绘制表格
- * @param {*} ctx 
- * @param {*} options 
+ * @param {*} ctx
+ * @param {*} options
  * @param {*} options.x 表格的左上角x坐标
- * @param {*} options.y 表格的左上角y坐标 
+ * @param {*} options.y 表格的左上角y坐标
  * @param {*} options.columns 表格的列
  * @param {*} options.rows 表格的行
  * @param {*} options.headerData 表格的表头
@@ -444,30 +502,43 @@ const drawCanvasRight = (tableData) =>{
  * @param {*} options.columnWidth 单元格宽度
  * @param {*} options.rowHeight 单元格高度
  */
- const drawTable = (ctx, options) => {
+const drawTable = (ctx, options) => {
   // 默认配置（可自定义）
   const defaults = {
     columnWidth: 80,
     rowHeight: 25,
-    headerBgColor: '#42b983',
-    cellBgColor: '#ffffff',
-    borderColor: '#333333',
-    headerTextColor: '#ffffff',
-    cellTextColor: '#373737',
+    headerBgColor: "#42b983",
+    cellBgColor: "#ffffff",
+    borderColor: "#333333",
+    headerTextColor: "#ffffff",
+    cellTextColor: "#373737",
     fontSize: 14,
-    font: 'Arial',
-    scale: 1
+    font: "Arial",
+    scale: 1,
   };
 
   // 合并配置（用户传参覆盖默认）
   const config = { ...defaults, ...options };
   const {
-    x, y, columns, rows, headerData, tableData,
-    columnWidth, rowHeight, headerBgColor, cellBgColor,
-    borderColor, headerTextColor, cellTextColor, fontSize, font, scale
+    x,
+    y,
+    columns,
+    rows,
+    headerData,
+    tableData,
+    columnWidth,
+    rowHeight,
+    headerBgColor,
+    cellBgColor,
+    borderColor,
+    headerTextColor,
+    cellTextColor,
+    fontSize,
+    font,
+    scale,
   } = config;
   // 计算缩放后的实际尺寸（适配画布缩放）
-  let scaledColW = columnWidth * scale;
+  const scaledColW = columnWidth * scale;
   const scaledRowH = rowHeight * scale;
   const scaledFontSize = fontSize * scale;
   const scaledLineWidth = 1 * scale; // 边框线宽
@@ -480,56 +551,45 @@ const drawCanvasRight = (tableData) =>{
     x, // 表格起始x（已适配分割线位置）
     y, // 表格起始y
     columns * scaledColW, // 表格总宽度
-    (rows + 1) * scaledRowH // 表格总高度（表头1行 + 内容rows行）
+    (rows + 1) * scaledRowH, // 表格总高度（表头1行 + 内容rows行）
   );
 
-  let currentX=x;
-  let addColumnWidth=20;
-  let reduceColumnWidth=20;
+  let currentX = x;
+  const addColumnWidth = 20;
+  const reduceColumnWidth = 20;
   // 2. 绘制表头（第1行）
   for (let col = 0; col < columns; col++) {
     ctx.fillStyle = headerBgColor;
-    
+
     let currentColW = col === 0 ? scaledColW + addColumnWidth : scaledColW;
     currentColW = col === 1 ? scaledColW - reduceColumnWidth : currentColW;
 
     // 绘制表头单元格背景
-    ctx.fillRect(
-      currentX,
-      y,
-      currentColW,
-      scaledRowH
-    );
+    ctx.fillRect(currentX, y, currentColW, scaledRowH);
     //绘制表头单元格边框
-    ctx.strokeRect(
-      currentX,
-      y,
-      currentColW,
-      scaledRowH
-    );
+    ctx.strokeRect(currentX, y, currentColW, scaledRowH);
     // 绘制表头文字（居中）
     ctx.fillStyle = headerTextColor;
     ctx.font = `${scaledFontSize}px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(
-      headerData[col] || '',
-      currentX  + currentColW / 2,
-      y + scaledRowH / 2
+      headerData[col] || "",
+      currentX + currentColW / 2,
+      y + scaledRowH / 2,
     );
-    
-    currentX+=currentColW;
+
+    currentX += currentColW;
   }
 
   // 3. 绘制内容行（第2行及以后）
   for (let row = 0; row < rows; row++) {
-    currentX=x;
+    currentX = x;
     for (let col = 0; col < columns; col++) {
-      
       let currentColW = col === 0 ? scaledColW + addColumnWidth : scaledColW;
       currentColW = col === 1 ? scaledColW - reduceColumnWidth : currentColW;
 
-      ctx.fillStyle = tableData[row]?.[9]||cellBgColor;
+      ctx.fillStyle = tableData[row]?.[9] || cellBgColor;
       // 计算当前单元格的坐标
       const cellX = currentX;
       const cellY = y + (row + 1) * scaledRowH;
@@ -541,14 +601,14 @@ const drawCanvasRight = (tableData) =>{
       // 绘制内容文字（居中）
       ctx.fillStyle = cellTextColor;
       ctx.font = `${scaledFontSize}px ${font}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.fillText(
-        tableData[row]?.[col] || '0',
+        tableData[row]?.[col] || "0",
         cellX + currentColW / 2,
-        cellY + scaledRowH / 2
+        cellY + scaledRowH / 2,
       );
-      currentX+=currentColW;
+      currentX += currentColW;
     }
   }
 
@@ -565,31 +625,41 @@ const drawCanvasRight = (tableData) =>{
  * @param {number} offsetY 画布y偏移
  * @param {object} options 可选配置（可自定义样式）
  */
-const drawClickContent = (mousex, mousey, value, scale=1, offsetX=0, offsetY=0, options = {}) => {
+const drawClickContent = (
+  mousex,
+  mousey,
+  value,
+  scale = 1,
+  offsetX = 0,
+  offsetY = 0,
+  options = {},
+) => {
   // 默认配置（可自定义）
   const config = {
     boxWidth: 200, // 信息框基础宽度（未缩放）
     boxPadding: 10, // 内边距（未缩放）
-    bgColor: 'rgba(0, 0, 0, 0.8)', // 背景色（半透明黑）
-    borderColor: '#ffffff', // 边框色
+    bgColor: "rgba(0, 0, 0, 0.8)", // 背景色（半透明黑）
+    borderColor: "#ffffff", // 边框色
     borderWidth: 1, // 边框宽度（未缩放）
-    fontColor: '#ffffff', // 文字颜色
+    fontColor: "#ffffff", // 文字颜色
     fontSize: 14, // 字体大小（未缩放）
-    font: 'Arial', // 字体
+    font: "Arial", // 字体
     gap: 10, // 信息框与鼠标的间距（未缩放）
-    ...options
+    ...options,
   };
 
   // 1. 处理value，转成可展示的文本（对象→键值对，字符串→原内容）
-  let text = '';
-  if (typeof value === 'object' && value !== null ) {
-    text = Object.entries(value).map(([key, val]) => `${key}: ${val}`).join('\n');
-    let item =value;
-    text =`坐标:${item.id}\n血量:${item.hP}/${item.maxHP}\n类型:${item.typeName}\n分数:${item.point}\n所属俱乐部:${validData.value.legionInfo[item.belongsLegionId]?.name||'无所属'}`
+  let text = "";
+  if (typeof value === "object" && value !== null) {
+    text = Object.entries(value)
+      .map(([key, val]) => `${key}: ${val}`)
+      .join("\n");
+    const item = value;
+    text = `坐标:${item.id}\n血量:${item.hP}/${item.maxHP}\n类型:${item.typeName}\n分数:${item.point}\n所属俱乐部:${validData.value.legionInfo[item.belongsLegionId]?.name || "无所属"}`;
   } else {
-    text = String(value || '无数据');
+    text = String(value || "无数据");
   }
-  const textLines = text.split('\n'); // 按换行分割成数组
+  const textLines = text.split("\n"); // 按换行分割成数组
 
   // 2. 计算缩放后的实际尺寸（适配canvas缩放）
   const scaledBoxWidth = config.boxWidth * scale;
@@ -609,15 +679,13 @@ const drawClickContent = (mousex, mousey, value, scale=1, offsetX=0, offsetY=0, 
   // 信息框默认显示在鼠标右下方，避免溢出canvas边界
   let boxX = canvasX + scaledGap;
   let boxY = canvasY + scaledGap;
-  const canvasWidth = ctx.canvas.width / dpr; // canvas可视宽度（去除dpr）
-  const canvasHeight = ctx.canvas.height / dpr; // canvas可视高度（去除dpr）
 
   // 右边界溢出：信息框移到鼠标左侧
-  if (boxX + scaledBoxWidth > leftMaxPoint[0]+10) {
+  if (boxX + scaledBoxWidth > leftMaxPoint[0] + 10) {
     boxX = canvasX - scaledBoxWidth - scaledGap;
   }
   // 下边界溢出：信息框移到鼠标上方
-  if (boxY + scaledBoxHeight > leftMaxPoint[1]+20) {
+  if (boxY + scaledBoxHeight > leftMaxPoint[1] + 20) {
     boxY = canvasY - scaledBoxHeight - scaledGap;
   }
   // 左/上边界溢出：贴边显示
@@ -631,7 +699,7 @@ const drawClickContent = (mousex, mousey, value, scale=1, offsetX=0, offsetY=0, 
     boxX - scaledBorderWidth,
     boxY - scaledBorderWidth,
     scaledBoxWidth + 2 * scaledBorderWidth,
-    scaledBoxHeight + 2 * scaledBorderWidth
+    scaledBoxHeight + 2 * scaledBorderWidth,
   );
 
   // 5. 绘制信息框边框
@@ -642,17 +710,17 @@ const drawClickContent = (mousex, mousey, value, scale=1, offsetX=0, offsetY=0, 
   // 6. 绘制文本内容
   ctx.fillStyle = config.fontColor;
   ctx.font = `${scaledFontSize}px ${config.font}`;
-  ctx.textBaseline = 'top'; // 文本基线：顶部对齐
+  ctx.textBaseline = "top"; // 文本基线：顶部对齐
   textLines.forEach((line, index) => {
     ctx.fillText(
       line,
       boxX + scaledPadding, // 文本x坐标（加内边距）
-      boxY + scaledPadding + index * lineHeight // 文本y坐标（按行高偏移）
+      boxY + scaledPadding + index * lineHeight, // 文本y坐标（按行高偏移）
     );
   });
 
   ctx.restore(); // 恢复上下文状态
-}
+};
 
 function resizeAndRedraw(canvas) {
   const container = canvas.parentElement;
@@ -684,8 +752,13 @@ const connectWebSocket = () => {
       const status = tokenStore.getWebSocketStatus(tokenId);
       if (status === "connected") {
         message.success("WebSocket 连接成功");
-        
-        const getbattlefield = await tokenStore.sendMessageWithPromise(tokenId, 'legion_getbattlefield', {}, 10000)
+
+        const getbattlefield = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_getbattlefield",
+          {},
+          10000,
+        );
         fetchBattleRecords1(getbattlefield);
       }
     }, 2000);
@@ -700,71 +773,76 @@ const connectWebSocket = () => {
  */
 const fetchBattleRecords1 = async (getbattlefield) => {
   if (tokenStore.selectedToken) {
-    const tokenId = tokenStore.selectedToken.id
+    const tokenId = tokenStore.selectedToken.id;
     const status = tokenStore.getWebSocketStatus(tokenStore.selectedToken.id);
     if (status !== "connected") {
       connectWebSocket();
       return;
     }
-    const baseWsUrl = 'wss://xxz-xyzw-new.hortorgames.com/agent' +`?p=${encodeURIComponent(tokenStore.selectedToken.token)}&e=x&sid2=${getbattlefield?.info.sid}&lang=chinese&sid2=${getbattlefield?.info.sid}`
+    const baseWsUrl =
+      "wss://xxz-xyzw-new.hortorgames.com/agent" +
+      `?p=${encodeURIComponent(tokenStore.selectedToken.token)}&e=x&sid2=${getbattlefield?.info.sid}&lang=chinese&sid2=${getbattlefield?.info.sid}`;
     hint.value = getbattlefield?.info.battlefieldId;
-    legionWarWebSocket =  new XyzwLegionWarWebSocketClient({
+    legionWarWebSocket = new XyzwLegionWarWebSocketClient({
       url: baseWsUrl,
-          utils: null,
-          hint: hint.value,
-          heartbeatMs: 5000
-    })
+      utils: null,
+      hint: hint.value,
+      heartbeatMs: 5000,
+    });
 
-    
     legionWarWebSocket.onConnect = async () => {
       try {
-        setTimeout( () => {
-          isEntireBattlefield.value=true;
-          const entire = legionWarWebSocket.send("war_enterbattlefield",{battlefieldId:hint.value,useGzip:true})
+        setTimeout(() => {
+          isEntireBattlefield.value = true;
+          legionWarWebSocket.send("war_enterbattlefield", {
+            battlefieldId: hint.value,
+            useGzip: true,
+          });
         }, 5000);
       } catch (error) {
-        console.error(`初始请求盐场信息失败 [${tokenId}]`, error)
+        console.error(`初始请求盐场信息失败 [${tokenId}]`, error);
       }
-    }
+    };
     // 10. 设置消息监听
     legionWarWebSocket.setMessageListener((message) => {
-      const cmd = message?.cmd || 'unknown'
-      if(cmd.includes("war_getbattlefieldinfo")){
-        console.log(message.rawData)
+      const cmd = message?.cmd || "unknown";
+      if (cmd.includes("war_getbattlefieldinfo")) {
+        console.log(message.rawData);
         result.value = message?.rawData;
-        resizeAndRedraw(legionWarMapDom.value)
+        resizeAndRedraw(legionWarMapDom.value);
       }
-    })
+    });
     legionWarWebSocket.onDisconnect = (event) => {
-      const reason = event.code === 1006 ? '异常断开' : event.reason || ''
-      console.log(event)
-    }
+      console.log(event);
+    };
 
     legionWarWebSocket.onError = (error) => {
-    console.log(error)
-    }
+      console.log(error);
+    };
 
     // 11. 初始化连接
-    legionWarWebSocket.init()
+    legionWarWebSocket.init();
   }
-}
+};
 
 /**
  * 获取战场信息
  */
-const getBattlefieldInfo = async ()=> {
-  if(isEntireBattlefield.value){
-    legionWarWebSocket.send("war_getbattlefieldinfo",{battlefieldId:hint.value});
+const getBattlefieldInfo = async () => {
+  if (isEntireBattlefield.value) {
+    legionWarWebSocket.send("war_getbattlefieldinfo", {
+      battlefieldId: hint.value,
+    });
     currentDateTime.value = getCurrentTimeByFormat("");
-  }else{
+  } else {
     message.error("暂未进入战场,请稍后");
   }
-}
+};
 
 onMounted(() => {
-  fetchBattleRecords1()
+  fetchBattleRecords1();
   const canvas = legionWarMapDom.value;
-  ctx = canvas.getContext('2d');
+  ctx = canvas.getContext("2d");
 
   resizeHandler = () => resizeAndRedraw(canvas);
   resizeHandler(); // 初始化
@@ -778,22 +856,20 @@ onMounted(() => {
   //   drawCanvasContent(mouseX,mouseY,'mousemove')
   // });
   //增加点击事件
-  canvas.addEventListener('click', (e) => {
+  canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-    ctx.font="12px Arial";
+    ctx.font = "12px Arial";
     ctx.fillStyle = "rgb(0,0,0)";
-    drawCanvasContent(mouseX,mouseY,'click')
+    drawCanvasContent(mouseX, mouseY, "click");
   });
-  window.addEventListener('resize', resizeHandler);
-  
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', resizeHandler);
+  window.addEventListener("resize", resizeHandler);
 });
 
+onUnmounted(() => {
+  window.removeEventListener("resize", resizeHandler);
+});
 </script>
 
 <style scoped lang="scss">
@@ -810,13 +886,13 @@ onUnmounted(() => {
     width: 87%;
 
     .map-title {
-      display:flex;
+      display: flex;
       padding: var(--spacing-sm);
       border-bottom: 1px solid #bbbbbb80;
-      align-items:center;
+      align-items: center;
       justify-content: space-between;
     }
-    
+
     .map-container {
       width: 100%;
       height: 100%;
@@ -828,33 +904,33 @@ onUnmounted(() => {
       }
     }
   }
-  .legion-war-operation{
+  .legion-war-operation {
     background-color: var(--bg-secondary);
-    width: 12.5%; 
+    width: 12.5%;
     display: flex;
     flex-direction: column;
     padding: var(--spacing-sm);
 
-    .legion-war-operation-title{
-      display:flex;
+    .legion-war-operation-title {
+      display: flex;
       padding: var(--spacing-sm);
       border-bottom: 1px solid #bbbbbb80;
-      align-items:center;
+      align-items: center;
       justify-content: space-between;
     }
-    .legion-war-operation-container{
+    .legion-war-operation-container {
       width: 100%;
       height: 100%;
       display: flex;
       padding: var(--spacing-xs);
       flex-direction: column;
       gap: var(--spacing-sm);
-      .legion-war-operation-item{
+      .legion-war-operation-item {
         width: 100%;
         display: flex;
         flex-direction: row;
         justify-content: space-between;
-        align-items:center;
+        align-items: center;
       }
     }
   }
@@ -871,12 +947,12 @@ onUnmounted(() => {
   .legion-war-container {
     flex-direction: column;
     margin: 0;
-    
+
     .legion-war-map {
       width: 100%;
       padding: var(--spacing-xs);
       margin-bottom: var(--spacing-md);
-      
+
       .map-title {
         font-size: var(--font-size-sm);
         padding: var(--spacing-xs);
@@ -902,7 +978,7 @@ onUnmounted(() => {
           width: 100%; /* Keep items full width for better touch targets */
           padding: var(--spacing-xs) 0;
           border-bottom: 1px solid var(--border-light);
-          
+
           &:last-child {
             border-bottom: none;
           }

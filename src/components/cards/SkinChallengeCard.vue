@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="skin-challenge" :statusClass="statusClass">
+  <MyCard class="skin-challenge" :status-class="statusClass">
     <template #icon>
       <img src="/icons/1733492491706152.png" alt="换皮闯关" />
     </template>
@@ -13,34 +13,38 @@
     <template #default>
       <div class="header-info">
         <span class="challenge-count">今日挑战 {{ dailyFightNum }}/10</span>
-        <span class="daily-target" v-if="isActivityValid">今日可挑战 {{ todayInfo }}</span>
+        <span class="daily-target" v-if="isActivityValid"
+          >今日可挑战 {{ todayInfo }}</span
+        >
         <span class="daily-target" v-else>活动已结束</span>
       </div>
-      
-      <div v-if="!isActivityValid" class="expired-mask">
-         当前活动已结束
-      </div>
-      <div class="boss-grid" :class="{ 'disabled': !isActivityValid }">
-        <div 
-          v-for="type in 6" 
+
+      <div v-if="!isActivityValid" class="expired-mask">当前活动已结束</div>
+      <div class="boss-grid" :class="{ disabled: !isActivityValid }">
+        <div
+          v-for="type in 6"
           :key="type"
           class="boss-card"
-          :class="{ 
-            'active': isTowerOpen(type),
-            'cleared': isTowerCleared(type),
-            'locked': !isTowerOpen(type)
+          :class="{
+            active: isTowerOpen(type),
+            cleared: isTowerCleared(type),
+            locked: !isTowerOpen(type),
           }"
         >
           <div class="boss-title">BOSS {{ type }}</div>
           <div class="boss-level">第 {{ getTowerLevel(type) }} 层</div>
-          
+
           <div class="boss-status">
-            <span v-if="isTowerCleared(type)" class="status-text cleared">已通关</span>
-            <span v-else-if="!isTowerOpen(type)" class="status-text locked">未开放</span>
+            <span v-if="isTowerCleared(type)" class="status-text cleared"
+              >已通关</span
+            >
+            <span v-else-if="!isTowerOpen(type)" class="status-text locked"
+              >未开放</span
+            >
             <span v-else class="status-text active">进行中</span>
           </div>
 
-          <button 
+          <button
             class="challenge-btn"
             :disabled="!canChallenge(type) || isFighting"
             @click="challengeSingle(type)"
@@ -49,7 +53,7 @@
           </button>
         </div>
       </div>
-      
+
       <div class="action-row">
         <button
           class="action-button secondary"
@@ -64,10 +68,10 @@
 </template>
 
 <script setup>
+import { useMessage } from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import { getTowerActId } from "@/utils/towerActId.js";
-import { useMessage } from "naive-ui";
 import MyCard from "../Common/MyCard.vue";
 
 const tokenStore = useTokenStore();
@@ -77,19 +81,19 @@ const isFighting = ref(false);
 const actId = ref(null);
 const isActivityValid = computed(() => {
   if (!actId.value) return false;
-  
+
   const idStr = String(actId.value);
   if (idStr.length < 6) return false;
-  
+
   // Format: YYMMDDX -> 20YY-MM-DD
-  const year = "20" + idStr.substring(0, 2);
+  const year = `20${idStr.substring(0, 2)}`;
   const month = idStr.substring(2, 4);
   const day = idStr.substring(4, 6);
-  
+
   const startDate = new Date(`${year}-${month}-${day}T00:00:00`);
   const endDate = new Date(startDate);
   endDate.setDate(startDate.getDate() + 7);
-  
+
   const now = new Date();
   return now >= startDate && now < endDate;
 });
@@ -112,7 +116,7 @@ const openTowerMap = {
   1: [4], // Monday
   2: [5], // Tuesday
   3: [6], // Wednesday
-  4: [1, 2, 3, 4, 5, 6] // Thursday (All open)
+  4: [1, 2, 3, 4, 5, 6], // Thursday (All open)
 };
 
 const todayOpenTowers = computed(() => {
@@ -129,7 +133,10 @@ const todayInfo = computed(() => {
 });
 
 const isTowerOpen = (type) => {
-  return todayOpenTowers.value.includes(type) || todayOpenTowers.value.includes(6) && todayWeekDay === 4; // Special case for Thursday if map is correct
+  return (
+    todayOpenTowers.value.includes(type) ||
+    (todayOpenTowers.value.includes(6) && todayWeekDay === 4)
+  ); // Special case for Thursday if map is correct
 };
 
 const isTowerCleared = (type) => {
@@ -144,10 +151,10 @@ const getTowerLevel = (type) => {
     const key1 = `${type}00${i}`;
     const key2 = Number(key1);
     if (levelRewardMap.value[key1] || levelRewardMap.value[key2]) {
-        // If 8 is cleared, return 8
-        if (i === 8) return 8;
-        // Else return next level
-        return i + 1;
+      // If 8 is cleared, return 8
+      if (i === 8) return 8;
+      // Else return next level
+      return i + 1;
     }
   }
   return 1;
@@ -163,20 +170,29 @@ const getInfo = async () => {
   if (tokenStore.getWebSocketStatus(tokenId) !== "connected") return;
 
   try {
-    const res = await tokenStore.sendMessageWithPromise(tokenId, "towers_getinfo", { actId: getTowerActId() }, 5000);
+    const res = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "towers_getinfo",
+      { actId: getTowerActId() },
+      5000,
+    );
     if (res) {
       // Handle nested data structure if necessary
-      const data = res.actId ? res : (res.towerData && res.towerData.actId ? res.towerData : res);
-      
+      const data = res.actId
+        ? res
+        : res.towerData && res.towerData.actId
+          ? res.towerData
+          : res;
+
       actId.value = data.actId;
       levelRewardMap.value = data.levelRewardMap || {};
-      
-      console.log('SkinChallenge Info:', {
-         actId: data.actId,
-         mapSize: Object.keys(levelRewardMap.value).length,
-         keys: Object.keys(levelRewardMap.value).slice(0, 10),
-         map: levelRewardMap.value,
-         rawRes: res
+
+      console.log("SkinChallenge Info:", {
+        actId: data.actId,
+        mapSize: Object.keys(levelRewardMap.value).length,
+        keys: Object.keys(levelRewardMap.value).slice(0, 10),
+        map: levelRewardMap.value,
+        rawRes: res,
       });
 
       // Try to find daily num if exists in response
@@ -198,64 +214,76 @@ const refreshInfo = async () => {
 
 const challengeSingle = async (type) => {
   if (isFighting.value) return;
-  
+
   isFighting.value = true;
   const tokenId = tokenStore.selectedToken.id;
-  
+
   try {
-     message.info(`开始挑战 BOSS ${type}`);
-     
-     let needStart = true;
-     let loop = true;
-     let failCount = 0;
-     
-     while (loop) {
-        if (needStart) {
-            await tokenStore.sendMessageWithPromise(tokenId, "towers_start", { actId: getTowerActId(), towerType: type }, 5000);
-        }
-        
-        const fightRes = await tokenStore.sendMessageWithPromise(tokenId, "towers_fight", { actId: getTowerActId(), towerType: type }, 5000);
-        const battleData = fightRes?.battleData;
-        const curHP = battleData?.result?.accept?.ext?.curHP;
-        
-        if (curHP === 0) {
-            // Get current level before updating info (it will be the level just cleared)
-            const currentLevel = getTowerLevel(type);
-            message.success(`BOSS ${type} 第 ${currentLevel} 层挑战成功`);
-            
-            // 挑战成功，不需要重新 start，直接继续 fight
-            needStart = false;
-            failCount = 0;
-            
-            // 检查是否通关（需要更新 levelRewardMap）
-            await getInfo();
-            if (isTowerCleared(type)) {
-                loop = false;
-                message.success(`BOSS ${type} 已全部通关`);
-            } else {
-                // 等待一下避免过快请求
-                await new Promise(r => setTimeout(r, 1000));
-            }
+    message.info(`开始挑战 BOSS ${type}`);
+
+    let needStart = true;
+    let loop = true;
+    let failCount = 0;
+
+    while (loop) {
+      if (needStart) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "towers_start",
+          { actId: getTowerActId(), towerType: type },
+          5000,
+        );
+      }
+
+      const fightRes = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "towers_fight",
+        { actId: getTowerActId(), towerType: type },
+        5000,
+      );
+      const battleData = fightRes?.battleData;
+      const curHP = battleData?.result?.accept?.ext?.curHP;
+
+      if (curHP === 0) {
+        // Get current level before updating info (it will be the level just cleared)
+        const currentLevel = getTowerLevel(type);
+        message.success(`BOSS ${type} 第 ${currentLevel} 层挑战成功`);
+
+        // 挑战成功，不需要重新 start，直接继续 fight
+        needStart = false;
+        failCount = 0;
+
+        // 检查是否通关（需要更新 levelRewardMap）
+        await getInfo();
+        if (isTowerCleared(type)) {
+          loop = false;
+          message.success(`BOSS ${type} 已全部通关`);
         } else {
-            const currentLevel = getTowerLevel(type);
-            message.warning(`BOSS ${type} 第 ${currentLevel} 层挑战失败`);
-            // 挑战失败，需要重新 start
-            needStart = true;
-            failCount++;
-            
-            if (failCount >= 3) {
-                message.error(`BOSS ${type} 第 ${currentLevel} 层连续失败 3 次，停止挑战`);
-                loop = false;
-            } else {
-                await new Promise(r => setTimeout(r, 1000));
-            }
+          // 等待一下避免过快请求
+          await new Promise((r) => setTimeout(r, 1000));
         }
-     }
+      } else {
+        const currentLevel = getTowerLevel(type);
+        message.warning(`BOSS ${type} 第 ${currentLevel} 层挑战失败`);
+        // 挑战失败，需要重新 start
+        needStart = true;
+        failCount++;
+
+        if (failCount >= 3) {
+          message.error(
+            `BOSS ${type} 第 ${currentLevel} 层连续失败 3 次，停止挑战`,
+          );
+          loop = false;
+        } else {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+    }
   } catch (e) {
-     message.error(`挑战出错: ${e.message}`);
+    message.error(`挑战出错: ${e.message}`);
   } finally {
-     isFighting.value = false;
-     await getInfo();
+    isFighting.value = false;
+    await getInfo();
   }
 };
 
@@ -263,10 +291,10 @@ watch(
   () => tokenStore.selectedToken,
   (newVal) => {
     if (newVal) {
-       setTimeout(getInfo, 1000);
+      setTimeout(getInfo, 1000);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -275,7 +303,7 @@ watch(
     if (status === "connected") {
       getInfo();
     }
-  }
+  },
 );
 </script>
 
@@ -316,18 +344,18 @@ watch(
   text-align: center;
   border: 1px solid transparent;
   transition: all var(--transition-fast);
-  
+
   &.active {
     background: #fff;
     border-color: var(--primary-color);
     box-shadow: var(--shadow-sm);
   }
-  
+
   &.cleared {
     background: rgba(34, 197, 94, 0.05);
     border-color: var(--success-color);
   }
-  
+
   &.locked {
     opacity: 0.7;
     background: var(--bg-tertiary);
@@ -369,15 +397,15 @@ watch(
 .status-text {
   font-size: var(--font-size-sm);
   font-weight: bold;
-  
+
   &.cleared {
     color: var(--success-color);
   }
-  
+
   &.locked {
     color: var(--text-tertiary);
   }
-  
+
   &.active {
     display: none; // Hide "进行中" text if button is there, or show it?
   }
@@ -392,13 +420,13 @@ watch(
   font-size: var(--font-size-xs);
   cursor: pointer;
   transition: background var(--transition-fast);
-  
+
   &:disabled {
     background: var(--bg-tertiary);
     color: var(--text-tertiary);
     cursor: not-allowed;
   }
-  
+
   &:not(:disabled):hover {
     background: var(--primary-color-hover);
   }

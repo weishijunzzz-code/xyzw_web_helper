@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="helper" :statusClass="{ active: state.isRunning }">
+  <MyCard class="helper" :status-class="{ active: state.isRunning }">
     <template #icon>
       <img :src="iconPath" alt="招募图标" />
     </template>
@@ -52,13 +52,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import {
+  getErrorMessage,
   HELPER_BATCH_DELAY_MS,
   HELPER_COMMAND_TIMEOUT_MS,
-  getErrorMessage,
   runInventoryVerifiedGameCommand,
 } from "@/utils/helperTaskRunner";
 import MyCard from "../Common/MyCard.vue";
@@ -66,7 +66,7 @@ import MyCard from "../Common/MyCard.vue";
 const tokenStore = useTokenStore();
 const message = useMessage();
 
-const iconPath = computed(() => import.meta.env.BASE_URL + "icons/zml.png");
+const iconPath = computed(() => `${import.meta.env.BASE_URL}icons/zml.png`);
 
 const roleInfo = computed(() => tokenStore.gameData?.roleInfo || null);
 

@@ -4,9 +4,9 @@
  */
 
 import {
-  loadQuestionsData,
   findAnswer,
   getQuestionCount,
+  loadQuestionsData,
 } from "./studyQuestionsFromJSON.js";
 
 // 测试函数

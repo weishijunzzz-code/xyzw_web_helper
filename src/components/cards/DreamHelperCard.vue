@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="dream-helper" :statusClass="{ active: isRunning }">
+  <MyCard class="dream-helper" :status-class="{ active: isRunning }">
     <template #icon>
       <img :src="iconPath" alt="梦境图标" />
     </template>
@@ -90,7 +90,11 @@
                 {{ merchantConfig[merchantId]?.name || `商人${merchantId}` }}
               </div>
               <div class="items-list">
-                <div class="item" v-for="(item, index) in items" :key="index">
+                <div
+                  class="item"
+                  v-for="(item, itemIndex) in items"
+                  :key="itemIndex"
+                >
                   <div
                     class="item-name"
                     :style="{ color: getItemColor(parseInt(merchantId), item) }"
@@ -120,21 +124,21 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
-import MyCard from "../Common/MyCard.vue";
 import {
-  merchantConfig,
   goldItemsConfig,
   isDungeonOpen,
+  merchantConfig,
 } from "@/utils/dreamConstants";
+import MyCard from "../Common/MyCard.vue";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
 
 const iconPath = computed(
-  () => import.meta.env.BASE_URL + "174061875626614.png",
+  () => `${import.meta.env.BASE_URL}174061875626614.png`,
 );
 
 // 状态管理
@@ -144,12 +148,11 @@ const isLoading = ref(false);
 const hasDefaultInfo = ref(false);
 const teamHeroes = ref([]);
 const continuousBattles = ref({});
-const battleInterval = ref(null);
 
 // 购买模块状态
 const merchantData = ref({ 1: [], 2: [], 3: [] });
 const levelId = ref(0);
-const selectedItems = ref(new Set());
+
 const merchantDataLoaded = ref(false);
 
 // 英雄数据映射
@@ -313,7 +316,7 @@ async function selectDreamTeam() {
       tokenId,
       "dungeon_selecthero",
       {
-        battleTeam: battleTeam,
+        battleTeam,
       },
       15000,
     );
@@ -342,7 +345,7 @@ async function startSingleBattle(heroId) {
       tokenId,
       "fight_startdungeon",
       {
-        heroId: parseInt(heroId),
+        heroId: Number.parseInt(heroId),
       },
       15000,
     );
@@ -502,8 +505,8 @@ async function buyItem(merchantId, index, pos) {
       "dungeon_buymerchant",
       {
         id: merchantId,
-        index: index,
-        pos: pos,
+        index,
+        pos,
       },
       15000,
     );
@@ -516,63 +519,6 @@ async function buyItem(merchantId, index, pos) {
 }
 
 // 批量购买选中的商品
-async function batchBuySelected() {
-  if (selectedItems.value.size === 0) {
-    message.warning("请先选择要购买的商品");
-    return;
-  }
-
-  if (!isDungeonOpen()) {
-    message.warning("当前不是梦境开放时间（周三/周四/周日/周一）");
-    return;
-  }
-
-  if (levelId.value < 4000) {
-    message.warning("关卡数小于4000，无法购买金币商品");
-    return;
-  }
-
-  isRunning.value = true;
-  const items = Array.from(selectedItems.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  // 按商人ID和位置排序，从大到小购买
-  items.sort((a, b) => {
-    const [aMerchant, aIndex, aPos] = a.split("-").map(Number);
-    const [bMerchant, bIndex, bPos] = b.split("-").map(Number);
-
-    if (aMerchant !== bMerchant) return bMerchant - aMerchant;
-    return bPos - aPos;
-  });
-
-  for (const itemKey of items) {
-    const [merchantId, index, pos] = itemKey.split("-").map(Number);
-
-    try {
-      const success = await buyItem(merchantId, index, pos);
-      if (success) {
-        selectedItems.value.delete(itemKey);
-        successCount++;
-      } else {
-        failCount++;
-      }
-    } catch (error) {
-      failCount++;
-    }
-
-    // 延迟避免请求过快
-    await delay(0.5);
-  }
-
-  // 重新获取商品列表更新界面
-  await refreshMerchantList();
-
-  message.success(
-    `批量购买完成: 成功 ${successCount} 件, 失败 ${failCount} 件`,
-  );
-  isRunning.value = false;
-}
 
 // 一键购买所有金币商品
 async function buyAllGoldItems() {
@@ -593,7 +539,7 @@ async function buyAllGoldItems() {
   // 遍历所有商人的商品
   for (const merchantId in merchantData.value) {
     const items = merchantData.value[merchantId];
-    const numId = parseInt(merchantId);
+    const numId = Number.parseInt(merchantId);
 
     // 从后往前购买（pos从大到小）
     for (let pos = items.length - 1; pos >= 0; pos--) {
@@ -689,7 +635,7 @@ async function refreshMerchantList() {
     message.info("开始自动获取商品列表流程...");
 
     // 第一步：获取默认队伍信息
-    const teamSuccess = await getDefaultTeam();
+    await getDefaultTeam();
 
     // 第二步：选择梦境阵容
     await selectDreamTeam();

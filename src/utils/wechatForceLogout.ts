@@ -43,7 +43,10 @@ export function generateBinFromCombUser(
     { decrypt: dm.lz4XorDecode, encrypt: dm.lz4XorEncode },
   );
   const bytes = new Uint8Array(encrypted);
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  );
 }
 
 export function roleIndexFromServerId(serverId: unknown): number {
@@ -54,7 +57,8 @@ export function roleIndexFromServerId(serverId: unknown): number {
 }
 
 function sameValue(actual: unknown, expected: unknown): boolean {
-  if (expected === undefined || expected === null || expected === "") return true;
+  if (expected === undefined || expected === null || expected === "")
+    return true;
   return String(actual) === String(expected);
 }
 

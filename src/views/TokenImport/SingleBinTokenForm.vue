@@ -1,79 +1,108 @@
 <template>
   <!-- 手动输入表单 -->
-  <n-form :model="importForm" :label-placement="'top'" :size="'large'" :show-label="true">
-    <n-form-item :label="'游戏角色名称'" :show-label="true">
-      <n-input v-model:value="importForm.name" placeholder="例如：主号战士" clearable />
-    </n-form-item>
+  <NForm
+    :model="importForm"
+    label-placement="top"
+    size="large"
+    :show-label="true"
+  >
+    <NFormItem label="游戏角色名称" :show-label="true">
+      <NInput
+        v-model:value="importForm.name"
+        placeholder="例如：主号战士"
+        clearable
+      />
+    </NFormItem>
 
-    <n-form-item :label="'bin文件'" :show-label="true">
-      <a-upload multiple accept="*.bin,*.dmp" @before-upload="uploadBin" draggable dropzone placeholder="粘贴Token字符串..."
-        clearable>
+    <NFormItem label="bin文件" :show-label="true">
+      <a-upload
+        multiple
+        accept="*.bin,*.dmp"
+        @before-upload="uploadBin"
+        draggable
+        dropzone
+        placeholder="粘贴Token字符串..."
+        clearable
+      >
         <!-- <div class="dropzone-content">
           请点击上传或将bind文件拖拽到此处
         </div> -->
       </a-upload>
-    </n-form-item>
+    </NFormItem>
     <a-list>
-      <a-list-item v-for="(role, index) in roleList" :key="index">
+      <a-list-item v-for="(role, roleIndex) in roleList" :key="roleIndex">
         <div>
           <strong>角色名称:</strong> {{ role.name || "未命名角色" }}<br />
           <strong>Token:</strong>
-          <span style="word-break: break-all">{{ role.token }}</span><br />
+          <span style="word-break: break-all">{{ role.token }}</span
+          ><br />
           <strong>服务器:</strong> {{ role.server || "未指定" }}
         </div>
       </a-list-item>
     </a-list>
 
     <!-- 角色详情 -->
-    <n-collapse>
-      <n-collapse-item title="角色详情 (可选)" name="optional">
+    <NCollapse>
+      <NCollapseItem title="角色详情 (可选)" name="optional">
         <div class="optional-fields">
-          <n-form-item label="服务器">
-            <n-input v-model:value="importForm.server" placeholder="服务器名称" />
-          </n-form-item>
+          <NFormItem label="服务器">
+            <NInput
+              v-model:value="importForm.server"
+              placeholder="服务器名称"
+            />
+          </NFormItem>
 
-          <n-form-item label="自定义连接地址">
-            <n-input v-model:value="importForm.wsUrl" placeholder="留空使用默认连接" />
-          </n-form-item>
+          <NFormItem label="自定义连接地址">
+            <NInput
+              v-model:value="importForm.wsUrl"
+              placeholder="留空使用默认连接"
+            />
+          </NFormItem>
         </div>
-      </n-collapse-item>
-    </n-collapse>
+      </NCollapseItem>
+    </NCollapse>
 
     <div class="form-actions">
-      <n-button type="primary" size="large" block :loading="isImporting" @click="handleImport">
+      <NButton
+        type="primary"
+        size="large"
+        block
+        :loading="isImporting"
+        @click="handleImport"
+      >
         <template #icon>
-          <n-icon>
+          <NIcon>
             <CloudUpload />
-          </n-icon>
+          </NIcon>
         </template>
         添加Token
-      </n-button>
+      </NButton>
 
-      <n-button v-if="tokenStore.hasTokens" size="large" block @click="cancel">
+      <NButton v-if="tokenStore.hasTokens" size="large" block @click="cancel">
         取消
-      </n-button>
+      </NButton>
     </div>
-  </n-form>
+  </NForm>
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive } from "vue";
-import { useTokenStore } from "@/stores/tokenStore";
 import { CloudUpload } from "@vicons/ionicons5";
-
 import {
-  NForm,
-  NFormItem,
-  NInput,
   NButton,
-  NIcon,
   NCollapse,
   NCollapseItem,
+  NForm,
+  NFormItem,
+  NIcon,
+  NInput,
   useMessage,
 } from "naive-ui";
-
 import PQueue from "p-queue";
+
+import { reactive, ref } from "vue";
+
 import useIndexedDB from "@/hooks/useIndexedDB";
+import { useTokenStore } from "@/stores/tokenStore";
 import { getTokenId, transformToken } from "@/utils/token";
 
 const $emit = defineEmits(["cancel", "ok"]);
@@ -110,7 +139,7 @@ const tQueue = new PQueue({ concurrency: 1, interval: 1000 });
 const initName = (fileName: string) => {
   if (!fileName) return;
   fileName = fileName.trim();
-  let binRes = fileName.match(/^bin-(.*?)服-([0-2])-([0-9]{6,12})-(.*)\.bin$/);
+  const binRes = fileName.match(/^bin-(.*?)服-([0-2])-(\d{6,12})-(.*)\.bin$/);
   console.log(binRes);
   if (binRes) {
     importForm.name = `${binRes[1]}_${binRes[2]}_${binRes[4]}`;
@@ -146,16 +175,14 @@ const uploadBin = (binFile: File) => {
         message.error("保存BIN数据到IndexedDB失败");
         return;
       }
-      
+
       // 上传列表中发现已存在的重复名称，提示消息
       if (roleList.value.some((role) => role.id === tokenId)) {
         message.error("上传列表中已存在同名角色! ");
         return;
       }
       // 检查待上传的角色是否已在tokenStore中存在
-      const existingToken = tokenStore.gameTokens.find(
-        (t) => t.id === tokenId,
-      );
+      const existingToken = tokenStore.gameTokens.find((t) => t.id === tokenId);
       if (existingToken) {
         message.warning(`角色"${roleName}"已存在，将更新该角色的Token`);
       }
@@ -164,7 +191,7 @@ const uploadBin = (binFile: File) => {
         id: tokenId,
         token: roleToken,
         name: roleName,
-        server: roleMeta.server + "" + roleMeta.roleIndex || "",
+        server: `${roleMeta.server}${roleMeta.roleIndex}` || "",
         wsUrl: importForm.wsUrl || "",
         importMethod: "bin",
       });
@@ -233,3 +260,10 @@ const handleImport = async () => {
   font-size: 12px;
 }
 </style>
+
+<route lang="json">
+{
+  "name": "/TokenImport/singlebin",
+  "path": "/TokenImport/singlebin"
+}
+</route>

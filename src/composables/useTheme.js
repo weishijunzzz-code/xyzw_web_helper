@@ -1,4 +1,5 @@
-import { ref, onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
+import { listenForThemeChanges } from "@/utils/themeListener.js";
 
 // 全局响应式主题状态
 const isDark = ref(false);
@@ -16,9 +17,13 @@ const updateReactiveState = () => {
   isDark.value = checkCurrentTheme();
 };
 
-// 主题管理逻辑
+/**
+ * Share reactive theme state while owning each instance's DOM and media listeners.
+ * @returns {object} Theme state, setters, initialization and listener setup functions.
+ */
 export function useTheme() {
   let mutationObserver = null;
+  let removeSystemThemeListener = null;
 
   // 初始化主题
   const initTheme = () => {
@@ -88,15 +93,14 @@ export function useTheme() {
   };
 
   // 监听系统主题变化
+  /** Register one system-theme listener per composable instance. */
   const setupSystemThemeListener = () => {
+    removeSystemThemeListener?.();
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addListener(() => {
-      const savedTheme = localStorage.getItem("theme");
-      // 只有在用户没有手动设置主题时才跟随系统
-      if (!savedTheme) {
-        initTheme();
-      }
-    });
+    const onChange = () => {
+      if (!localStorage.getItem("theme")) initTheme();
+    };
+    removeSystemThemeListener = listenForThemeChanges(mediaQuery, onChange);
   };
 
   // 设置DOM变化监听器（确保响应式状态同步）
@@ -121,6 +125,8 @@ export function useTheme() {
 
   // 清理监听器
   const cleanup = () => {
+    removeSystemThemeListener?.();
+    removeSystemThemeListener = null;
     if (mutationObserver) {
       mutationObserver.disconnect();
       mutationObserver = null;

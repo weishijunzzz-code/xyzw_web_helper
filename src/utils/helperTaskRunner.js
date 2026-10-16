@@ -4,8 +4,19 @@ export const HELPER_COMMAND_TIMEOUT_MS = 5000;
 export const HELPER_RETRY_DELAY_MS = 1000;
 export const HELPER_MAX_RETRIES = 2;
 
+/**
+ * Wait between asynchronous task or protocol operations without blocking the event loop.
+ * @param {number} ms Requested delay in milliseconds.
+ * @returns {Promise<void>} Resolves after the delay.
+ */
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Split a requested count into full batches and a final remainder.
+ * @param {number} total Requested quantity, normalized to a non-negative integer.
+ * @param {number} batchSize Maximum quantity per command.
+ * @returns {number[]} Quantities to send in order; empty when no work is needed.
+ */
 export function buildTenBatchPlan(total, batchSize = HELPER_BATCH_SIZE) {
   const safeTotal = Math.max(0, Math.trunc(Number(total) || 0));
   const safeBatchSize = Math.max(

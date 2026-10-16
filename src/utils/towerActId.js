@@ -3,7 +3,8 @@ const DAYS_PER_WEEK = 7;
 
 const getCycleFriday = (date) => {
   const cycleDate = new Date(date);
-  const diff = (cycleDate.getDay() - FRIDAY_DAY + DAYS_PER_WEEK) % DAYS_PER_WEEK;
+  const diff =
+    (cycleDate.getDay() - FRIDAY_DAY + DAYS_PER_WEEK) % DAYS_PER_WEEK;
 
   cycleDate.setHours(0, 0, 0, 0);
   cycleDate.setDate(cycleDate.getDate() - diff);

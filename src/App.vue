@@ -26,8 +26,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, provide } from "vue";
 import { darkTheme } from "naive-ui";
+import { computed, onMounted, onUnmounted, ref, provide } from "vue";
 import { useTheme } from "@/composables/useTheme";
 import { useCompactMode } from "@/composables/useCompactMode";
 import { initCapacitor, isNativePlatform } from "@/utils/capacitor";

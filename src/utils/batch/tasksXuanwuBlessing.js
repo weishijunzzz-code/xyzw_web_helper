@@ -33,8 +33,8 @@ const formatReward = (reward = []) =>
 
 /**
  * 创建玄武赐福批量任务执行器
- * @param {Object} deps - 依赖项
- * @returns {Object} 任务函数集合
+ * @param {object} deps - 依赖项
+ * @returns {object} 任务函数集合
  */
 export function createTasksXuanwuBlessing(deps) {
   const {
@@ -109,11 +109,15 @@ export function createTasksXuanwuBlessing(deps) {
           { actId, missionId: Number(missionIdStr) },
           8000,
         );
-        const latest = res?.activity?.warOrderActivityInfo?.[actId]?.taskClaimed;
+        const latest =
+          res?.activity?.warOrderActivityInfo?.[actId]?.taskClaimed;
         if (latest) Object.assign(claimedMap, latest);
 
         if (res?.reward?.length) {
-          log(`${tokenName} 任务${missionIdStr}领取: ${formatReward(res.reward)}`, "success");
+          log(
+            `${tokenName} 任务${missionIdStr}领取: ${formatReward(res.reward)}`,
+            "success",
+          );
           claimed++;
         } else {
           skipped++;
@@ -146,7 +150,10 @@ export function createTasksXuanwuBlessing(deps) {
           8000,
         );
         if (!res?.reward?.length) break;
-        log(`${tokenName} 通行证奖励领取: ${formatReward(res.reward)}`, "success");
+        log(
+          `${tokenName} 通行证奖励领取: ${formatReward(res.reward)}`,
+          "success",
+        );
         rounds++;
       } catch {
         // 已无可领取奖励
@@ -189,7 +196,9 @@ export function createTasksXuanwuBlessing(deps) {
         {},
         8000,
       );
-      log(`${tokenName} 抽奖信息: ${JSON.stringify(lotteryInfo?.lotteryInfo || {})}`);
+      log(
+        `${tokenName} 抽奖信息: ${JSON.stringify(lotteryInfo?.lotteryInfo || {})}`,
+      );
     } catch {
       // 抽奖信息获取失败不影响抽奖
     }
@@ -299,7 +308,12 @@ export function createTasksXuanwuBlessing(deps) {
         if (lotteryCnt > 0 || signCnt > 0) {
           const latestInfo = await fetchWarOrder(tokenId, actId);
           if (latestInfo) {
-            const second = await claimTasks(tokenId, actId, latestInfo, token.name);
+            const second = await claimTasks(
+              tokenId,
+              actId,
+              latestInfo,
+              token.name,
+            );
             secondClaimed = second.claimed;
             if (secondClaimed > 0) {
               passRewards += await claimPassRewards(tokenId, actId, token.name);
@@ -316,7 +330,10 @@ export function createTasksXuanwuBlessing(deps) {
       } catch (error) {
         console.error(error);
         tokenStatus.value[tokenId] = "failed";
-        log(`${token.name} 玄武赐福失败: ${error.message || "未知错误"}`, "error");
+        log(
+          `${token.name} 玄武赐福失败: ${error.message || "未知错误"}`,
+          "error",
+        );
       } finally {
         tokenStore.closeWebSocketConnection(tokenId);
         releaseConnectionSlot();

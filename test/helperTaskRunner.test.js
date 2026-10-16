@@ -5,8 +5,8 @@ import {
   buildTenBatchPlan,
   getClaimableBoxPoints,
   getItemQuantity,
-  runInventoryVerifiedGameCommand,
   runBatchedGameCommand,
+  runInventoryVerifiedGameCommand,
 } from "../src/utils/helperTaskRunner.js";
 
 test("buildTenBatchPlan splits totals into ten-sized batches plus remainder", () => {
@@ -297,9 +297,10 @@ test("runInventoryVerifiedGameCommand sends the remaining deficit after a verifi
   const tokenStore = {
     async sendMessageWithPromise(_tokenId, _cmd, params) {
       events.push({ type: "send", amount: params.recruitNumber });
-      inventory -= events.filter((event) => event.type === "send").length === 1
-        ? 6
-        : params.recruitNumber;
+      inventory -=
+        events.filter((event) => event.type === "send").length === 1
+          ? 6
+          : params.recruitNumber;
       return { ok: true };
     },
   };
@@ -421,7 +422,7 @@ test("runInventoryVerifiedGameCommand does not fill when a failed intermediate c
 });
 
 test("runInventoryVerifiedGameCommand stops when verification shows no inventory decrease", async () => {
-  let inventory = 20;
+  const inventory = 20;
   const tokenStore = {
     async sendMessageWithPromise() {
       return { ok: true };

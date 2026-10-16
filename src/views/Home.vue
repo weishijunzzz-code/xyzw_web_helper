@@ -257,10 +257,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, markRaw } from "vue";
+import { Cube, Menu, PersonCircle, Ribbon, Settings } from "@vicons/ionicons5";
+import { markRaw, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { PersonCircle, Cube, Ribbon, Settings, Menu } from "@vicons/ionicons5";
 
 const router = useRouter();
 const authStore = useAuthStore();

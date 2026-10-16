@@ -1,10 +1,7 @@
-import { gameLogger } from "@/utils/logger";
 import type { EVM, XyzwSession } from ".";
+import { gameLogger } from "@/utils/logger";
 
-export const LegionPlugin = ({
-  onSome,
-  $emit
-}: EVM) => {
+export const LegionPlugin = ({ onSome }: EVM) => {
   onSome(
     [
       "legion_getinfo",
@@ -28,4 +25,4 @@ export const LegionPlugin = ({
   onSome(["legion_applylistresp"], (data: XyzwSession) => {
     gameLogger.debug(`收到俱乐部申请列表响应: ${data.tokenId}`, data.body);
   });
-}
+};

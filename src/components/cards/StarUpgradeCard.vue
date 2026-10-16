@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="star-upgrade" :statusClass="{ active: state.isRunning }">
+  <MyCard class="star-upgrade" :status-class="{ active: state.isRunning }">
     <template #icon>
       <img src="/icons/ta.png" alt="升星图标" />
     </template>
@@ -72,11 +72,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
-import MyCard from "../Common/MyCard.vue";
 import { HERO_DICT } from "@/utils/HeroList";
+import MyCard from "../Common/MyCard.vue";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
@@ -144,50 +144,6 @@ const stopRunning = () => {
  * @param {{ delay: number }} mod 延迟设置（毫秒）
  * @returns {Promise<void>}
  */
-const executeUpgradeStarTask = async (mod) => {
-  const token = tokenStore.selectedToken;
-  if (!token) {
-    message.warning("请先选择Token");
-    return;
-  }
-  const tokenId = token.id;
-  const status = tokenStore.getWebSocketStatus(tokenId);
-  if (status !== "connected") {
-    message.error("WebSocket未连接，无法执行");
-    addLog("WebSocket连接缺失", "error");
-    return;
-  }
-
-  try {
-    state.value.isRunning = true;
-    state.value.progressText = "开始升星";
-    message.success("开始升星");
-    addLog("升星任务启动", "success");
-
-    await runHeroUpgrade(mod);
-
-    state.value.progressText = "图鉴升星";
-    message.success("英雄升星完成，开始图鉴升星");
-    addLog("英雄升星全部完成", "success");
-
-    await runBookUpgrade(mod);
-
-    state.value.progressText = "领取奖励";
-    message.success("图鉴升星完成，开始领取奖励");
-    addLog("图鉴升星全部完成", "success");
-
-    await runClaimRewards(mod);
-
-    state.value.progressText = "完成";
-    message.success("升星全部完成");
-    addLog("升星任务全部完成", "success");
-  } catch (error) {
-    addLog(`升星任务执行出错: ${error.message}`, "error");
-    message.error("升星任务执行出错");
-  } finally {
-    state.value.isRunning = false;
-  }
-};
 
 /**
  * 仅执行英雄升星
@@ -345,8 +301,6 @@ const runClaimRewards = async (mod) => {
     state.value.isRunning = false;
   }
 };
-
-const formatTime = (ts) => new Date(ts).toLocaleTimeString("zh-CN");
 </script>
 
 <style scoped lang="scss">

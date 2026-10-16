@@ -19,7 +19,8 @@
               <button
                 v-for="type in versionTypes"
                 :key="type.value"
-                :class="['filter-btn', { active: selectedType === type.value }]"
+                class="filter-btn"
+                :class="[{ active: selectedType === type.value }]"
                 @click="selectedType = type.value"
               >
                 {{ type.label }}
@@ -99,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import ChangelogCard from "@/components/ChangelogCard.vue";
 import { useChangelogStore } from "@/stores/changelogStore";
 
@@ -145,9 +146,11 @@ const handleSubscribe = () => {
   isSubscribed.value = !isSubscribed.value;
   if (isSubscribed.value) {
     localStorage.setItem("changelog_subscribed", "true");
+    // eslint-disable-next-line no-alert -- Preserve the existing native notification or confirmation flow.
     alert("已成功订阅更新通知！");
   } else {
     localStorage.removeItem("changelog_subscribed");
+    // eslint-disable-next-line no-alert -- Preserve the existing native notification or confirmation flow.
     alert("已取消订阅");
   }
 };

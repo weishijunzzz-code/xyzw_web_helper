@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="bottle-helper" :statusClass="{ active: state.isRunning }">
+  <MyCard class="bottle-helper" :status-class="{ active: state.isRunning }">
     <template #icon>
       <img :src="iconPath" alt="宝箱图标" />
     </template>
@@ -71,14 +71,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import {
-  HELPER_BATCH_DELAY_MS,
-  HELPER_COMMAND_TIMEOUT_MS,
   getClaimableBoxPoints,
   getErrorMessage,
+  HELPER_BATCH_DELAY_MS,
+  HELPER_COMMAND_TIMEOUT_MS,
   runInventoryVerifiedGameCommand,
 } from "@/utils/helperTaskRunner";
 import MyCard from "../Common/MyCard.vue";
@@ -86,7 +86,7 @@ import MyCard from "../Common/MyCard.vue";
 const tokenStore = useTokenStore();
 const message = useMessage();
 
-const iconPath = computed(() => import.meta.env.BASE_URL + "box/zsbx.png");
+const iconPath = computed(() => `${import.meta.env.BASE_URL}box/zsbx.png`);
 
 const roleInfo = computed(() => tokenStore.gameData?.roleInfo || null);
 
@@ -130,7 +130,9 @@ const totalPoints = computed(() => {
   return wooden * 1 + bronze * 10 + gold * 20 + platinum * 50;
 });
 
-const claimableBoxPoints = computed(() => getClaimableBoxPoints(roleInfo.value));
+const claimableBoxPoints = computed(() =>
+  getClaimableBoxPoints(roleInfo.value),
+);
 const claimBoxPointButtonText = computed(() =>
   claimableBoxPoints.value > 1000
     ? `领取${claimableBoxPoints.value}宝箱积分`

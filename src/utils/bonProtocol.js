@@ -400,6 +400,11 @@ export class BonEncoder {
     }
   }
 
+  /**
+   * Encode one BON value into the current writer, retaining referenced strings.
+   * @param {unknown} v Serializable protocol value.
+   * @returns {void} Writes the value to the internal buffer.
+   */
   encode(v) {
     if (v == null) {
       this.encodeNull();
@@ -436,7 +441,6 @@ export class BonEncoder {
           return;
         }
         this.encodeObject(v);
-        return;
     }
   }
 
@@ -456,11 +460,13 @@ export class BonDecoder {
     this.strArr.length = 0;
   }
 
+  /**
+   * Decode the next BON tag, including nested collections and shared strings.
+   * @returns {unknown} Decoded protocol value, or null for an unknown tag.
+   */
   decode() {
     const tag = this.dr.readUInt8();
     switch (tag) {
-      default:
-        return null;
       case 1:
         return this.dr.readInt32();
       case 2:
@@ -492,7 +498,7 @@ export class BonDecoder {
       }
       case 9: {
         const len = this.dr.read7BitInt();
-        const arr = new Array(len);
+        const arr = Array.from({ length: len });
         for (let i = 0; i < len; i++) arr[i] = this.decode();
         return arr;
       }
@@ -500,6 +506,8 @@ export class BonDecoder {
         return new Date(this.dr.readInt64());
       case 99:
         return this.strArr[this.dr.read7BitInt()];
+      default:
+        return null;
     }
   }
 }
@@ -701,9 +709,9 @@ const registry = new Map();
 /** lz4 + 头部掩码的 "lx" 方案 */
 const lx = {
   encrypt: (buf) => {
-    let e = lz4.compress(buf);
+    const e = lz4.compress(buf);
     const t = 2 + ~~(Math.random() * 248);
-    for (let n = Math.min(e.length, 100); --n >= 0; ) e[n] ^= t;
+    for (let n = Math.min(e.length, 100); --n >= 0;) e[n] ^= t;
 
     // 写入标识与混淆位
     e[0] = 112;
@@ -732,7 +740,7 @@ const lx = {
       (((e[3] >> 4) & 1) << 2) |
       (((e[3] >> 2) & 1) << 1) |
       (e[3] & 1);
-    for (let n = Math.min(100, e.length); --n >= 2; ) e[n] ^= t;
+    for (let n = Math.min(100, e.length); --n >= 2;) e[n] ^= t;
     e[0] = 4;
     e[1] = 34;
     e[2] = 77;
@@ -752,7 +760,7 @@ const x = {
     n[3] = (rnd >>> 24) & 0xff;
     n.set(e, 4);
     const r = 2 + ~~(Math.random() * 248);
-    for (let i = n.length; --i >= 0; ) n[i] ^= r;
+    for (let i = n.length; --i >= 0;) n[i] ^= r;
     n[0] = 112;
     n[1] = 120;
     n[2] =
@@ -779,7 +787,7 @@ const x = {
       (((e[3] >> 4) & 1) << 2) |
       (((e[3] >> 2) & 1) << 1) |
       (e[3] & 1);
-    for (let n = e.length; --n >= 4; ) e[n] ^= t;
+    for (let n = e.length; --n >= 4;) e[n] ^= t;
     return e.subarray(4);
   },
 };
@@ -826,7 +834,7 @@ export function getEnc(name) {
 
 /** 对外：encode（bon.encode → 加密） */
 export function encode(obj, enc) {
-  let bytes = bon.encode(obj, false);
+  const bytes = bon.encode(obj, false);
   const out = enc.encrypt(bytes);
   return out.buffer.byteLength === out.length && out.byteOffset === 0
     ? out.buffer
@@ -846,7 +854,7 @@ export function parse(buf, enc, isLegion = false) {
 }
 
 /** 对外：parse（解密 → bon.decode → ProtoMsg） 返回的消息体是盐场版本的消息体*/
-function parseLegion(buf, enc, isLegion) {
+function parseLegion(buf, enc) {
   const u8 = new Uint8Array(buf);
   const plain = enc.decrypt(u8);
   const raw = bon.decode(plain);
@@ -992,7 +1000,7 @@ export const bonProtocol = {
   },
   generateSeq: () => Math.floor(Math.random() * 1000000),
   generateMessageId: () =>
-    "msg_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+    `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
 };
 
 // 导出单独的加密器类以兼容测试文件

@@ -150,7 +150,7 @@
                     <span class="group-count">({{ group.length }})</span>
                   </div>
                   <div
-                    v-for="(legion, index) in group"
+                    v-for="legion in group"
                     :key="legion.id"
                     class="legion-item"
                     :style="{ borderLeftColor: legion.color }"
@@ -179,26 +179,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
-import { useMessage } from "naive-ui";
-import { useTokenStore } from "@/stores/tokenStore";
-import { useLegionWarStore } from "@/stores/legionWarStore";
-import { extractValidData, HexGraph, roadPointList } from "@/utils/legionWar";
-import { getCurrentTimeByFormat } from "@/utils/DateTimeUtils";
 import {
+  ImageOutline,
   LogInOutline,
   MapOutline,
   RefreshOutline,
-  ImageOutline,
   ChatbubbleOutline,
 } from "@vicons/ionicons5";
-import { allianceincludes } from "@/utils/clubWarrankUtils";
-import { isLegionWarAccessible } from "@/utils/clubBattleUtils";
-import { storeToRefs } from "pinia";
 import html2canvas from "html2canvas";
+import { useMessage } from "naive-ui";
+import { storeToRefs } from "pinia";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useLegionWarStore } from "@/stores/legionWarStore";
+import { useTokenStore } from "@/stores/tokenStore";
+import { isLegionWarAccessible } from "@/utils/clubBattleUtils";
+import { allianceincludes } from "@/utils/clubWarrankUtils";
+import { getCurrentTimeByFormat } from "@/utils/DateTimeUtils";
+import { HexGraph, roadPointList } from "@/utils/legionWar";
 
 const message = useMessage();
-const tokenStore = useTokenStore();
+useTokenStore();
 const legionWarStore = useLegionWarStore();
 
 const isAccessible = ref(isLegionWarAccessible());
@@ -218,7 +218,7 @@ const legionWarMapDom = ref(null);
 let ctx = null;
 let resizeHandler = null;
 
-const isJoined = isEntireBattlefield; // alias for compatibility if needed, but we use isEntireBattlefield in template
+// alias for compatibility if needed, but we use isEntireBattlefield in template
 
 const exporting = ref(false);
 const sendingReviveInfo = ref(false);
@@ -294,8 +294,8 @@ const sortedLegions = computed(() => {
     return {
       ...legion,
       announcement: detail.announcement || "",
-      alliance: alliance,
-      redCount: redCount,
+      alliance,
+      redCount,
     };
   });
 
@@ -309,7 +309,7 @@ const sortedLegions = computed(() => {
       return b.power - a.power;
     }
     // 3. ID 升序
-    return parseInt(a.id) - parseInt(b.id);
+    return Number.parseInt(a.id) - Number.parseInt(b.id);
   });
 });
 
@@ -387,7 +387,7 @@ let hexHeight = Math.sqrt(3) * hexSize;
 const arr = Array.from({ length: 41 }, () =>
   Array.from({ length: 41 }, () => 0),
 );
-let leftMaxPoint = [0, 0];
+const leftMaxPoint = [0, 0];
 
 // 颜色映射
 const typeBg = (type) => {
@@ -432,7 +432,7 @@ const typeLabel = (type) => {
 };
 
 // 绘制六边形
-const drawHexagon = (x, y, color, type) => {
+const drawHexagon = (x, y, color) => {
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
     const angle = ((2 * Math.PI) / 6) * i;
@@ -485,7 +485,7 @@ const drawCanvasContent = () => {
   arr.forEach((row) => row.fill(0));
 
   // 获取图结构实例
-  let graph = HexGraph.getInstance();
+  const graph = HexGraph.getInstance();
   graph.removeAllNode();
 
   // 计算需要绘制的行列数以铺满画布
@@ -540,8 +540,8 @@ const drawCanvasContent = () => {
 
       return {
         id: item.id,
-        type: type,
-        belongsLegionId: belongsLegionId,
+        type,
+        belongsLegionId,
         hP: realTimeNode ? realTimeNode.hP : 0,
         maxHP: realTimeNode ? realTimeNode.maxHP : 0,
         point: realTimeNode ? realTimeNode.point : 0,
@@ -568,10 +568,10 @@ const drawCanvasContent = () => {
 
   nodesToDraw.forEach((node) => {
     const [colStr, rowStr] = node.id.split("_");
-    const col = parseInt(colStr);
-    const row = parseInt(rowStr);
+    const col = Number.parseInt(colStr);
+    const row = Number.parseInt(rowStr);
 
-    if (!isNaN(col) && !isNaN(row)) {
+    if (!Number.isNaN(+col) && !Number.isNaN(+row)) {
       const x = col * (hexWidth * 0.75) + hexSize + gap * col;
       const y =
         row * hexHeight + (col % 2 === 1 ? hexHeight / 2 : 0) + gap * row;
@@ -613,10 +613,10 @@ const drawCanvasContent = () => {
       // 必须有大本营坐标
       if (legion.strongholdId) {
         const [colStr, rowStr] = legion.strongholdId.split("_");
-        const col = parseInt(colStr);
-        const row = parseInt(rowStr);
+        const col = Number.parseInt(colStr);
+        const row = Number.parseInt(rowStr);
 
-        if (!isNaN(col) && !isNaN(row)) {
+        if (!Number.isNaN(+col) && !Number.isNaN(+row)) {
           const x = col * (hexWidth * 0.75) + hexSize + gap * col;
           const y =
             row * hexHeight + (col % 2 === 1 ? hexHeight / 2 : 0) + gap * row;

@@ -43,13 +43,10 @@ export const useGameRolesStore = defineStore("gameRoles", () => {
       isLoading.value = true;
 
       // 生成角色ID和游戏token
-      const roleId =
-        "role_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-      const gameToken =
-        "game_token_" +
-        Date.now() +
-        "_" +
-        Math.random().toString(36).substr(2, 16);
+      const roleId = `role_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const gameToken = `game_token_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 16)}`;
 
       const newRole = {
         ...roleData,
@@ -69,7 +66,7 @@ export const useGameRolesStore = defineStore("gameRoles", () => {
       // 生成并保存游戏token
       const tokenData = {
         token: gameToken,
-        roleId: roleId,
+        roleId,
         roleName: newRole.name,
         server: newRole.server,
         wsUrl: null, // 使用默认的游戏WebSocket地址

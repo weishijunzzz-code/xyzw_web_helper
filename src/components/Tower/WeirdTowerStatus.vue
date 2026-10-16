@@ -15,7 +15,9 @@
         <span class="energy-count">{{ towerEnergy }}</span>
         <button
           class="buy-energy-button"
-          :class="{ disabled: isBuying || isClimbing || isUsingItems || isMerging }"
+          :class="{
+            disabled: isBuying || isClimbing || isUsingItems || isMerging,
+          }"
           :disabled="isBuying || isClimbing || isUsingItems || isMerging"
           @click="openBuyEnergyDialog"
         >
@@ -27,11 +29,17 @@
     <!-- 购买小鱼干弹窗：Teleport 到 body，脱离 n-tabs animated 的 transform 包含块，
          否则 position: fixed 会失效导致弹窗跟随鼠标移动 -->
     <Teleport to="body">
-      <div v-if="showBuyEnergyDialog" class="buy-energy-mask" @click.self="closeBuyEnergyDialog">
+      <div
+        v-if="showBuyEnergyDialog"
+        class="buy-energy-mask"
+        @click.self="closeBuyEnergyDialog"
+      >
         <div class="buy-energy-dialog" @click.stop>
           <div class="dialog-header">
             <h3>购买小鱼干</h3>
-            <button class="dialog-close" @click="closeBuyEnergyDialog">×</button>
+            <button class="dialog-close" @click="closeBuyEnergyDialog">
+              ×
+            </button>
           </div>
           <div class="dialog-body">
             <div class="dialog-row">
@@ -52,7 +60,14 @@
             <div class="dialog-row">
               <span class="row-label">快捷选择</span>
               <div class="quick-btns">
-                <button v-for="n in [1, 10, 50, 100]" :key="n" class="quick-btn" @click="buyEnergyNum = n">{{ n }}</button>
+                <button
+                  v-for="n in [1, 10, 50, 100]"
+                  :key="n"
+                  class="quick-btn"
+                  @click="buyEnergyNum = n"
+                >
+                  {{ n }}
+                </button>
               </div>
             </div>
             <div class="dialog-hint">
@@ -65,15 +80,35 @@
                     <stop offset="100%" stop-color="#E6A117" />
                   </linearGradient>
                 </defs>
-                <path d="M12 1.6 22 6.2 12 10.8 2 6.2Z" fill="url(#goldFace)" stroke="#B07600" stroke-width="1.1" stroke-linejoin="round" />
-                <path d="M2 6.2V17.8L12 22.4V10.8Z" fill="#F9A825" stroke="#B07600" stroke-width="1.1" stroke-linejoin="round" />
-                <path d="M22 6.2V17.8L12 22.4V10.8Z" fill="#EFB218" stroke="#B07600" stroke-width="1.1" stroke-linejoin="round" />
+                <path
+                  d="M12 1.6 22 6.2 12 10.8 2 6.2Z"
+                  fill="url(#goldFace)"
+                  stroke="#B07600"
+                  stroke-width="1.1"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M2 6.2V17.8L12 22.4V10.8Z"
+                  fill="#F9A825"
+                  stroke="#B07600"
+                  stroke-width="1.1"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M22 6.2V17.8L12 22.4V10.8Z"
+                  fill="#EFB218"
+                  stroke="#B07600"
+                  stroke-width="1.1"
+                  stroke-linejoin="round"
+                />
               </svg>
               金砖，每次购买 1-100 份小鱼干
             </div>
           </div>
           <div class="dialog-footer">
-            <button class="btn-cancel" @click="closeBuyEnergyDialog">取消</button>
+            <button class="btn-cancel" @click="closeBuyEnergyDialog">
+              取消
+            </button>
             <button
               class="btn-confirm"
               :class="{ disabled: buyEnergyNum < 1 || buyEnergyNum > 100 }"
@@ -107,8 +142,8 @@
         />
         <span class="climb-limit-unit">次</span>
         <button
+          class="climb-button"
           :class="[
-            'climb-button',
             {
               active: canClimb,
               disabled: !canClimb,
@@ -122,7 +157,9 @@
       </div>
 
       <!-- 停止批量爬塔按钮，仅批量时显示 -->
-      <button v-if="isClimbing" class="stop-button" @click="stopClimbing">停止爬塔</button>
+      <button v-if="isClimbing" class="stop-button" @click="stopClimbing">
+        停止爬塔
+      </button>
 
       <button
         v-if="!isClimbing && !isUsingItems && !isMerging"
@@ -131,7 +168,9 @@
       >
         一键使用道具
       </button>
-      <button v-if="isUsingItems" class="stop-button" @click="stopUsingItems">停止使用</button>
+      <button v-if="isUsingItems" class="stop-button" @click="stopUsingItems">
+        停止使用
+      </button>
 
       <button
         v-if="!isClimbing && !isUsingItems && !isMerging"
@@ -145,7 +184,17 @@
 </template>
 
 <script setup>
+import { useMessage } from "naive-ui";
+
 // 停止批量爬塔操作
+import { computed, onMounted, ref, watch } from "vue";
+import { useTokenStore } from "@/stores/tokenStore";
+import { isSameGameValue } from "@/utils/gameValue.js";
+import {
+  DEFAULT_WEIRD_TOWER_MAX_CLIMB,
+  normalizeWeirdTowerMaxClimb,
+} from "@/utils/towerClimbLimit.js";
+
 let stopFlag = false;
 let stopItemFlag = false;
 let stopMergeFlag = false;
@@ -170,14 +219,6 @@ const stopUsingItems = () => {
   message.info("已手动停止使用道具");
 };
 
-import { computed, onMounted, ref, watch } from "vue";
-import { useTokenStore } from "@/stores/tokenStore";
-import { useMessage } from "naive-ui";
-import {
-  DEFAULT_WEIRD_TOWER_MAX_CLIMB,
-  normalizeWeirdTowerMaxClimb,
-} from "@/utils/towerClimbLimit.js";
-
 const tokenStore = useTokenStore();
 const message = useMessage();
 
@@ -192,26 +233,26 @@ const maxClimbInput = ref(DEFAULT_WEIRD_TOWER_MAX_CLIMB);
 const climbTimeout = ref(null); // 用于超时重置状态
 const itemTimeout = ref(null); // 用于道具使用超时
 const mergeTimeout = ref(null); // 用于合成超时
-const lastClimbResult = ref(null); // 最后一次爬塔结果
+// 最后一次爬塔结果
 
 // 计算属性 - 从gameData中获取塔相关信息
 const evoTowerInfo = computed(() => {
-  const data = tokenStore.gameData?.evoTowerInfo || null
-  return data
-})
+  const data = tokenStore.gameData?.evoTowerInfo || null;
+  return data;
+});
 
 const weirdTowerData = computed(() => {
-  return evoTowerInfo.value?.evoTower || null
-})
+  return evoTowerInfo.value?.evoTower || null;
+});
 
 const currentTowerId = computed(() => {
-  return weirdTowerData.value?.towerId || 0
-})
+  return weirdTowerData.value?.towerId || 0;
+});
 
 // 已领取到的章号，与已通关章数不一致时游戏服会拒绝开战
 const rewardTowerId = computed(() => {
-  return weirdTowerData.value?.rewardTowerId || 0
-})
+  return weirdTowerData.value?.rewardTowerId || 0;
+});
 
 // 未领取的章节通关奖励数量：已通关章数(towerId / 10) - 已领章号
 const pendingChapterRewards = computed(() => {
@@ -220,11 +261,7 @@ const pendingChapterRewards = computed(() => {
     return 0;
   }
   return Math.max(0, Math.floor(towerId / 10) - rewardTowerId.value);
-})
-
-const lotteryLeftCnt = computed(() => {
-  return weirdTowerData.value?.lotteryLeftCnt || 0
-})
+});
 
 const displayFloor = computed(() => {
   const towerId = currentTowerId.value;
@@ -263,7 +300,12 @@ const openBuyEnergyDialog = () => {
     message.warning("请先选择Token");
     return;
   }
-  if (isClimbing.value || isUsingItems.value || isMerging.value || isBuying.value) {
+  if (
+    isClimbing.value ||
+    isUsingItems.value ||
+    isMerging.value ||
+    isBuying.value
+  ) {
     message.warning("正在执行其他操作，请稍候");
     return;
   }
@@ -336,7 +378,6 @@ const confirmBuyEnergy = async () => {
   }
 };
 
-
 const getCurrentActivityWeek = computed(() => {
   const now = new Date();
   // 校准后的起始日期：2025-12-12是黑市周开始
@@ -351,16 +392,16 @@ const getCurrentActivityWeek = computed(() => {
   const cyclePosition = elapsed % cycleDuration;
 
   if (cyclePosition < weekDuration) {
-    return '黑市周';
+    return "黑市周";
   } else if (cyclePosition < 2 * weekDuration) {
-    return '招募周';
+    return "招募周";
   } else {
-    return '宝箱周';
+    return "宝箱周";
   }
 });
 
 const isWeirdTowerActivityOpen = computed(() => {
-  return getCurrentActivityWeek.value === '黑市周';
+  return getCurrentActivityWeek.value === "黑市周";
 });
 
 // 方法
@@ -399,7 +440,7 @@ const startUseItems = async () => {
       tokenId,
       "mergebox_getinfo",
       { actType: 1 },
-      5000
+      5000,
     );
 
     // 获取怪异塔信息以读取剩余道具数量
@@ -407,7 +448,7 @@ const startUseItems = async () => {
       tokenId,
       "evotower_getinfo",
       {},
-      5000
+      5000,
     );
 
     if (!infoRes || !infoRes.mergeBox) {
@@ -424,9 +465,12 @@ const startUseItems = async () => {
       return;
     }
 
-    message.success(`开始使用道具，剩余：${lotteryLeftCnt}，已用：${costTotalCnt}`);
+    message.success(
+      `开始使用道具，剩余：${lotteryLeftCnt}，已用：${costTotalCnt}`,
+    );
     let processedCount = 0;
 
+    // eslint-disable-next-line no-unmodified-loop-condition -- The Stop button changes this flag while awaited requests yield.
     while (lotteryLeftCnt > 0 && !stopItemFlag) {
       let pos = {};
       if (costTotalCnt < 2) {
@@ -443,9 +487,9 @@ const startUseItems = async () => {
         "mergebox_openbox",
         {
           actType: 1,
-          pos: pos
+          pos,
         },
-        5000
+        5000,
       );
 
       costTotalCnt++;
@@ -456,19 +500,20 @@ const startUseItems = async () => {
     }
 
     // 领取累计奖励
-    await tokenStore.sendMessageWithPromise(
-      tokenId,
-      "mergebox_claimcostprogress",
-      { actType: 1 },
-      5000
-    ).catch(() => {});
+    await tokenStore
+      .sendMessageWithPromise(
+        tokenId,
+        "mergebox_claimcostprogress",
+        { actType: 1 },
+        5000,
+      )
+      .catch(() => {});
 
     message.success(`已使用道具 ${processedCount} 次`);
     // 刷新一下
     await getTowerInfo();
-
   } catch (error) {
-    message.error("使用道具失败: " + (error.message || "未知错误"));
+    message.error(`使用道具失败: ${error.message || "未知错误"}`);
   } finally {
     if (itemTimeout.value) {
       clearTimeout(itemTimeout.value);
@@ -507,6 +552,7 @@ const autoMergeItems = async () => {
     let loopCount = 0;
     const MAX_LOOPS = 20;
 
+    // eslint-disable-next-line no-unmodified-loop-condition -- The Stop button changes this flag while awaited requests yield.
     while (loopCount < MAX_LOOPS && !stopMergeFlag) {
       loopCount++;
 
@@ -515,11 +561,11 @@ const autoMergeItems = async () => {
         tokenId,
         "mergebox_getinfo",
         { actType: 1 },
-        5000
+        5000,
       );
 
       if (!infoRes || !infoRes.mergeBox) {
-         throw new Error("返回数据缺少 mergeBox");
+        throw new Error("返回数据缺少 mergeBox");
       }
 
       // 领取合成奖励
@@ -530,13 +576,15 @@ const autoMergeItems = async () => {
         for (const taskId in taskMap) {
           if (stopMergeFlag) break;
           if (taskMap[taskId] !== 0 && !taskClaimMap[taskId]) {
-             await tokenStore.sendMessageWithPromise(
-               tokenId,
-               "mergebox_claimmergeprogress",
-               { actType: 1, taskId: parseInt(taskId) },
-               2000
-             ).catch(() => {});
-             await new Promise((res) => setTimeout(res, 500));
+            await tokenStore
+              .sendMessageWithPromise(
+                tokenId,
+                "mergebox_claimmergeprogress",
+                { actType: 1, taskId: Number.parseInt(taskId) },
+                2000,
+              )
+              .catch(() => {});
+            await new Promise((res) => setTimeout(res, 500));
           }
         }
       }
@@ -549,11 +597,15 @@ const autoMergeItems = async () => {
       for (const xStr in gridMap) {
         for (const yStr in gridMap[xStr]) {
           const item = gridMap[xStr][yStr];
-          if (item.gridConfId == 0 && item.gridItemId > 0 && !item.isLock) {
+          if (
+            isSameGameValue(item.gridConfId, 0) &&
+            item.gridItemId > 0 &&
+            !item.isLock
+          ) {
             items.push({
-              x: parseInt(xStr),
-              y: parseInt(yStr),
-              id: item.gridItemId
+              x: Number.parseInt(xStr),
+              y: Number.parseInt(yStr),
+              id: item.gridItemId,
             });
           }
         }
@@ -561,7 +613,7 @@ const autoMergeItems = async () => {
 
       // 按 gridItemId 分组
       const groupedItems = {};
-      items.forEach(item => {
+      items.forEach((item) => {
         if (!groupedItems[item.id]) {
           groupedItems[item.id] = [];
         }
@@ -584,7 +636,10 @@ const autoMergeItems = async () => {
         break;
       }
 
-      const isLevel8OrAbove = infoRes.mergeBox.taskMap && infoRes.mergeBox.taskMap["251212208"] && infoRes.mergeBox.taskMap["251212208"] !== 0;
+      const isLevel8OrAbove =
+        infoRes.mergeBox.taskMap &&
+        infoRes.mergeBox.taskMap["251212208"] &&
+        infoRes.mergeBox.taskMap["251212208"] !== 0;
 
       if (isLevel8OrAbove) {
         // 8级以上使用智能合成
@@ -592,7 +647,7 @@ const autoMergeItems = async () => {
           tokenId,
           "mergebox_automergeitem",
           { actType: 1 },
-          10000 
+          10000,
         );
         await new Promise((res) => setTimeout(res, 1500));
       } else {
@@ -606,21 +661,23 @@ const autoMergeItems = async () => {
             const source = group.shift();
             const target = group.shift();
 
-            await tokenStore.sendMessageWithPromise(
-              tokenId,
-              "mergebox_mergeitem",
-              {
-                actType: 1,
-                sourcePos: { gridX: source.x, gridY: source.y },
-                targetPos: { gridX: target.x, gridY: target.y }
-              },
-              1000
-            ).catch(() => {});
+            await tokenStore
+              .sendMessageWithPromise(
+                tokenId,
+                "mergebox_mergeitem",
+                {
+                  actType: 1,
+                  sourcePos: { gridX: source.x, gridY: source.y },
+                  targetPos: { gridX: target.x, gridY: target.y },
+                },
+                1000,
+              )
+              .catch(() => {});
             await new Promise((res) => setTimeout(res, 300));
           }
         }
       }
-      
+
       // 继续下一轮循环
       await new Promise((res) => setTimeout(res, 500));
     }
@@ -628,9 +685,8 @@ const autoMergeItems = async () => {
     message.success("一键合成操作完成");
     // 刷新一下
     await getTowerInfo();
-
   } catch (error) {
-    message.error("一键合成失败: " + (error.message || "未知错误"));
+    message.error(`一键合成失败: ${error.message || "未知错误"}`);
   } finally {
     if (mergeTimeout.value) {
       clearTimeout(mergeTimeout.value);
@@ -645,12 +701,12 @@ const startTowerClimb = async () => {
     message.warning("请先选择Token");
     return;
   }
-  
+
   if (!isWeirdTowerActivityOpen.value) {
     message.warning("怪异塔活动未开始或已结束");
     return;
   }
-  
+
   if (!canClimb.value) {
     message.warning("体力不足或正在执行其他操作");
     return;
@@ -718,28 +774,31 @@ const startTowerClimb = async () => {
       if (towerData && towerData.taskClaimMap) {
         const now = new Date();
         const year = now.getFullYear().toString().slice(2);
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
+        const month = (now.getMonth() + 1).toString().padStart(2, "0");
+        const day = now.getDate().toString().padStart(2, "0");
         const dateKey = `${year}${month}${day}`;
-        
+
         const dailyTasks = towerData.taskClaimMap[dateKey] || {};
         const taskIds = [1, 2, 3];
-        
+
         for (const taskId of taskIds) {
-           if (!dailyTasks[taskId]) {
-             await tokenStore.sendMessageWithPromise(
-               tokenId,
-               "evotower_claimtask",
-               { taskId: taskId },
-               2000
-             ).then(() => {
+          if (!dailyTasks[taskId]) {
+            await tokenStore
+              .sendMessageWithPromise(
+                tokenId,
+                "evotower_claimtask",
+                { taskId },
+                2000,
+              )
+              .then(() => {
                 message.success(`领取每日任务奖励 ${taskId} 成功`);
-             }).catch(() => {
+              })
+              .catch(() => {
                 // 失败静默，可能是还没达到条件
-             });
-             // 稍微延时避免请求过快
-             await new Promise(r => setTimeout(r, 200)); 
-           }
+              });
+            // 稍微延时避免请求过快
+            await new Promise((r) => setTimeout(r, 200));
+          }
         }
       }
 
@@ -753,28 +812,30 @@ const startTowerClimb = async () => {
     // 获取免费道具数量
     const freeEnergyResult = await tokenStore.sendMessageWithPromise(
       tokenId,
-      'mergebox_getinfo',
+      "mergebox_getinfo",
       {
-        actType: 1
+        actType: 1,
       },
-      5000
+      5000,
     );
     if (freeEnergyResult && freeEnergyResult.mergeBox.freeEnergy > 0) {
       // 领取免费道具
       await tokenStore.sendMessageWithPromise(
         tokenId,
-        'mergebox_claimfreeenergy',
+        "mergebox_claimfreeenergy",
         {
-          actType: 1
+          actType: 1,
         },
-        5000
+        5000,
       );
-      message.success(`成功领取免费道具${freeEnergyResult.mergeBox.freeEnergy}个！`);
+      message.success(
+        `成功领取免费道具${freeEnergyResult.mergeBox.freeEnergy}个！`,
+      );
     }
     await new Promise((res) => setTimeout(res, 500));
     message.success(`已自动爬塔${climbCount}次，体力已耗尽或达到上限。`);
   } catch (error) {
-    message.error("批量爬塔失败: " + (error.message || "未知错误"));
+    message.error(`批量爬塔失败: ${error.message || "未知错误"}`);
   }
 
   // 清除超时并重置状态
@@ -888,7 +949,7 @@ watch(
 onMounted(() => {
   // 检查WebSocket客户端
   if (tokenStore.selectedToken) {
-    const client = tokenStore.getWebSocketClient(tokenStore.selectedToken.id);
+    tokenStore.getWebSocketClient(tokenStore.selectedToken.id);
   }
 
   // 组件挂载时获取塔信息
@@ -974,7 +1035,9 @@ onMounted(() => {
   border: none;
   border-radius: var(--border-radius-small, 6px);
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
   white-space: nowrap;
   line-height: 20px;
 }
@@ -1039,7 +1102,9 @@ onMounted(() => {
   border: none;
   border-radius: var(--border-radius-small, 6px);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .buy-energy-dialog .dialog-close:hover {
@@ -1164,7 +1229,9 @@ onMounted(() => {
   font-weight: var(--font-weight-medium);
   border-radius: var(--border-radius-small, 6px);
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
 }
 
 .btn-cancel {
@@ -1192,7 +1259,6 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 
 .card-content {
   background: var(--bg-tertiary);

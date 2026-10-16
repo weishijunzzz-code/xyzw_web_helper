@@ -125,7 +125,7 @@ export const LINEUP_RULES = [
 ];
 
 export const getLineupType = (heroList) => {
-  const ids = new Set(heroList.map((h) => parseInt(h.heroId)));
+  const ids = new Set(heroList.map((h) => Number.parseInt(h.heroId)));
   const has = (id) => ids.has(id);
 
   for (const rule of LINEUP_RULES) {
@@ -246,7 +246,7 @@ const FishMap = {
   1121: { name: "回响" },
 };
 
-export { FishMap, PearlMap, color };
+export { color, FishMap, PearlMap };
 
 //洗练颜色
 const color = {
@@ -289,15 +289,15 @@ export const formatWeapon = (id) => {
 /**
  * 提取传入对象中的鱼和鱼珠信息
  * @param {*} obj
- * @returns
+ * @returns {object} Fish and pearl metadata indexed by hero artifact ID.
  */
 export const HeroFillInfo = (obj) => {
-  let temp = {};
+  const temp = {};
   // 检查 obj 和 obj.heroes 是否存在
   if (obj && obj.heroes && typeof obj.heroes === "object") {
     Object.values(obj.heroes).forEach((hero) => {
       temp[hero.artifactId] = {
-        FishInfo: FishMap[(hero.artifactId + "").substring(0, 4)],
+        FishInfo: FishMap[`${hero.artifactId}`.substring(0, 4)],
         artifactId: hero.artifactId,
       };
       // 获取鱼珠技能信息，先检查 appendSkill 是否存在

@@ -108,25 +108,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useMessage } from "naive-ui";
-import { useTokenStore } from "@/stores/tokenStore";
 import SkeletonCard from "@/components/Common/SkeletonCard.vue";
 import AnimatedNumber from "@/components/Common/AnimatedNumber.vue";
 import {
-  PersonCircle,
-  Cube,
-  Settings,
-  CheckmarkCircle,
-  Time,
-  TrendingUp,
   Add,
+  CheckmarkCircle,
   Cloud,
+  Cube,
   GameController,
 } from "@vicons/ionicons5";
-import useIndexedDB from "@/hooks/useIndexedDB";
 import lz4 from "lz4js";
+import { useMessage } from "naive-ui";
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import useIndexedDB from "@/hooks/useIndexedDB";
+import { useTokenStore } from "@/stores/tokenStore";
 
 const router = useRouter();
 const message = useMessage();
@@ -167,7 +163,7 @@ function xDecrypt(buf) {
   const e = new Uint8Array(buf);
   const t = extractKey(e);
   const out = new Uint8Array(e);
-  for (let n = out.length; --n >= 4; ) out[n] ^= t;
+  for (let n = out.length; --n >= 4;) out[n] ^= t;
   return out.subarray(4);
 }
 
@@ -176,7 +172,7 @@ function lxEncrypt(plain) {
   const out = new Uint8Array(compressed.length);
   out.set(compressed);
   const r = 2 + ~~(Math.random() * 248);
-  for (let n = Math.min(out.length, 100); --n >= 0; ) out[n] ^= r;
+  for (let n = Math.min(out.length, 100); --n >= 0;) out[n] ^= r;
   out[0] = 112;
   out[1] = 108;
   encodeKey(out, r);
@@ -208,7 +204,7 @@ const openGame = async () => {
   const hex = Array.from(converted)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  localStorage.setItem("bin_data_" + token.id, hex);
+  localStorage.setItem(`bin_data_${token.id}`, hex);
   localStorage.setItem("current_bin_id", token.id);
   let binList = [];
   try {
@@ -219,7 +215,7 @@ const openGame = async () => {
       id: token.id,
       name: token.name || "Token",
       byteLength: binData.byteLength,
-      size: (binData.byteLength / 1024).toFixed(1) + " KB",
+      size: `${(binData.byteLength / 1024).toFixed(1)} KB`,
       order: binList.length,
     });
     localStorage.setItem("bin_file_list", JSON.stringify(binList));

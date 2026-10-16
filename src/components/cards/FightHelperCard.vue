@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="bottle-helper" :statusClass="{ active: state.isRunning }">
+  <MyCard class="bottle-helper" :status-class="{ active: state.isRunning }">
     <template #icon>
       <img src="/icons/1736425783912140.png" alt="竞技场" />
     </template>
@@ -36,8 +36,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, ref } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
 
@@ -121,7 +121,6 @@ const handleFightHelper = async () => {
   await tokenStore.sendMessage(tokenId, "role_getroleinfo");
   message.success("竞技场战斗完毕");
   state.value.isRunning = false;
-  return;
 };
 </script>
 

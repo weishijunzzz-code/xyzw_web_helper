@@ -1,6 +1,6 @@
 <template>
   <!-- 俱乐部签到 -->
-  <MyCard class="legion-match" :statusClass="{ active: isSignedIn }">
+  <MyCard class="legion-match" :status-class="{ active: isSignedIn }">
     <template #icon>
       <img src="/icons/1733492491706148.png" alt="签到图标" />
     </template>
@@ -31,8 +31,8 @@
 </template>
 
 <script setup lang="ts">
-import { useTokenStore } from "@/stores/tokenStore";
 import { useMessage } from "naive-ui";
+import { useTokenStore } from "@/stores/tokenStore";
 
 const tokenStore = useTokenStore();
 const message = useMessage();

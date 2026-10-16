@@ -6,31 +6,31 @@
  * yyyy - 4位年份 | MM - 2位月份（补0） | dd - 2位日期（补0）
  * HH - 24小时制小时（补0） | mm - 2位分钟（补0） | ss - 2位秒数（补0）
  */
- export function getCurrentTimeByFormat(format) {
+export function getCurrentTimeByFormat(format) {
   // 第一步：处理参数默认值（格式为空/非字符串时，用默认格式）
   const defaultFormat = "yyyy-MM-dd HH:mm:ss";
-  if (typeof format !== 'string' || format.trim() === '') {
-      format = defaultFormat;
+  if (typeof format !== "string" || format.trim() === "") {
+    format = defaultFormat;
   }
   format = format.trim();
 
   // 第二步：获取当前时间的所有部分（补零处理）
   const now = new Date();
   const year = now.getFullYear(); // 4位年
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始，补0到2位
-  const day = String(now.getDate()).padStart(2, '0'); // 日期补0
-  const hour = String(now.getHours()).padStart(2, '0'); // 24小时制，补0
-  const minute = String(now.getMinutes()).padStart(2, '0'); // 分钟补0
-  const second = String(now.getSeconds()).padStart(2, '0'); // 秒数补0
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // 月份从0开始，补0到2位
+  const day = String(now.getDate()).padStart(2, "0"); // 日期补0
+  const hour = String(now.getHours()).padStart(2, "0"); // 24小时制，补0
+  const minute = String(now.getMinutes()).padStart(2, "0"); // 分钟补0
+  const second = String(now.getSeconds()).padStart(2, "0"); // 秒数补0
 
   // 第三步：替换格式中的占位符
-  let result = format
-      .replace(/yyyy/g, year)
-      .replace(/MM/g, month)
-      .replace(/dd/g, day)
-      .replace(/HH/g, hour)
-      .replace(/mm/g, minute)
-      .replace(/ss/g, second);
+  const result = format
+    .replace(/yyyy/g, year)
+    .replace(/MM/g, month)
+    .replace(/dd/g, day)
+    .replace(/HH/g, hour)
+    .replace(/mm/g, minute)
+    .replace(/ss/g, second);
 
   return result;
 }

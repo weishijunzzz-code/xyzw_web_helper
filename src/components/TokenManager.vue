@@ -4,9 +4,9 @@
       <div class="header-actions">
         <n-button size="small" @click="refreshTokens">
           <template #icon>
-            <n-icon>
+            <NIcon>
               <Refresh />
-            </n-icon>
+            </NIcon>
           </template>
           <span class="btn-text">刷新</span>
         </n-button>
@@ -19,9 +19,9 @@
         <n-upload :show-file-list="false" accept=".json" @change="importTokens">
           <n-button size="small" type="info">
             <template #icon>
-              <n-icon>
+              <NIcon>
                 <CloudUpload />
-              </n-icon>
+              </NIcon>
             </template>
             <span class="btn-text">导入</span>
           </n-button>
@@ -97,9 +97,9 @@
                 >
                   <n-button size="tiny" type="tertiary">
                     <template #icon>
-                      <n-icon>
+                      <NIcon>
                         <EllipsisHorizontal />
-                      </n-icon>
+                      </NIcon>
                     </template>
                   </n-button>
                 </n-dropdown>
@@ -154,22 +154,20 @@
 </template>
 
 <script setup>
-import { ref, h } from "vue";
-import { useMessage, useDialog, NIcon } from "naive-ui";
-import { gameTokens } from "@/stores/tokenStore";
-import { useLocalTokenStore } from "@/stores/localTokenManager";
-import { useGameRolesStore } from "@/stores/gameRoles";
 import EmptyState from "@/components/Common/EmptyState.vue";
 import {
-  Refresh,
-  Download,
   CloudUpload,
-  EllipsisHorizontal,
-  Create,
-  TrashBin,
-  SyncCircle,
   CopyOutline,
+  Create,
+  EllipsisHorizontal,
+  Refresh,
+  SyncCircle,
+  TrashBin,
 } from "@vicons/ionicons5";
+import { NIcon, useDialog, useMessage } from "naive-ui";
+import { h } from "vue";
+import { useGameRolesStore } from "@/stores/gameRoles";
+import { useLocalTokenStore } from "@/stores/localTokenManager";
 
 const message = useMessage();
 const dialog = useDialog();
@@ -190,7 +188,7 @@ const maskToken = (token) => {
   if (!token) return "";
   const len = token.length;
   if (len <= 8) return token;
-  return token.substring(0, 8) + "***" + token.substring(len - 8);
+  return `${token.substring(0, 8)}***${token.substring(len - 8)}`;
 };
 
 const formatTime = (timestamp) => {
@@ -441,7 +439,7 @@ const removeToken = (roleId) => {
 };
 
 // 编辑Token（暂时显示提示信息，后续可以实现编辑功能）
-const editToken = (roleId, tokenData) => {
+const editToken = (_roleId) => {
   message.info("编辑功能正在开发中");
 };
 
@@ -515,7 +513,7 @@ const refreshTokenFromUrl = async (roleId, tokenData) => {
         message.success("Token刷新成功");
       } catch (error) {
         console.error("URL刷新Token失败:", error);
-        message.error("刷新失败: " + error.message);
+        message.error(`刷新失败: ${error.message}`);
       }
     },
   });
@@ -534,7 +532,7 @@ const exportTokens = () => {
 
     message.success("Token数据已导出");
   } catch (error) {
-    message.error("导出失败: " + error.message);
+    message.error(`导出失败: ${error.message}`);
   }
 };
 

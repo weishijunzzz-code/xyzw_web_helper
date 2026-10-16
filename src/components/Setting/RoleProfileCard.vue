@@ -37,7 +37,7 @@
         <div class="progress-bar">
           <div
             class="progress-fill"
-            :style="{ width: progressPercentage + '%' }"
+            :style="{ width: `${progressPercentage}%` }"
             :class="rankInfo.class"
           ></div>
         </div>
@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 
 const tokenStore = useTokenStore();

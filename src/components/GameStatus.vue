@@ -171,12 +171,18 @@
     <SkinChallengeCard v-show="activeSection === 'activity'" />
 
     <!-- 逐鹿盐山分组 -->
-    <div class="apex-challenge-group" v-if="activeSection === 'apexChallengeGroup'">
+    <div
+      class="apex-challenge-group"
+      v-if="activeSection === 'apexChallengeGroup'"
+    >
       <ApexChallenge />
     </div>
 
     <!-- 营地挑战分组 -->
-    <div class="camp-challenge-group" v-if="activeSection === 'campChallengeGroup'">
+    <div
+      class="camp-challenge-group"
+      v-if="activeSection === 'campChallengeGroup'"
+    >
       <CampChallenge />
     </div>
 
@@ -361,63 +367,57 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useTokenStore } from "@/stores/tokenStore";
 import { useMessage } from "naive-ui";
-import {
-  preloadQuestions,
-  getQuestionCount,
-} from "@/utils/studyQuestionsFromJSON.js";
 import IdentityCard from "./Common/IdentityCard.vue";
 import DailyTaskStatus from "./Daily/DailyTaskStatus.vue";
 import TeamFormation from "./Team/TeamFormation.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useTokenStore } from "@/stores/tokenStore";
+import ApexChallenge from "./Apex/ApexChallenge.vue";
 import BottleHelperCard from "./cards/BottleHelperCard.vue";
 import BoxHelperCard from "./cards/BoxHelperCard.vue";
-import FishHelperCard from "./cards/FishHelperCard.vue";
-import RecruitHelperCard from "./cards/RecruitHelperCard.vue";
-import StarUpgradeCard from "./cards/StarUpgradeCard.vue";
-import HangUpStatusCard from "./cards/HangUpStatusCard.vue";
-import MonthlyTasksCard from "./cards/MonthlyTasksCard.vue";
-import StudyChallengeCard from "./cards/StudyChallengeCard.vue";
-import SkinChallengeCard from "./cards/SkinChallengeCard.vue";
-import ClubWarrank from "./Club/ClubWarrank.vue";
-import ClubWarrankV2 from "./Club/ClubWarrankV2.vue";
-import ClubMonthBattleRecords from "./Club/ClubMonthBattleRecords.vue";
-import ClubBattleRecords from "./Club/ClubBattleRecords.vue";
-import PeachBattleRecords from "./Club/PeachBattleRecords.vue";
-import TopRankList from "./cards/TopRankListPageCard.vue";
-import TopClubList from "./cards/TopClubListPageCard.vue";
-import GreatRouteRankList from "./Club/GreatRouteRankListPageCard.vue";
-import GoldClubList from "./cards/GoldRankListPageCard.vue";
-import FightPvp from "./cards/FightPvp.vue";
-import FightHelperCard from "./cards/FightHelperCard.vue";
-import DreamHelperCard from "./cards/DreamHelperCard.vue";
-import HeroUpgradeCard from "./cards/HeroUpgradeCard.vue";
 import ConsumptionProgressCard from "./cards/ConsumptionProgressCard.vue";
+import DreamHelperCard from "./cards/DreamHelperCard.vue";
+import FightHelperCard from "./cards/FightHelperCard.vue";
+import FightPvp from "./cards/FightPvp.vue";
+import FishHelperCard from "./cards/FishHelperCard.vue";
+import GoldClubList from "./cards/GoldRankListPageCard.vue";
+import HangUpStatusCard from "./cards/HangUpStatusCard.vue";
+import HeroUpgradeCard from "./cards/HeroUpgradeCard.vue";
+import MonthlyTasksCard from "./cards/MonthlyTasksCard.vue";
+import RecruitHelperCard from "./cards/RecruitHelperCard.vue";
 import RefineHelperCard from "./cards/RefineHelperCard.vue";
-import TowerStatus from "./Tower/TowerStatus.vue";
-import WeirdTowerStatus from "./Tower/WeirdTowerStatus.vue";
-import BossTower from "./Tower/BossTower.vue";
-import PeachInfo from "./Club/PeachInfo.vue";
-import PeachInfoV2 from "./Club/PeachInfoV2.vue";
 import ServerRankList from "./cards/ServerRankListPageCard.vue";
-import LegionWarMap from "./Club/LegionWarMap.vue";
-import LegionWarStatistics from "./Club/LegionWarStatistics.vue";
-import ProgressRing from "./Common/ProgressRing.vue";
-import AnimatedNumber from "./Common/AnimatedNumber.vue";
+import SkinChallengeCard from "./cards/SkinChallengeCard.vue";
+import StarUpgradeCard from "./cards/StarUpgradeCard.vue";
+import StudyChallengeCard from "./cards/StudyChallengeCard.vue";
+import TopClubList from "./cards/TopClubListPageCard.vue";
+import TopRankList from "./cards/TopRankListPageCard.vue";
 import Unlimitedlineup from "./cards/Unlimitedlineup.vue";
 import CampChallenge from "./Club/CampChallenge.vue";
-import ApexChallenge from "./Apex/ApexChallenge.vue";
+import ClubBattleRecords from "./Club/ClubBattleRecords.vue";
+import ClubMonthBattleRecords from "./Club/ClubMonthBattleRecords.vue";
+import ClubWarrank from "./Club/ClubWarrank.vue";
+import ClubWarrankV2 from "./Club/ClubWarrankV2.vue";
+import GreatRouteRankList from "./Club/GreatRouteRankListPageCard.vue";
+import LegionWarMap from "./Club/LegionWarMap.vue";
+import LegionWarStatistics from "./Club/LegionWarStatistics.vue";
+import PeachBattleRecords from "./Club/PeachBattleRecords.vue";
+import PeachInfo from "./Club/PeachInfo.vue";
+import PeachInfoV2 from "./Club/PeachInfoV2.vue";
+import BossTower from "./Tower/BossTower.vue";
+import TowerStatus from "./Tower/TowerStatus.vue";
+import WeirdTowerStatus from "./Tower/WeirdTowerStatus.vue";
 
 const tokenStore = useTokenStore();
-const message = useMessage();
+useMessage();
 
 const legionMatch = ref({
   isRegistered: false,
 });
 
 // 响应式数据
-const showIdentity = ref(false);
+
 const activeSection = ref("daily");
 const saltFieldSubTab = ref("warrank");
 const peachSubTab = ref("peach");
@@ -433,7 +433,7 @@ defineExpose({ setSection });
 
 // 盐场匹配信息详情 / 蟠桃园信息 界面样式选择（style1=原有样式，style2=移植样式）
 const warrankStyle = ref(
-  localStorage.getItem("club_warrank_style") || "style1"
+  localStorage.getItem("club_warrank_style") || "style1",
 );
 const peachStyle = ref(localStorage.getItem("peach_info_style") || "style1");
 
@@ -445,10 +445,6 @@ watch(peachStyle, (newStyle) => {
 });
 
 // 活动开放时间：仅周一到周三可参与
-const isActivityOpen = computed(() => {
-  const day = new Date().getDay(); // 0=周日,1=周一,...,6=周六
-  return day >= 1 && day <= 3;
-});
 
 const bottleHelper = ref({
   isRunning: false,
@@ -472,7 +468,6 @@ const legionSignin = ref({
 });
 
 // 使用 tokenStore 中的答题状态（仍用于 badge 状态等场景，如果仅在子组件中使用也可移除）
-const study = computed(() => tokenStore.gameData.studyStatus);
 
 // 计算属性
 const roleInfo = computed(() => {
@@ -489,11 +484,6 @@ const isShowTowerStatus = computed(() => {
 });
 
 // WebSocket连接状态
-const isConnected = computed(() => {
-  if (!tokenStore.selectedToken) return false;
-  const status = tokenStore.getWebSocketStatus(tokenStore.selectedToken.id);
-  return status === "connected";
-});
 
 // 每日任务进度 - 使用与 DailyTaskStatus 相同的数据源
 const dailyTaskProgress = computed(() => {
@@ -528,18 +518,6 @@ const hangUpProgress = computed(() => {
 });
 
 // 格式化时间 - 确保显示到秒
-const formatTime = (seconds) => {
-  // 确保传入值为数字，并向下取整到秒
-  const totalSeconds = Math.floor(Number(seconds) || 0);
-
-  if (totalSeconds <= 0) return "00:00:00";
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const secs = totalSeconds % 60;
-
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-};
 
 // 更新数据
 const updateGameStatus = () => {
@@ -634,131 +612,8 @@ const startTimer = () => {
 };
 
 // 盐罐机器人操作
-const handleBottleHelper = () => {
-  if (!tokenStore.selectedToken) {
-    message.warning("请先选择Token");
-    return;
-  }
-
-  const tokenId = tokenStore.selectedToken.id;
-
-  // 停止后重启
-  tokenStore.sendMessage(tokenId, "bottlehelper_stop");
-  setTimeout(() => {
-    tokenStore.sendMessage(tokenId, "bottlehelper_start");
-    tokenStore.sendMessage(tokenId, "role_getroleinfo");
-  }, 500);
-
-  message.info(
-    bottleHelper.value.isRunning ? "重启盐罐机器人" : "启动盐罐机器人",
-  );
-};
 
 // 挂机操作 - 参考HangUpStatus逻辑优化
-const extendHangUp = async () => {
-  if (!tokenStore.selectedToken) {
-    message.warning("请先选择Token");
-    return;
-  }
-
-  const tokenId = tokenStore.selectedToken.id;
-
-  try {
-    // 降噪
-    hangUp.value.isExtending = true;
-    message.info("正在加钟...");
-
-    // 按照参考代码的逻辑，发送4次分享回调请求
-    const promises = [];
-    for (let i = 0; i < 4; i++) {
-      const promise = new Promise((resolve) => {
-        setTimeout(() => {
-          // 降噪
-          const result = tokenStore.sendMessage(
-            tokenId,
-            "system_mysharecallback",
-            {
-              isSkipShareCard: true,
-              type: 2,
-            },
-          );
-          resolve(result);
-        }, i * 300); // 增加间隔时间确保稳定性
-      });
-      promises.push(promise);
-    }
-
-    // 等待所有请求完成
-    await Promise.all(promises);
-
-    // 降噪
-
-    // 延迟获取最新角色信息
-    setTimeout(() => {
-      // 降噪
-      tokenStore.sendMessage(tokenId, "role_getroleinfo");
-    }, 1500);
-
-    // 延迟显示完成消息和重置状态
-    setTimeout(() => {
-      message.success("加钟操作已完成，请查看挂机剩余时间");
-      hangUp.value.isExtending = false;
-    }, 2500);
-  } catch (error) {
-    console.error("🕐 加钟操作失败:", error);
-    message.error("加钟操作失败: " + (error.message || "未知错误"));
-    hangUp.value.isExtending = false;
-  }
-};
-
-const claimHangUpReward = async () => {
-  if (!tokenStore.selectedToken) {
-    message.warning("请先选择Token");
-    return;
-  }
-
-  const tokenId = tokenStore.selectedToken.id;
-
-  try {
-    // 降噪
-    hangUp.value.isClaiming = true;
-    message.info("正在领取挂机奖励...");
-
-    // 参考HangUpStatus的S函数逻辑
-    // 1. 发送初始分享回调
-    tokenStore.sendMessage(tokenId, "system_mysharecallback");
-
-    // 2. 领取挂机奖励
-    setTimeout(() => {
-      tokenStore.sendMessage(tokenId, "system_claimhangupreward");
-    }, 200);
-
-    // 3. 发送跳过分享卡片的回调
-    setTimeout(() => {
-      tokenStore.sendMessage(tokenId, "system_mysharecallback", {
-        isSkipShareCard: true,
-        type: 2,
-      });
-    }, 400);
-
-    // 4. 获取最新角色信息
-    setTimeout(() => {
-      tokenStore.sendMessage(tokenId, "role_getroleinfo");
-    }, 600);
-
-    // 5. 显示完成消息并重置状态
-    setTimeout(() => {
-      message.success("挂机奖励领取完成");
-      hangUp.value.isClaiming = false;
-    }, 1200);
-
-    // 降噪
-  } catch (error) {
-    console.error("🎁 领取挂机奖励失败:", error);
-    message.error("领取挂机奖励失败: " + (error.message || "未知错误"));
-    hangUp.value.isClaiming = false;
-  }
-};
 
 // 功能开关：暂时隐藏俱乐部排位与旧签到卡片
 const ENABLE_LEGION_MATCH = false;

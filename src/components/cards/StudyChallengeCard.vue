@@ -1,7 +1,7 @@
 <template>
   <MyCard
     class="study"
-    :statusClass="{ weekly: true, completed: study.isCompleted }"
+    :status-class="{ weekly: true, completed: study.isCompleted }"
   >
     <template #icon>
       <img src="/icons/1736425783912140.png" alt="学习图标" />
@@ -21,28 +21,30 @@
         🎯 一键答题.
       </a-button>
       <a-button
-        v-if="!study.thisWeek && study.status == 'starting'"
+        v-if="!study.thisWeek && isSameGameValue(study.status, 'starting')"
         status="warning"
         :disabled="true"
       >
         正在获取题库...
       </a-button>
       <a-button
-        v-if="!study.thisWeek && study.status == 'answering'"
+        v-if="!study.thisWeek && isSameGameValue(study.status, 'answering')"
         status="warning"
         :disabled="true"
       >
         答题中...
       </a-button>
       <a-button
-        v-if="!study.thisWeek && study.status == 'claiming_rewards'"
+        v-if="
+          !study.thisWeek && isSameGameValue(study.status, 'claiming_rewards')
+        "
         status="warning"
         :disabled="true"
       >
         正在领取奖励...
       </a-button>
       <a-button
-        v-if="!study.thisWeek && study.status == 'completed'"
+        v-if="!study.thisWeek && isSameGameValue(study.status, 'completed')"
         status="warning"
         :disabled="true"
       >
@@ -56,13 +58,15 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
 import { useMessage } from "naive-ui";
-import {
-  preloadQuestions,
-  getQuestionCount,
-} from "@/utils/studyQuestionsFromJSON.js";
+
+import { computed } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
+import { isSameGameValue } from "@/utils/gameValue.js";
+import {
+  getQuestionCount,
+  preloadQuestions,
+} from "@/utils/studyQuestionsFromJSON.js";
 import MyCard from "../Common/MyCard.vue";
 
 const tokenStore = useTokenStore();
@@ -71,7 +75,11 @@ const study = computed(() => tokenStore.gameData.studyStatus);
 
 const startStudy = async () => {
   if (!tokenStore.selectedToken || study.value.thisWeek) return;
-  if (study.value.status != "" && study.value.status != "idel") return;
+  if (
+    !isSameGameValue(study.value.status, "") &&
+    !isSameGameValue(study.value.status, "idel")
+  )
+    return;
   console.log("开始答题", study.value);
 
   study.value.status = "starting";
@@ -109,7 +117,7 @@ const startStudy = async () => {
     message.info(`🚀 开始一键答题... (题库包含 ${questionCount} 道题目)`);
   } catch (error) {
     console.error("启动答题失败:", error);
-    message.error("启动答题失败: " + error.message);
+    message.error(`启动答题失败: ${error.message}`);
   }
 };
 </script>

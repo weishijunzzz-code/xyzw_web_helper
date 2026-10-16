@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import { useLocalTokenStore } from "./localTokenManager";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -29,18 +29,16 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 模拟本地认证逻辑
       const mockUser = {
-        id: "local_user_" + Date.now(),
+        id: `local_user_${Date.now()}`,
         username: credentials.username,
         email: credentials.email || `${credentials.username}@local.game`,
         avatar: "/icons/xiaoyugan.png",
         createdAt: new Date().toISOString(),
       };
 
-      const mockToken =
-        "local_token_" +
-        Date.now() +
-        "_" +
-        Math.random().toString(36).substr(2, 9);
+      const mockToken = `local_token_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
 
       token.value = mockToken;
       user.value = mockUser;
@@ -81,7 +79,7 @@ export const useAuthStore = defineStore("auth", () => {
       // 保存新用户信息到本地
       const newUser = {
         ...userInfo,
-        id: "user_" + Date.now(),
+        id: `user_${Date.now()}`,
         createdAt: new Date().toISOString(),
       };
 

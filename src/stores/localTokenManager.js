@@ -1,13 +1,13 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import {
-  getUserToken as dbGetUserToken,
-  setUserToken as dbSetUserToken,
-  clearUserToken as dbClearUserToken,
-  getAllGameTokens as dbGetAllGameTokens,
-  putGameToken as dbPutGameToken,
-  deleteGameToken as dbDeleteGameToken,
   clearGameTokens as dbClearGameTokens,
+  clearUserToken as dbClearUserToken,
+  deleteGameToken as dbDeleteGameToken,
+  getAllGameTokens as dbGetAllGameTokens,
+  getUserToken as dbGetUserToken,
+  putGameToken as dbPutGameToken,
+  setUserToken as dbSetUserToken,
   migrateFromLocalStorageIfNeeded,
 } from "@/utils/tokenDb";
 
@@ -183,7 +183,7 @@ export const useLocalTokenStore = defineStore("localToken", () => {
         }
       };
 
-      wsAgent.onClose = (event) => {
+      wsAgent.onClose = () => {
         // 降噪
         if (wsConnections.value[roleId]) {
           wsConnections.value[roleId].status = "disconnected";
@@ -237,7 +237,7 @@ export const useLocalTokenStore = defineStore("localToken", () => {
 
   // 处理游戏消息
   const handleGameMessage = (roleId, message) => {
-    const { cmd, body } = message;
+    const { cmd } = message;
 
     switch (cmd) {
       case "role_getroleinfo":
@@ -343,7 +343,7 @@ export const useLocalTokenStore = defineStore("localToken", () => {
         // 降噪
         return response;
       } else {
-        throw new Error(`未知的游戏命令: ${commandName}`);
+        throw new TypeError(`未知的游戏命令: ${commandName}`);
       }
     } catch (error) {
       console.error(`发送游戏命令失败 [${roleId}] ${commandName}:`, error);

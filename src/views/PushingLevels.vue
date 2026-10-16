@@ -54,27 +54,27 @@
 
       <div v-if="filteredTokens.length" class="token-grid">
         <div
-          v-for="token in filteredTokens"
-          :key="token.id"
+          v-for="gameToken in filteredTokens"
+          :key="gameToken.id"
           class="token-cell"
-          :class="{ selected: selectedTokenIds.includes(token.id) }"
+          :class="{ selected: selectedTokenIds.includes(gameToken.id) }"
         >
           <n-checkbox
-            :checked="selectedTokenIds.includes(token.id)"
-            @update:checked="(checked) => toggleToken(token.id, checked)"
+            :checked="selectedTokenIds.includes(gameToken.id)"
+            @update:checked="(checked) => toggleToken(gameToken.id, checked)"
             @click.stop
           />
-          <span class="token-server" :title="token.server || '未知区服'">
-            {{ token.server || "未知区服" }}
+          <span class="token-server" :title="gameToken.server || '未知区服'">
+            {{ gameToken.server || "未知区服" }}
           </span>
           <span class="token-sep">-</span>
-          <span class="token-name" :title="token.name || token.id">
-            {{ token.name || token.id }}
+          <span class="token-name" :title="gameToken.name || gameToken.id">
+            {{ gameToken.name || gameToken.id }}
           </span>
           <span
             class="status-dot"
-            :class="getStatusClass(token.id)"
-            :title="getStatusTitle(token.id)"
+            :class="getStatusClass(gameToken.id)"
+            :title="getStatusTitle(gameToken.id)"
           ></span>
         </div>
       </div>
@@ -129,7 +129,10 @@
           全部停止
         </n-button>
         <div class="control-spacer"></div>
-        <span class="status-text">已选择 {{ selectedTokenIds.length }} 个账号，正在推图 {{ runningCount }} 个账号</span>
+        <span class="status-text"
+          >已选择 {{ selectedTokenIds.length }} 个账号，正在推图
+          {{ runningCount }} 个账号</span
+        >
         <n-button size="small" @click="clearSelection">清除选择</n-button>
       </div>
     </n-card>
@@ -163,13 +166,17 @@
             </n-tag>
           </n-space>
         </div>
-        <div class="level-line">当前关卡：{{ card.level > 0 ? `${card.level}关` : "--" }}</div>
+        <div class="level-line">
+          当前关卡：{{ card.level > 0 ? `${card.level}关` : "--" }}
+        </div>
         <div class="level-line">boss：{{ card.bossName || "--" }}</div>
         <div class="level-line torch-line">{{ card.torchLabel }}</div>
         <div class="running-body">
           <template v-if="card.running">
             <div class="countdown-row">
-              <span class="countdown-text">战斗剩余 {{ formatDuration(card.countdown) }}</span>
+              <span class="countdown-text"
+                >战斗剩余 {{ formatDuration(card.countdown) }}</span
+              >
               <n-progress
                 class="inline-progress"
                 type="line"
@@ -181,7 +188,9 @@
             </div>
             <div class="card-actions">
               <span>已战斗 {{ card.battles }} 场</span>
-              <n-button size="tiny" type="error" @click="stopOne(card.tokenId)">停止</n-button>
+              <n-button size="tiny" type="error" @click="stopOne(card.tokenId)"
+                >停止</n-button
+              >
             </div>
           </template>
           <template v-else>
@@ -190,7 +199,12 @@
               <span class="err-text" :title="card.lastError || '无'">
                 最近错误：{{ card.lastError || "无" }}
               </span>
-              <n-button size="tiny" type="primary" @click="startOne(card.tokenId)">启动</n-button>
+              <n-button
+                size="tiny"
+                type="primary"
+                @click="startOne(card.tokenId)"
+                >启动</n-button
+              >
             </div>
           </template>
         </div>
@@ -206,8 +220,12 @@
             <n-tag size="small">{{ logs.length }}/2000 条</n-tag>
           </div>
           <div class="log-actions">
-            <n-checkbox v-model:checked="autoScroll" size="small">自动滚动</n-checkbox>
-            <n-checkbox v-model:checked="onlyErrors" size="small">只看错误</n-checkbox>
+            <n-checkbox v-model:checked="autoScroll" size="small"
+              >自动滚动</n-checkbox
+            >
+            <n-checkbox v-model:checked="onlyErrors" size="small"
+              >只看错误</n-checkbox
+            >
             <n-button size="tiny" @click="clearLogs">清空</n-button>
           </div>
         </div>
@@ -233,8 +251,8 @@
       </div>
       <div ref="logsContainer" class="log-container">
         <div
-          v-for="(log, index) in visibleLogs"
-          :key="index"
+          v-for="(log, logIndex) in visibleLogs"
+          :key="logIndex"
           class="log-item"
           :class="log.type"
         >
@@ -242,15 +260,27 @@
           <span class="log-name">[{{ log.tokenName }}]</span>
           <span class="log-msg">{{ log.msg }}</span>
         </div>
-        <n-empty v-if="!visibleLogs.length" description="暂无日志" size="small" />
+        <n-empty
+          v-if="!visibleLogs.length"
+          description="暂无日志"
+          size="small"
+        />
       </div>
     </n-card>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useMessage } from "naive-ui";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import { BOSS_NAMES } from "./boss_names.js";
 
@@ -292,8 +322,12 @@ const tokenGroups = computed(() => tokenStore.tokenGroups || []);
 const filteredTokens = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
   const list = [...tokens.value].sort((a, b) => {
-    const left = new Date(a.lastUsed || a.updatedAt || a.createdAt || 0).getTime();
-    const right = new Date(b.lastUsed || b.updatedAt || b.createdAt || 0).getTime();
+    const left = new Date(
+      a.lastUsed || a.updatedAt || a.createdAt || 0,
+    ).getTime();
+    const right = new Date(
+      b.lastUsed || b.updatedAt || b.createdAt || 0,
+    ).getTime();
     return left - right;
   });
 
@@ -306,22 +340,33 @@ const filteredTokens = computed(() => {
 });
 
 const runningCount = computed(() => {
-  return Object.values(runningStates).filter((state) => state?.running && !state.stopFlag).length;
+  return Object.values(runningStates).filter(
+    (state) => state?.running && !state.stopFlag,
+  ).length;
 });
 
 const allVisibleSelected = computed(() => {
-  return filteredTokens.value.length > 0
-    && filteredTokens.value.every((token) => selectedTokenIds.value.includes(token.id));
+  return (
+    filteredTokens.value.length > 0 &&
+    filteredTokens.value.every((token) =>
+      selectedTokenIds.value.includes(token.id),
+    )
+  );
 });
 
 const someVisibleSelected = computed(() => {
-  return filteredTokens.value.some((token) => selectedTokenIds.value.includes(token.id))
-    && !allVisibleSelected.value;
+  return (
+    filteredTokens.value.some((token) =>
+      selectedTokenIds.value.includes(token.id),
+    ) && !allVisibleSelected.value
+  );
 });
 
 const allSelectedRunning = computed(() => {
-  return selectedTokenIds.value.length > 0
-    && selectedTokenIds.value.every((tokenId) => isRunning(tokenId));
+  return (
+    selectedTokenIds.value.length > 0 &&
+    selectedTokenIds.value.every((tokenId) => isRunning(tokenId))
+  );
 });
 
 const hasSelectedRunning = computed(() => {
@@ -329,7 +374,9 @@ const hasSelectedRunning = computed(() => {
 });
 
 const hasAnyRunning = computed(() => {
-  return Object.values(runningStates).some((state) => state?.running && !state.stopFlag);
+  return Object.values(runningStates).some(
+    (state) => state?.running && !state.stopFlag,
+  );
 });
 
 function getTorchLabel(state) {
@@ -402,7 +449,10 @@ const logFilterOptions = computed(() => {
   });
   Object.values(runningStates).forEach((state) => {
     if (state?.tokenId && !map.has(state.tokenId)) {
-      map.set(state.tokenId, { label: state.tokenName || state.tokenId, value: state.tokenId });
+      map.set(state.tokenId, {
+        label: state.tokenName || state.tokenId,
+        value: state.tokenId,
+      });
     }
   });
   return Array.from(map.values());
@@ -464,32 +514,44 @@ function toggleToken(tokenId, checked) {
   if (checked) {
     selectedTokenIds.value = [...new Set([...selectedTokenIds.value, tokenId])];
   } else {
-    selectedTokenIds.value = selectedTokenIds.value.filter((id) => id !== tokenId);
+    selectedTokenIds.value = selectedTokenIds.value.filter(
+      (id) => id !== tokenId,
+    );
   }
 }
 
 function toggleAllVisible(checked) {
   const visibleIds = filteredTokens.value.map((token) => token.id);
   if (checked) {
-    selectedTokenIds.value = [...new Set([...selectedTokenIds.value, ...visibleIds])];
+    selectedTokenIds.value = [
+      ...new Set([...selectedTokenIds.value, ...visibleIds]),
+    ];
     return;
   }
 
   const visibleSet = new Set(visibleIds);
-  selectedTokenIds.value = selectedTokenIds.value.filter((id) => !visibleSet.has(id));
+  selectedTokenIds.value = selectedTokenIds.value.filter(
+    (id) => !visibleSet.has(id),
+  );
 }
 
 function toggleGroup(group) {
   const index = selectedGroupIds.value.indexOf(group.id);
-  const validIds = (group.tokenIds || []).filter((tokenId) => getToken(tokenId));
+  const validIds = (group.tokenIds || []).filter((tokenId) =>
+    getToken(tokenId),
+  );
 
   if (index >= 0) {
     selectedGroupIds.value.splice(index, 1);
     const groupSet = new Set(validIds);
-    selectedTokenIds.value = selectedTokenIds.value.filter((tokenId) => !groupSet.has(tokenId));
+    selectedTokenIds.value = selectedTokenIds.value.filter(
+      (tokenId) => !groupSet.has(tokenId),
+    );
   } else {
     selectedGroupIds.value.push(group.id);
-    selectedTokenIds.value = [...new Set([...selectedTokenIds.value, ...validIds])];
+    selectedTokenIds.value = [
+      ...new Set([...selectedTokenIds.value, ...validIds]),
+    ];
   }
 }
 
@@ -565,7 +627,7 @@ function clearLogs() {
 function sanitizeError(error) {
   return String(error?.message || error || "")
     .replace(/请求超时: \w+(\s*\(\d+ms\))?/g, "请求超时")
-    .replace(/\b\w+_\w+\b(\s*\(\d+ms\))?/g, "")
+    .replace(/\b\w[\dA-Za-z]*_\w+\b(\s*\(\d+ms\))?/g, "")
     .trim();
 }
 
@@ -611,7 +673,8 @@ function readTorchFromResponse(response) {
   return {
     torchType: pickNumber(role.autoClickType, body.autoClickType) || 0,
     torchRemaining: pickNumber(role.autoClickTime, body.autoClickTime) || 0,
-    torchSettleTime: pickNumber(role.autoClickSettleTime, body.autoClickSettleTime) || 0,
+    torchSettleTime:
+      pickNumber(role.autoClickSettleTime, body.autoClickSettleTime) || 0,
   };
 }
 
@@ -619,17 +682,19 @@ function computeTorchRemaining(state) {
   if (!state) return 0;
   // settleTime 是绝对时间戳时才使用它计算倒计时
   if (state.torchSettleTime > 0) {
-    const settleMs = state.torchSettleTime < 1e12
-      ? state.torchSettleTime * 1000
-      : state.torchSettleTime;
+    const settleMs =
+      state.torchSettleTime < 1e12
+        ? state.torchSettleTime * 1000
+        : state.torchSettleTime;
     if (settleMs > tickNow.value) {
       return Math.max(0, Math.floor((settleMs - tickNow.value) / 1000));
     }
   }
   // 否则用基础值做本地倒计时
   if (state.torchBaseTimestamp && state.torchBaseRemaining) {
-    const diff = state.torchBaseRemaining
-      - Math.floor((tickNow.value - state.torchBaseTimestamp) / 1000);
+    const diff =
+      state.torchBaseRemaining -
+      Math.floor((tickNow.value - state.torchBaseTimestamp) / 1000);
     return Math.max(0, diff);
   }
   return Number(state.torchRemaining || 0);
@@ -679,7 +744,10 @@ function formatDuration(seconds) {
 
 function progressPercent(card) {
   if (!card.totalTime) return 0;
-  return Math.max(0, Math.min(100, Math.round((1 - card.countdown / card.totalTime) * 100)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round((1 - card.countdown / card.totalTime) * 100)),
+  );
 }
 
 function sleep(ms) {
@@ -707,14 +775,23 @@ async function ensureConnected(tokenId, retryCount = 2) {
 
   for (let attempt = 0; attempt < retryCount; attempt++) {
     if (attempt > 0) {
-      addLog(tokenId, tokenName, `重连尝试 ${attempt}/${retryCount}，等待 3 秒...`, "warning");
+      addLog(
+        tokenId,
+        tokenName,
+        `重连尝试 ${attempt}/${retryCount}，等待 3 秒...`,
+        "warning",
+      );
       await sleep(3000);
     } else {
       addLog(tokenId, tokenName, "WebSocket 断开，尝试连接...", "info");
     }
 
     try {
-      await tokenStore.createWebSocketConnection(tokenId, token.token, token.wsUrl);
+      await tokenStore.createWebSocketConnection(
+        tokenId,
+        token.token,
+        token.wsUrl,
+      );
       if (await waitConnected(tokenId, 3000)) {
         addLog(tokenId, tokenName, "WebSocket 连接成功", "success");
         return true;
@@ -724,7 +801,12 @@ async function ensureConnected(tokenId, retryCount = 2) {
     }
   }
 
-  addLog(tokenId, tokenName, `WebSocket 连接失败，已重试 ${retryCount} 次，放弃`, "error");
+  addLog(
+    tokenId,
+    tokenName,
+    `WebSocket 连接失败，已重试 ${retryCount} 次，放弃`,
+    "error",
+  );
   return false;
 }
 
@@ -756,7 +838,12 @@ async function fetchTorchInfo(tokenId, tokenName, { silent = false } = {}) {
     return state;
   } catch (error) {
     if (!silent) {
-      addLog(tokenId, tokenName, `获取火把信息失败：${sanitizeError(error)}`, "warning");
+      addLog(
+        tokenId,
+        tokenName,
+        `获取火把信息失败：${sanitizeError(error)}`,
+        "warning",
+      );
     }
     return null;
   }
@@ -764,29 +851,60 @@ async function fetchTorchInfo(tokenId, tokenName, { silent = false } = {}) {
 
 async function initializeBattleData(tokenId, tokenName) {
   try {
-    await tokenStore.sendMessageWithPromise(tokenId, "role_getroleinfo", {}, 10000);
-    const response = await tokenStore.sendMessageWithPromise(tokenId, "fight_startlevel", {}, 10000);
-    const version = response?.battleData?.version || response?.body?.battleData?.version;
+    await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+      10000,
+    );
+    const response = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "fight_startlevel",
+      {},
+      10000,
+    );
+    const version =
+      response?.battleData?.version || response?.body?.battleData?.version;
     if (version) {
       tokenStore.setBattleVersion(version);
       addLog(tokenId, tokenName, `battleVersion: ${version}`, "info");
     }
   } catch (error) {
-    addLog(tokenId, tokenName, `初始化战斗数据失败：${sanitizeError(error)}`, "warning");
+    addLog(
+      tokenId,
+      tokenName,
+      `初始化战斗数据失败：${sanitizeError(error)}`,
+      "warning",
+    );
   }
 }
 
 async function upgradeHangupReward(tokenId, tokenName) {
   try {
-    const roleInfo = await tokenStore.sendMessageWithPromise(tokenId, "role_getroleinfo", {}, 5000);
-    const items = roleInfo?.role?.items || roleInfo?.body?.role?.items || roleInfo?.items || [];
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+      5000,
+    );
+    const items =
+      roleInfo?.role?.items ||
+      roleInfo?.body?.role?.items ||
+      roleInfo?.items ||
+      [];
     let coinCount = 0;
 
     if (Array.isArray(items)) {
-      const coin = items.find((entry) => Number(entry.id ?? entry.itemId) === KNOWLEDGE_COIN_ITEM_ID);
+      const coin = items.find(
+        (entry) => Number(entry.id ?? entry.itemId) === KNOWLEDGE_COIN_ITEM_ID,
+      );
       coinCount = Number(coin?.num ?? coin?.count ?? coin?.quantity ?? 0);
     } else if (items && typeof items === "object") {
-      coinCount = Number(items[KNOWLEDGE_COIN_ITEM_ID]?.num ?? items[KNOWLEDGE_COIN_ITEM_ID] ?? 0);
+      coinCount = Number(
+        items[KNOWLEDGE_COIN_ITEM_ID]?.num ??
+          items[KNOWLEDGE_COIN_ITEM_ID] ??
+          0,
+      );
     }
 
     if (coinCount <= 0) {
@@ -794,7 +912,12 @@ async function upgradeHangupReward(tokenId, tokenName) {
       return;
     }
 
-    addLog(tokenId, tokenName, `知识币剩余：${coinCount}，开始升级挂机奖励`, "info");
+    addLog(
+      tokenId,
+      tokenName,
+      `知识币剩余：${coinCount}，开始升级挂机奖励`,
+      "info",
+    );
     let used = 0;
     while (coinCount > 0) {
       const state = runningStates[tokenId];
@@ -810,19 +933,39 @@ async function upgradeHangupReward(tokenId, tokenName) {
         );
         coinCount -= upgradeNum;
         used += upgradeNum;
-        addLog(tokenId, tokenName, `升级挂机 +${upgradeNum}，剩余 ${coinCount}`, "success");
+        addLog(
+          tokenId,
+          tokenName,
+          `升级挂机 +${upgradeNum}，剩余 ${coinCount}`,
+          "success",
+        );
       } catch (error) {
-        addLog(tokenId, tokenName, `升级挂机失败 (${upgradeNum})：${sanitizeError(error)}`, "warning");
+        addLog(
+          tokenId,
+          tokenName,
+          `升级挂机失败 (${upgradeNum})：${sanitizeError(error)}`,
+          "warning",
+        );
         break;
       }
       await sleep(1200);
     }
 
     if (used > 0) {
-      addLog(tokenId, tokenName, `升级挂机奖励完成，共用 ${used} 个知识币`, "success");
+      addLog(
+        tokenId,
+        tokenName,
+        `升级挂机奖励完成，共用 ${used} 个知识币`,
+        "success",
+      );
     }
   } catch (error) {
-    addLog(tokenId, tokenName, `升级挂机奖励异常：${sanitizeError(error)}`, "warning");
+    addLog(
+      tokenId,
+      tokenName,
+      `升级挂机奖励异常：${sanitizeError(error)}`,
+      "warning",
+    );
   }
 }
 
@@ -841,8 +984,13 @@ async function runOneBattle(tokenId, tokenName) {
       );
       const body = responseBody(response);
       battleTime = pickNumber(body.battleTime, body.body?.battleTime) || 0;
-      const syncedLevel = pickNumber(body.currLevel, body.levelId, body.body?.currLevel);
-      const syncedBossName = body.bossName || body.body?.bossName || body.role?.bossName || "";
+      const syncedLevel = pickNumber(
+        body.currLevel,
+        body.levelId,
+        body.body?.currLevel,
+      );
+      const syncedBossName =
+        body.bossName || body.body?.bossName || body.role?.bossName || "";
 
       if (syncedLevel !== null && syncedLevel !== state.level) {
         applyLevel(state, syncedLevel, syncedBossName);
@@ -861,7 +1009,12 @@ async function runOneBattle(tokenId, tokenName) {
       state.losses += 1;
       state.retries += 1;
       state.lastError = "服务器未返回战斗时间";
-      addLog(tokenId, tokenName, `服务器未返回有效战斗时间，重试 ${state.retries}`, "warning");
+      addLog(
+        tokenId,
+        tokenName,
+        `服务器未返回有效战斗时间，重试 ${state.retries}`,
+        "warning",
+      );
     } catch (error) {
       if (String(error?.message || "").includes("WebSocket") && attempt === 0) {
         if (await ensureConnected(tokenId)) continue;
@@ -870,7 +1023,12 @@ async function runOneBattle(tokenId, tokenName) {
       state.losses += 1;
       state.retries += 1;
       state.lastError = sanitizeError(error);
-      addLog(tokenId, tokenName, `计算战斗时间失败，重试 ${state.retries}：${state.lastError}`, "error");
+      addLog(
+        tokenId,
+        tokenName,
+        `计算战斗时间失败，重试 ${state.retries}：${state.lastError}`,
+        "error",
+      );
       return { success: false, error: state.lastError };
     }
   }
@@ -883,10 +1041,20 @@ async function runOneBattle(tokenId, tokenName) {
   state.totalTime = battleTime;
   state.countdown = battleTime;
   state.battles += 1;
-  addLog(tokenId, tokenName, `开始关卡 ${state.level || 0}，预计 ${battleTime}s`, "info");
+  addLog(
+    tokenId,
+    tokenName,
+    `开始关卡 ${state.level || 0}，预计 ${battleTime}s`,
+    "info",
+  );
 
   if (state.level > 0 && state.level % 100 === 1) {
-    addLog(tokenId, tokenName, `通过逢100关卡 ${state.level - 1}，自动升级挂机奖励`, "info");
+    addLog(
+      tokenId,
+      tokenName,
+      `通过逢100关卡 ${state.level - 1}，自动升级挂机奖励`,
+      "info",
+    );
     await upgradeHangupReward(tokenId, tokenName);
   }
 
@@ -910,11 +1078,21 @@ async function runOneBattle(tokenId, tokenName) {
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await tokenStore.sendMessageWithPromise(tokenId, "fight_level", {}, 15000);
+      const response = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "fight_level",
+        {},
+        15000,
+      );
       const body = responseBody(response);
       const success = Boolean(body.success || body.isWin);
-      const nextLevel = pickNumber(body.currLevel, body.nextLevel, body.levelId);
-      const nextBossName = body.bossName || body.body?.bossName || body.role?.bossName || "";
+      const nextLevel = pickNumber(
+        body.currLevel,
+        body.nextLevel,
+        body.levelId,
+      );
+      const nextBossName =
+        body.bossName || body.body?.bossName || body.role?.bossName || "";
 
       if (success) {
         state.wins += 1;
@@ -937,7 +1115,12 @@ async function runOneBattle(tokenId, tokenName) {
       state.lastError = body.code || body.msg || "服务器判定失败";
       if (state.retries >= state.maxRetries) {
         state.stopFlag = true;
-        addLog(tokenId, tokenName, `连续失败 ${state.retries} 次，停止推图`, "error");
+        addLog(
+          tokenId,
+          tokenName,
+          `连续失败 ${state.retries} 次，停止推图`,
+          "error",
+        );
       } else {
         addLog(tokenId, tokenName, `失败，重试 ${state.retries} 次`, "warning");
       }
@@ -969,9 +1152,19 @@ async function runOneBattle(tokenId, tokenName) {
 
       if (state.retries >= state.maxRetries) {
         state.stopFlag = true;
-        addLog(tokenId, tokenName, `连续失败 ${state.retries} 次，停止`, "error");
+        addLog(
+          tokenId,
+          tokenName,
+          `连续失败 ${state.retries} 次，停止`,
+          "error",
+        );
       } else {
-        addLog(tokenId, tokenName, `战斗异常，重试 ${state.retries} 次：${errorMessage}`, "error");
+        addLog(
+          tokenId,
+          tokenName,
+          `战斗异常，重试 ${state.retries} 次：${errorMessage}`,
+          "error",
+        );
       }
       return { success: false, error: errorMessage };
     }
@@ -990,7 +1183,7 @@ async function startOne(tokenId) {
   initState(tokenId, tokenName);
   addLog(tokenId, tokenName, "开始推图", "success");
 
-  if (!await ensureConnected(tokenId)) {
+  if (!(await ensureConnected(tokenId))) {
     runningStates[tokenId].running = false;
     runningStates[tokenId].lastError = "WebSocket 未连接";
     return;
@@ -999,7 +1192,12 @@ async function startOne(tokenId) {
   await initializeBattleData(tokenId, tokenName);
 
   try {
-    const roleInfo = await tokenStore.sendMessageWithPromise(tokenId, "role_getroleinfo", {}, 10000);
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+      10000,
+    );
     const body = responseBody(roleInfo);
     const level = pickNumber(body.levelId, body.body?.levelId, body.currLevel);
     if (level !== null) {
@@ -1007,20 +1205,44 @@ async function startOne(tokenId) {
       addLog(tokenId, tokenName, `当前关卡：${level}`, "info");
 
       try {
-        const levelInfo = await tokenStore.sendMessageWithPromise(tokenId, "fight_level", {}, 10000);
-        const bossName = levelInfo?.bossName || levelInfo?.body?.bossName || levelInfo?.role?.bossName || "";
+        const levelInfo = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "fight_level",
+          {},
+          10000,
+        );
+        const bossName =
+          levelInfo?.bossName ||
+          levelInfo?.body?.bossName ||
+          levelInfo?.role?.bossName ||
+          "";
         applyLevel(runningStates[tokenId], level, bossName);
         if (runningStates[tokenId].bossName) {
-          addLog(tokenId, tokenName, `BOSS：${runningStates[tokenId].bossName}`, "info");
+          addLog(
+            tokenId,
+            tokenName,
+            `BOSS：${runningStates[tokenId].bossName}`,
+            "info",
+          );
         }
       } catch (levelError) {
-        addLog(tokenId, tokenName, `获取BOSS信息失败：${sanitizeError(levelError)}`, "info");
+        addLog(
+          tokenId,
+          tokenName,
+          `获取BOSS信息失败：${sanitizeError(levelError)}`,
+          "info",
+        );
       }
     }
     // 启动时查询火把状态
     await fetchTorchInfo(tokenId, tokenName, { silent: true });
   } catch (error) {
-    addLog(tokenId, tokenName, `获取当前关卡失败：${sanitizeError(error)}`, "warning");
+    addLog(
+      tokenId,
+      tokenName,
+      `获取当前关卡失败：${sanitizeError(error)}`,
+      "warning",
+    );
   }
 
   try {
@@ -1113,7 +1335,7 @@ async function useTorchForSelected() {
     const tokenName = getTokenName(tokenId);
     addLog(tokenId, tokenName, `开始使用 ${itemName} x${quantity}`, "info");
     try {
-      if (!await ensureConnected(tokenId)) {
+      if (!(await ensureConnected(tokenId))) {
         addLog(tokenId, tokenName, `连接失败，跳过使用 ${itemName}`, "error");
         failCount += 1;
         continue;
@@ -1138,13 +1360,28 @@ async function useTorchForSelected() {
         );
         applyTorchInfo(state, readTorchFromResponse(roleInfo));
       } catch (fetchError) {
-        addLog(tokenId, tokenName, `刷新火把状态失败：${sanitizeError(fetchError)}`, "warning");
+        addLog(
+          tokenId,
+          tokenName,
+          `刷新火把状态失败：${sanitizeError(fetchError)}`,
+          "warning",
+        );
       }
 
-      addLog(tokenId, tokenName, `使用 ${itemName} x${quantity} 完成`, "success");
+      addLog(
+        tokenId,
+        tokenName,
+        `使用 ${itemName} x${quantity} 完成`,
+        "success",
+      );
       successCount += 1;
     } catch (error) {
-      addLog(tokenId, tokenName, `使用 ${itemName} 失败：${sanitizeError(error)}`, "error");
+      addLog(
+        tokenId,
+        tokenName,
+        `使用 ${itemName} 失败：${sanitizeError(error)}`,
+        "error",
+      );
       failCount += 1;
     } finally {
       try {
@@ -1154,7 +1391,9 @@ async function useTorchForSelected() {
   }
 
   torchRunning.value = false;
-  message.success(`使用 ${itemName} 完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+  message.success(
+    `使用 ${itemName} 完成：成功 ${successCount} 个，失败 ${failCount} 个`,
+  );
 }
 
 onMounted(() => {
@@ -1298,7 +1537,9 @@ onBeforeUnmount(() => {
   background: #fff;
   font-size: 12px;
   line-height: 1.4;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
   cursor: pointer;
   min-height: 0;
 }
@@ -1370,7 +1611,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 3px rgba(46, 144, 250, 0.2);
   }
   50% {

@@ -1,5 +1,5 @@
 <template>
-  <MyCard class="hang-up" :statusClass="{ active: hangUp.isActive }">
+  <MyCard class="hang-up" :status-class="{ active: hangUp.isActive }">
     <template #icon>
       <img src="/icons/174061875626614.png" alt="挂机图标" />
     </template>
@@ -41,8 +41,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useMessage } from "naive-ui";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
 import MyCard from "../Common/MyCard.vue";
 
@@ -135,7 +135,7 @@ const extendHangUp = async () => {
       hangUp.value.isExtending = false;
     }, 2500);
   } catch (e) {
-    message.error("加钟操作失败: " + (e?.message || "未知错误"));
+    message.error(`加钟操作失败: ${e?.message || "未知错误"}`);
     hangUp.value.isExtending = false;
   }
 };
@@ -165,7 +165,7 @@ const claimHangUpReward = async () => {
       hangUp.value.isClaiming = false;
     }, 1200);
   } catch (e) {
-    message.error("领取挂机奖励失败: " + (e?.message || "未知错误"));
+    message.error(`领取挂机奖励失败: ${e?.message || "未知错误"}`);
     hangUp.value.isClaiming = false;
   }
 };

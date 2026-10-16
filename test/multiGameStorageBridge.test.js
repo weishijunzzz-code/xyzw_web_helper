@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 delete globalThis.MultiGameStorageBridge;
-await import("../public/game/multi-game-storage-bridge.js").catch(() => undefined);
+await import("../public/game/multi-game-storage-bridge.js").catch(
+  () => undefined,
+);
 const bridge = globalThis.MultiGameStorageBridge || {};
 
 class MemoryStorage {
@@ -105,7 +107,10 @@ test("invalid and nested scopes are rejected before shared keys are touched", ()
     backing,
     "mg-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   );
-  assert.throws(() => scoped.setItem("multi-game:other:key", "value"), /Nested/);
+  assert.throws(
+    () => scoped.setItem("multi-game:other:key", "value"),
+    /Nested/,
+  );
   assert.equal(backing.length, 0);
 });
 
@@ -139,10 +144,7 @@ test("install virtualizes method and named-property access on iframe localStorag
     ),
     "account-a",
   );
-  assert.equal(
-    win.localStorage.getItem("actual_login_bin_id"),
-    "account-a",
-  );
+  assert.equal(win.localStorage.getItem("actual_login_bin_id"), "account-a");
   assert.equal(win.localStorage.actual_login_bin_id, "account-a");
   assert.deepEqual(Object.keys(win.localStorage).sort(), [
     "actual_login_bin_id",
@@ -154,9 +156,10 @@ test("install virtualizes method and named-property access on iframe localStorag
   assert.equal(win.localStorage.getItem("actual_login_bin_id"), null);
   assert.equal(win.localStorage.actual_login_bin_id, undefined);
   assert.throws(
-    () => Object.defineProperty(win.localStorage, "non_configurable", {
-      value: "must-not-be-written",
-    }),
+    () =>
+      Object.defineProperty(win.localStorage, "non_configurable", {
+        value: "must-not-be-written",
+      }),
     TypeError,
   );
   assert.equal(win.localStorage.getItem("non_configurable"), null);

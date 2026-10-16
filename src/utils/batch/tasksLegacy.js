@@ -5,8 +5,8 @@
 
 /**
  * 创建功法类任务执行器
- * @param {Object} deps - 依赖项
- * @returns {Object} 任务函数集合
+ * @param {object} deps - 依赖项
+ * @returns {object} 任务函数集合
  */
 export function createTasksLegacy(deps) {
   const {
@@ -256,7 +256,7 @@ export function createTasksLegacy(deps) {
             tokenId,
             "role_commitpassword",
             {
-              password: password,
+              password,
               passwordType: 1,
             },
             5000,
@@ -371,16 +371,13 @@ export function createTasksLegacy(deps) {
           console.error(`赠送失败: ${error.message}`);
 
           let errorMsg = error.message || "未知错误";
-          let errorType = "error";
 
           if (errorMsg.includes("200160")) {
             errorMsg = "模块未开启";
           } else if (errorMsg.includes("timeout")) {
             errorMsg = "请求超时";
-            errorType = "warning";
           } else if (errorMsg.includes("网络")) {
             errorMsg = "网络错误";
-            errorType = "warning";
           }
 
           if (consecutiveErrors <= maxRetries && !shouldStop.value) {

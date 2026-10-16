@@ -57,12 +57,12 @@ export function formatWarrankRecordsForExport(legionRankList, queryDate) {
   ];
 
   // 初始化统计变量
-  let totalmeng = 0,
-    totalbig = 0,
-    totalzhengyi = 0,
-    totallong = 0,
-    totalxi = 0,
-    totalweizhi = 0;
+  let totalmeng = 0;
+  let totalbig = 0;
+  let totalzhengyi = 0;
+  let totallong = 0;
+  let totalxi = 0;
+  let totalweizhi = 0;
 
   legionRankList.forEach((member) => {
     const alliance = allianceincludes(member.announcement);
@@ -97,12 +97,12 @@ export function formatWarrankRecordsForExport(legionRankList, queryDate) {
     [
       [
         "总计",
-        "梦盟：" + totalmeng + "家",
-        "大联盟：" + totalbig + "家",
-        "正义联盟：" + totalzhengyi + "家",
-        "龙盟：" + totallong + "家",
-        "曦盟：" + totalxi + "家",
-        "未知联盟：" + totalweizhi + "家",
+        `梦盟：${totalmeng}家`,
+        `大联盟：${totalbig}家`,
+        `正义联盟：${totalzhengyi}家`,
+        `龙盟：${totallong}家`,
+        `曦盟：${totalxi}家`,
+        `未知联盟：${totalweizhi}家`,
       ],
     ],
     { origin: -1 },
@@ -135,10 +135,10 @@ export function formatWarrankRecordsForExport(legionRankList, queryDate) {
 const formatPower = (power) => {
   if (!power) return "0";
   if (power >= 100000000) {
-    return (power / 100000000).toFixed(2) + "亿";
+    return `${(power / 100000000).toFixed(2)}亿`;
   }
   if (power >= 10000) {
-    return (power / 10000).toFixed(2) + "万";
+    return `${(power / 10000).toFixed(2)}万`;
   }
   return power.toString();
 };
@@ -148,7 +148,7 @@ const formatScore = (score) => {
 };
 
 const connectstr = (str1, str2, str3) => {
-  return str1 + "," + str2 + "," + str3;
+  return `${str1},${str2},${str3}`;
 };
 
 const allianceConfig = [

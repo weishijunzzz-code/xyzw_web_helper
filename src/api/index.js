@@ -37,7 +37,7 @@ request.interceptors.response.use(
     // 兼容不同的响应格式
     return {
       success: true,
-      data: data,
+      data,
       message: "success",
     };
   },
@@ -53,43 +53,44 @@ request.interceptors.response.use(
           // 未授权，清除登录状态
           authStore.logout();
           window.location.href = "/login";
-          return Promise.reject({
-            success: false,
-            message: "登录已过期，请重新登录",
-          });
+          return Promise.reject(
+            Object.assign(new Error("登录已过期，请重新登录"), {
+              success: false,
+            }),
+          );
         case 403:
-          return Promise.reject({
-            success: false,
-            message: "没有权限访问",
-          });
+          return Promise.reject(
+            Object.assign(new Error("没有权限访问"), { success: false }),
+          );
         case 404:
-          return Promise.reject({
-            success: false,
-            message: "请求的资源不存在",
-          });
+          return Promise.reject(
+            Object.assign(new Error("请求的资源不存在"), { success: false }),
+          );
         case 500:
-          return Promise.reject({
-            success: false,
-            message: "服务器内部错误",
-          });
+          return Promise.reject(
+            Object.assign(new Error("服务器内部错误"), { success: false }),
+          );
         default:
-          return Promise.reject({
-            success: false,
-            message: data?.message || "请求失败",
-          });
+          return Promise.reject(
+            Object.assign(new Error(data?.message || "请求失败"), {
+              success: false,
+            }),
+          );
       }
     } else if (error.request) {
       // 网络错误
-      return Promise.reject({
-        success: false,
-        message: "网络连接失败，请检查网络",
-      });
+      return Promise.reject(
+        Object.assign(new Error("网络连接失败，请检查网络"), {
+          success: false,
+        }),
+      );
     } else {
       // 其他错误
-      return Promise.reject({
-        success: false,
-        message: error.message || "未知错误",
-      });
+      return Promise.reject(
+        Object.assign(new Error(error.message || "未知错误"), {
+          success: false,
+        }),
+      );
     }
   },
 );

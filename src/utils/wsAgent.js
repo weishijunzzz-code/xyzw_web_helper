@@ -7,7 +7,7 @@ import { g_utils } from "./bonProtocol.js";
 
 export class WsAgent {
   /**
-   * @param {Object} options 配置选项
+   * @param {object} options 配置选项
    */
   constructor(options = {}) {
     const {
@@ -61,7 +61,7 @@ export class WsAgent {
   /**
    * 连接WebSocket
    * @param {string} url WebSocket URL
-   * @param {Object} connectionParams 连接参数
+   * @param {object} connectionParams 连接参数
    */
   connect(url, connectionParams = {}) {
     if (this.connecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
@@ -152,7 +152,7 @@ export class WsAgent {
 
   /**
    * 发送消息
-   * @param {Object|Array} payload 消息载荷
+   * @param {object | Array} payload 消息载荷
    */
   send(payload) {
     if (Array.isArray(payload)) {
@@ -164,7 +164,7 @@ export class WsAgent {
 
   /**
    * 发送消息并等待响应
-   * @param {Object} options 请求选项
+   * @param {object} options 请求选项
    * @returns {Promise} 响应Promise
    */
   sendWithPromise(options) {
@@ -319,10 +319,10 @@ export class WsAgent {
    * @private
    */
   _buildPacket(payload) {
-    const { cmd, body = {}, respKey } = payload;
+    const { cmd, body = {} } = payload;
 
     // 生成随机RTT (0-500ms)
-    const rtt = Math.floor(Math.random() * 500);
+    Math.floor(Math.random() * 500);
 
     const packet = {
       ack: this.ack,
@@ -401,7 +401,7 @@ export class WsAgent {
     }
 
     // 清理等待的Promise
-    for (const [key, { reject, timeoutId }] of this.waitingPromises) {
+    for (const [, { reject, timeoutId }] of this.waitingPromises) {
       clearTimeout(timeoutId);
       reject(new Error("连接已关闭"));
     }

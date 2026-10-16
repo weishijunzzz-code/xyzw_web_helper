@@ -24,7 +24,7 @@
 <script setup lang="ts">
 declare type StatusKey = "active" | "weekly" | "energy" | "completed";
 
-const $props = defineProps<{
+defineProps<{
   statusClass: StatusKey | Record<StatusKey, boolean>;
 }>();
 </script>

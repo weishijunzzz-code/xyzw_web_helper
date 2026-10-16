@@ -12,7 +12,13 @@
  * @param {function} options.nextTick - Vue nextTick函数
  * @returns {object} - 日志管理器对象
  */
-export function createLogManager({ logs, logContainer, autoScrollLog, batchSettings, nextTick }) {
+export function createLogManager({
+  logs,
+  logContainer,
+  autoScrollLog,
+  batchSettings,
+  nextTick,
+}) {
   /**
    * 添加日志
    * @param {object} log - 日志对象 {time: string, message: string, type: string}
@@ -76,7 +82,7 @@ export function createLogManager({ logs, logContainer, autoScrollLog, batchSetti
         message.success("日志已复制到剪贴板");
       })
       .catch((err) => {
-        message.error("复制日志失败: " + err.message);
+        message.error(`复制日志失败: ${err.message}`);
       });
   };
 
