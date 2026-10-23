@@ -15,6 +15,21 @@
     <!-- 身份牌常驻（嵌入式，Tabs 上方） -->
     <IdentityCard embedded />
 
+    <!-- 移动端分区芯片条：n-tabs 在移动端塌缩为空条，≤768px 用芯片条替代 -->
+    <div class="section-chips" role="tablist">
+      <button
+        v-for="item in sectionOptions"
+        :key="item.name"
+        class="section-chip"
+        :class="{ active: activeSection === item.name }"
+        role="tab"
+        :aria-selected="activeSection === item.name"
+        @click="switchSection(item.name)"
+      >
+        {{ item.label }}
+      </button>
+    </div>
+
     <!-- 下方选卡分区切换（Tabs）：日常｜俱乐部｜活动 -->
     <n-tabs
       class="section-tabs"
@@ -76,7 +91,6 @@
 
     <!-- 武将升级助手（提取组件） -->
     <HeroUpgradeCard v-if="activeSection === 'tools'" />
-
 
     <!-- 洗练助手（提取组件） -->
     <RefineHelperCard v-if="activeSection === 'tools'" />
@@ -431,6 +445,28 @@ const setSection = (section) => {
 };
 defineExpose({ setSection });
 
+// 移动端分区芯片条（替代 n-tabs：Naive 内部滚动容器在移动端塌缩为空条）
+const sectionOptions = computed(() => {
+  const list = [
+    { name: "daily", label: "日常" },
+    { name: "club", label: "俱乐部" },
+    { name: "activity", label: "活动" },
+  ];
+  if (ENABLE_TOOLS_TAB) list.push({ name: "tools", label: "工具" });
+  list.push(
+    { name: "apexChallengeGroup", label: "逐鹿盐山" },
+    { name: "campChallengeGroup", label: "营地挑战" },
+    { name: "saltFieldGroup", label: "盐场" },
+    { name: "peachGroup", label: "蟠桃园" },
+    { name: "rankGroup", label: "排行榜" },
+    { name: "fightPvp", label: "切磋" },
+  );
+  return list;
+});
+const switchSection = (name) => {
+  activeSection.value = name;
+};
+
 // 盐场匹配信息详情 / 蟠桃园信息 界面样式选择（style1=原有样式，style2=移植样式）
 const warrankStyle = ref(
   localStorage.getItem("club_warrank_style") || "style1",
@@ -498,7 +534,7 @@ const dailyTaskProgress = computed(() => {
   return {
     percentage,
     current: dailyPoint,
-    total: maxPoint
+    total: maxPoint,
   };
 });
 
@@ -513,7 +549,7 @@ const hangUpProgress = computed(() => {
 
   return {
     percentage,
-    remaining
+    remaining,
   };
 });
 
@@ -759,62 +795,43 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
 
-  // 移动端优化：标签条换行全部可见，
-  // 避免 Naive Tabs 内部裁剪导致靠后的功能入口（营地挑战/盐场/蟠桃园/排行榜/切磋）不可见
+  // 移动端：n-tabs 内部滚动容器会塌缩为空条（tab 宽 0），隐藏并由 .section-chips 接管
   @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+// 移动端分区芯片条：普通按钮 + flex 换行，无 JS 测量，所有分区入口始终可见
+.section-chips {
+  grid-column: 1 / -1;
+  display: none; // 桌面端隐藏，由 n-tabs 接管
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 var(--spacing-md) var(--spacing-sm);
+
+  @media (max-width: 768px) {
+    display: flex;
     margin: 0 0 var(--spacing-sm) 0;
-    overflow: visible;
+  }
+}
 
-    // 放开 Tabs 的多层裁剪/横向滚动容器（需 !important 覆盖 mobile-fix.scss 的 overflow-x: auto）
-    :deep(.n-tabs-nav),
-    :deep(.n-tabs-nav-scroll-wrapper),
-    :deep(.v-x-scroll) {
-      overflow: visible !important;
-    }
+.section-chip {
+  padding: 6px 14px;
+  font-size: 14px; // 补偿 MobileLayout 内容区 zoom: 0.6
+  line-height: 1.4;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-full, 999px);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
 
-    :deep(.n-tabs-nav-scroll-content) {
-      width: 100%;
-      min-width: 0;
-    }
-
-    // 换行代替横向滚动
-    :deep(.n-tabs-wrapper) {
-      flex-wrap: wrap;
-      row-gap: 2px;
-    }
-
-    // 下划线 bar 按单行布局绝对定位，换行后会错位，隐藏并改用胶囊高亮
-    :deep(.n-tabs-bar) {
-      display: none !important;
-    }
-
-    :deep(.n-tabs-tab) {
-      padding: 6px 12px !important;
-      // 补偿 MobileLayout 内容区 zoom: 0.6，保证中文标签可读
-      font-size: 14px !important;
-      white-space: nowrap;
-      flex-shrink: 0;
-      border-radius: var(--border-radius-full, 999px);
-    }
-
-    :deep(.n-tabs-tab--active) {
-      background: var(--primary-color-light, rgba(102, 126, 234, 0.18));
-      color: var(--primary-color, #667eea);
-      font-weight: 600;
-    }
-
-    // 防截断兜底：中文标签永不被省略号吃掉
-    :deep(.n-tabs-tab__label) {
-      font-size: 14px;
-      white-space: nowrap;
-      overflow: visible;
-      text-overflow: clip;
-    }
-
-    :deep(.n-tabs-nav__prefix),
-    :deep(.n-tabs-nav__suffix) {
-      flex-shrink: 0;
-    }
+  &.active {
+    color: var(--primary-color, #667eea);
+    background: var(--primary-color-light, rgba(102, 126, 234, 0.18));
+    border-color: transparent;
+    font-weight: 600;
   }
 }
 
@@ -1020,21 +1037,11 @@ onUnmounted(() => {
 // 响应式设计
 @media (max-width: 768px) {
   .game-status-container {
-    // minmax(0, 1fr)：允许列收缩到视口宽度，
-    // 否则 n-tabs 标签条的 min-content（10 个标签约 900px）会把整列撑爆
+    // minmax(0, 1fr)：允许列收缩到视口宽度，防止宽内容（表格/标签条等）把整列撑爆
     grid-template-columns: minmax(0, 1fr);
     padding: var(--spacing-sm);
 
     > * {
-      min-width: 0;
-    }
-  }
-
-  // 标签条允许内部横向滚动，不撑破容器
-  .section-tabs {
-    min-width: 0;
-
-    :deep(.n-tabs-wrapper) {
       min-width: 0;
     }
   }
