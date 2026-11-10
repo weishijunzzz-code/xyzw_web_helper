@@ -2,6 +2,7 @@
  * 挂机、答题、签到类任务
  * 包含: claimHangUpRewards, batchAddHangUpTime, batchStudy, batchclubsign
  */
+import { fillHangUpTime, runWithDailyTaskLock } from "@/utils/dailyTaskState";
 
 /**
  * 创建挂机、答题、签到类任务执行器
@@ -26,165 +27,112 @@ export function createTasksHangUp(deps) {
   } = deps;
 
   /**
-   * 领取挂机奖励
+   * Claim optional hang-up rewards and fill only server-confirmed empty help slots.
+   * @param {boolean} claimReward Whether to claim accumulated hang-up rewards first.
+   * @returns {Promise<void>} Resolves after selected accounts finish or stop.
    */
-  const claimHangUpRewards = async () => {
-    if (selectedTokens.value.length === 0) return;
-
+  const runHangUpTasks = async (claimReward) => {
+    if (isRunning.value || selectedTokens.value.length === 0) return;
     isRunning.value = true;
     shouldStop.value = false;
-
+    const label = claimReward ? "领取挂机并补加钟" : "一键加钟";
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
     });
-
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
-
-      tokenStatus.value[tokenId] = "running";
-
-      const token = tokens.value.find((t) => t.id === tokenId);
-
-      try {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== 开始领取挂机: ${token.name} ===`,
-          type: "info",
-        });
-
-        await ensureConnection(tokenId);
-
-        // 1. Claim reward
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 领取挂机奖励`,
-          type: "info",
-        });
-        await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "system_claimhangupreward",
-          {},
-          5000,
-        );
-        await new Promise((r) => setTimeout(r, 500));
-
-        // 2. Add time 4 times
-        for (let i = 0; i < 4; i++) {
-          if (shouldStop.value) break;
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 挂机加钟 ${i + 1}/4`,
-            type: "info",
-          });
-          await tokenStore.sendMessageWithPromise(
-            tokenId,
-            "system_mysharecallback",
-            { isSkipShareCard: true, type: 2 },
-            5000,
-          );
-          await new Promise((r) => setTimeout(r, 500));
-        }
-
-        tokenStatus.value[tokenId] = "completed";
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 领取挂机奖励完成 ===`,
-          type: "success",
-        });
-      } catch (error) {
-        console.error(error);
-        tokenStatus.value[tokenId] = "failed";
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 领取挂机奖励失败: ${error.message}`,
-          type: "error",
-        });
-      } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
-      }
-    });
-
-    await Promise.all(taskPromises);
-
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
-    message.success("批量领取挂机结束");
-  };
-
-  /**
-   * 一键加钟
-   */
-  const batchAddHangUpTime = async () => {
-    if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
-
-    selectedTokens.value.forEach((id) => {
-      tokenStatus.value[id] = "waiting";
-    });
-
     const taskPromises = selectedTokens.value.map(async (tokenId) => {
       if (shouldStop.value) return;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
+      if (!token) {
+        tokenStatus.value[tokenId] = "failed";
+        return;
+      }
       try {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== 开始一键加钟: ${token.name} ===`,
-          type: "info",
-        });
-        await ensureConnection(tokenId);
-        for (let i = 0; i < 4; i++) {
-          if (shouldStop.value) break;
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 执行加钟 ${i + 1}/4`,
-            type: "info",
-          });
-          await tokenStore.sendMessageWithPromise(
-            tokenId,
-            "system_mysharecallback",
-            { isSkipShareCard: true, type: 2 },
-            5000,
-          );
-          await new Promise((r) => setTimeout(r, 500));
-        }
-        tokenStatus.value[tokenId] = "completed";
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} 加钟完成 ===`,
-          type: "success",
+        await runWithDailyTaskLock(tokenId, async () => {
+          let ownsSlot = false;
+          const log = (text, type = "info") =>
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name}: ${text}`,
+              type,
+            });
+          const check = () => {
+            if (
+              shouldStop.value ||
+              tokenStore.getWebSocketStatus(tokenId) !== "connected"
+            ) {
+              const error = new Error(
+                "任务已停止或连接已断开，等待重新读取服务器状态",
+              );
+              error.interrupted = true;
+              throw error;
+            }
+          };
+          try {
+            log(`开始${label}`);
+            await ensureConnection(tokenId, 2, (owned) => {
+              ownsSlot = owned;
+            });
+            check();
+            if (claimReward) {
+              log("领取挂机奖励");
+              await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "system_claimhangupreward",
+                {},
+                5000,
+              );
+              check();
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+            const result = await fillHangUpTime({
+              tokenStore,
+              tokenId,
+              check,
+              onLog: log,
+            });
+            tokenStatus.value[tokenId] = result.remaining
+              ? "pending"
+              : "completed";
+            log(
+              result.remaining ? `${label}仍有步骤待继续` : `${label}完成`,
+              result.remaining ? "warning" : "success",
+            );
+          } finally {
+            if (ownsSlot) {
+              try {
+                tokenStore.closeWebSocketConnection(tokenId);
+              } finally {
+                releaseConnectionSlot();
+              }
+            }
+            log(
+              `连接清理结束 (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+            );
+          }
         });
       } catch (error) {
-        console.error(error);
-        tokenStatus.value[tokenId] = "failed";
+        tokenStatus.value[tokenId] = error.interrupted ? "stopped" : "failed";
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `${token.name} 加钟失败: ${error.message || "未知错误"}`,
-          type: "error",
-        });
-      } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
+          message: `${token.name} ${label}: ${error.message || "未知错误"}`,
+          type: error.interrupted ? "warning" : "error",
         });
       }
     });
-
-    await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
-    message.success("批量加钟结束");
+    try {
+      await Promise.all(taskPromises);
+    } finally {
+      isRunning.value = false;
+      currentRunningTokenId.value = null;
+    }
+    message.success(`批量${label}结束`);
   };
+
+  /** Claim hang-up rewards, then refill the remaining help slots. */
+  const claimHangUpRewards = () => runHangUpTasks(true);
+  /** Refill help slots without claiming rewards or trusting local task progress. */
+  const batchAddHangUpTime = () => runHangUpTasks(false);
 
   /**
    * 一键答题

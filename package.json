@@ -87,6 +87,7 @@
     "@vue/tsconfig": "^0.8.1",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.8",
+    "fake-indexeddb": "6.2.8",
     "jiti": "^2.6.1",
     "jsdom": "^23.0.0",
     "lz4js": "^0.2.0",

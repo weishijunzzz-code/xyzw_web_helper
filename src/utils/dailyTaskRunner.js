@@ -1,10 +1,11 @@
 import {
+  fillHangUpTime,
   getClaimablePointRewards,
   getDailyTaskStates,
   loadDailyTaskConfig,
+  runWithDailyTaskLock,
 } from "@/utils/dailyTaskState";
 
-const activeTokenRuns = new Set();
 const taskLabels = {
   1: "登录游戏",
   2: "分享游戏",
@@ -285,14 +286,9 @@ export class DailyTaskRunner {
    * @returns {Promise<object>} Execution counts without any local completion record.
    */
   async run(tokenId, callbacks = {}, customSettings = null) {
-    if (activeTokenRuns.has(tokenId))
-      throw new Error("该账号的每日任务正在执行中");
-    activeTokenRuns.add(tokenId);
-    try {
-      return await this.runTasks(tokenId, callbacks, customSettings);
-    } finally {
-      activeTokenRuns.delete(tokenId);
-    }
+    return runWithDailyTaskLock(tokenId, () =>
+      this.runTasks(tokenId, callbacks, customSettings),
+    );
   }
 
   async runTasks(tokenId, callbacks = {}, customSettings = null) {
@@ -342,7 +338,7 @@ export class DailyTaskRunner {
           this.executeGameCommand(
             tokenId,
             "system_mysharecallback",
-            { isSkipShareCard: true, type: 2 },
+            { isSkipShareCard: true, type: 3 },
             "分享游戏",
           ),
       });
@@ -412,15 +408,63 @@ export class DailyTaskRunner {
         taskList.push({
           name: `领取挂机奖励 ${i + 1}/${remaining}`,
           condition: 5,
-          execute: () =>
-            this.executeGameCommand(
+          execute: async () => {
+            const interval = this.taskConfig.hangUpClaimInterval;
+            if (interval) {
+              const serverTime =
+                this.tokenStore.wsConnections?.[tokenId]?.client?.serverTime;
+              const lastTime = roleData.hangUp?.lastTime;
+              const wait =
+                i === 0 &&
+                Number.isFinite(serverTime) &&
+                Number.isFinite(lastTime)
+                  ? Math.max(lastTime * 1000 + interval - serverTime, 0)
+                  : interval;
+              await this.sleep(wait);
+            }
+            return this.executeGameCommand(
               tokenId,
               "system_claimhangupreward",
               {},
               `领取挂机奖励 ${i + 1}/${remaining}`,
-            ),
+            );
+          },
         });
       }
+    }
+
+    // Help slots can be empty even after the daily goal and its points were claimed.
+    if (settings.claimHangUp) {
+      taskList.push({
+        name: "按服务器槽位补足挂机加钟",
+        execute: async () => {
+          try {
+            const result = await fillHangUpTime({
+              tokenStore: this.tokenStore,
+              tokenId,
+              readRole: async () => ({
+                role: await this.refreshServerRole(tokenId),
+              }),
+              sendCommand: () =>
+                this.executeGameCommand(
+                  tokenId,
+                  "system_mysharecallback",
+                  { isSkipShareCard: true, type: 2 },
+                  "挂机加钟",
+                ),
+              check: () => this.throwIfInterrupted(tokenId),
+              onLog: (message) => this.log(message),
+              sleep: this.sleep,
+              delay: 0,
+            });
+            return result.remaining === 0;
+          } catch (error) {
+            if (!error.hangUpStateUnavailable) throw error;
+            this.log(`${error.message}，加钟保留待继续`, "warning");
+            return false;
+          }
+        },
+      });
     }
 
     if (!isTaskCompleted(7) && settings.openBox) {
