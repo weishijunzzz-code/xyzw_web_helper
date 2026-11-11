@@ -57,11 +57,19 @@ export function scheduledTaskRoutes(db, gameManager) {
     const tasks = db.getAllScheduledTasks(req.userId);
     const task = tasks.find(t => t.id === req.params.id);
     if (!task) return res.status(404).json({ error: 'not found' });
+    // 任务执行可能持续数分钟，同步 await 会超过前端 30s 请求超时导致误报失败。
+    // 改为后台执行并立即返回；完成后与 cron 触发同口径写入 lastResult，进度通过实时日志/任务列表查看。
+    res.json({ ok: true, status: 'started', taskId: task.id, name: task.name });
     try {
       const result = await executeTask(task, req.userId, db, gameManager);
-      res.json(result);
+      const allFailed = Array.isArray(result.results)
+        && result.results.length > 0
+        && result.results.every(r => r.status === 'error');
+      db.updateScheduledTask(task.id, { lastRun: new Date().toISOString(), lastResult: { success: !allFailed, summary: result } }, req.userId);
+      gameLogger.info(`[手动执行] 完成: ${task.name}, 结果: ${JSON.stringify((result.results || []).map(r => `${r.task}:${r.status}`))}`);
     } catch (e) {
-      res.status(500).json({ error: e.message });
+      db.updateScheduledTask(task.id, { lastRun: new Date().toISOString(), lastResult: { success: false, error: e.message } }, req.userId);
+      gameLogger.error(`[手动执行] 失败: ${task.name} - ${e.message}`);
     }
   });
 

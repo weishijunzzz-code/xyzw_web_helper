@@ -55,16 +55,9 @@ function Pack-Release {
 
 if ($Pack) { Pack-Release; exit 0 }
 
-# ---------- 以下为目标机发布流程 ----------
-Write-Host "=== xyzw-web-helper 发布 ===" -ForegroundColor Cyan
-Write-Host "项目目录: $ProjectDir"
-
-if (-not (Test-Admin)) {
-    Write-Error "请以管理员身份运行 PowerShell 后重试（或使用 -Pack 仅打包）"; exit 1
-}
-
+# ---------- 环境准备（-Setup 仅执行本步；完整发布也会先执行本步） ----------
+function Initialize-Environment {
 # [1/5] 环境准备：Node 22 LTS + NSSM + 防火墙（已装自动跳过）
-Write-Host "`n[1/5] 环境检查与准备 ..." -ForegroundColor Yellow
 # Node.js 22 LTS（better-sqlite3 v12 预编译要求 Node 22/23/24，Node 20 无预编译会编译失败）
 $nodeOk = $false
 if (Get-Command node -ErrorAction SilentlyContinue) {
@@ -121,6 +114,23 @@ if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContin
     Write-Host "防火墙规则已添加（TCP $Port）" -ForegroundColor Green
 } else {
     Write-Host "防火墙规则已存在" -ForegroundColor Green
+}
+}
+
+# ---------- 以下为目标机发布流程 ----------
+Write-Host "=== xyzw-web-helper 发布 ===" -ForegroundColor Cyan
+Write-Host "项目目录: $ProjectDir"
+
+if (-not (Test-Admin)) {
+    Write-Error "请以管理员身份运行 PowerShell 后重试（或使用 -Pack 仅打包）"; exit 1
+}
+
+# [1/5] 环境准备（-Setup 到此为止，不发布应用）
+Write-Host "`n[1/5] 环境检查与准备 ..." -ForegroundColor Yellow
+Initialize-Environment
+if ($Setup) {
+    Write-Host "`n环境准备完成（-Setup 模式：仅 Node/NSSM/防火墙，未发布应用）" -ForegroundColor Green
+    exit 0
 }
 
 # [2/5] 前端构建

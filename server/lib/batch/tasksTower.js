@@ -47,7 +47,7 @@ export function createTasksTower(deps) {
 
       const token = tokens.value.find((t) => t.id === tokenId);
       // 加载该Token的独立配置，如果未找到则回退到currentSettings
-      const tokenSettings = loadSettings ? (loadSettings(tokenId) || currentSettings) : currentSettings;
+      const tokenSettings = (await loadSettings?.(tokenId)) || currentSettings;
 
       try {
         addLog({
@@ -294,7 +294,7 @@ export function createTasksTower(deps) {
 
       const token = tokens.value.find((t) => t.id === tokenId);
       // 加载该Token的独立配置，如果未找到则回退到currentSettings
-      const tokenSettings = loadSettings ? (loadSettings(tokenId) || currentSettings) : currentSettings;
+      const tokenSettings = (await loadSettings?.(tokenId)) || currentSettings;
 
       try {
         addLog({

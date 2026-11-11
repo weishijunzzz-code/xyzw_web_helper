@@ -14,6 +14,8 @@
 
 基于Vue 3 + Vite的现代化XYZW游戏辅助工具，支持Token管理、WebSocket通信、游戏自动化等功能。
 
+> **Windows 服务部署（云端 7x24 定时任务）**：见 [DEPLOY.md](DEPLOY.md) —— `deploy.ps1` 一键打包/发布/注册 NSSM 系统服务。
+
 </div>
 
 ---

@@ -109,6 +109,15 @@ export const scheduledTasksApi = {
   run: (id) => api.post(`/scheduled-tasks/${id}/run`).then((r) => r.data),
 };
 
+export const settingsApi = {
+  get: (key) =>
+    api.get(`/settings/${encodeURIComponent(key)}`).then((r) => r.data?.value ?? null),
+  put: (key, value) =>
+    api.put(`/settings/${encodeURIComponent(key)}`, { value }).then((r) => r.data),
+  batchGet: (keys) =>
+    api.post("/settings/batch", { keys }).then((r) => r.data),
+};
+
 export class ServerPushClient {
   constructor(onMessage) {
     this.onMessage = onMessage;

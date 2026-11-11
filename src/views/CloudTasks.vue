@@ -156,6 +156,13 @@
             </span>
             <n-button
               size="tiny"
+              quaternary
+              @click="openAccountSettings(t)"
+            >
+              设置
+            </n-button>
+            <n-button
+              size="tiny"
               :type="connStatus[t.id] === 'connected' ? 'warning' : 'success'"
               secondary
               @click="toggleConnect(t)"
@@ -379,6 +386,87 @@
           </n-space>
         </template>
       </n-modal>
+
+    <!-- 账号任务设置弹窗（云端 KV：daily-settings:${tokenId}） -->
+    <n-modal
+      v-model:show="showAccountSettings"
+      preset="card"
+      :title="`任务设置 - ${settingsToken?.name || ''}`"
+      style="width: 90%; max-width: 400px"
+    >
+      <div class="settings-content">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label class="setting-label">竞技场阵容</label>
+            <n-select
+              v-model:value="accountSettings.arenaFormation"
+              :options="formationOptions"
+              size="small"
+            />
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">爬塔阵容</label>
+            <n-select
+              v-model:value="accountSettings.towerFormation"
+              :options="formationOptions"
+              size="small"
+            />
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">BOSS阵容</label>
+            <n-select
+              v-model:value="accountSettings.bossFormation"
+              :options="formationOptions"
+              size="small"
+            />
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">BOSS次数</label>
+            <n-select
+              v-model:value="accountSettings.bossTimes"
+              :options="bossTimesOptions"
+              size="small"
+            />
+          </div>
+          <div class="setting-switches">
+            <div class="switch-row">
+              <span class="switch-label">领罐子</span>
+              <n-switch v-model:value="accountSettings.claimBottle" />
+            </div>
+            <div class="switch-row">
+              <span class="switch-label">领挂机</span>
+              <n-switch v-model:value="accountSettings.claimHangUp" />
+            </div>
+            <div class="switch-row">
+              <span class="switch-label">竞技场</span>
+              <n-switch v-model:value="accountSettings.arenaEnable" />
+            </div>
+            <div class="switch-row">
+              <span class="switch-label">开宝箱</span>
+              <n-switch v-model:value="accountSettings.openBox" />
+            </div>
+            <div class="switch-row">
+              <span class="switch-label">领取邮件奖励</span>
+              <n-switch v-model:value="accountSettings.claimEmail" />
+            </div>
+            <div class="switch-row">
+              <span class="switch-label">黑市购买物品</span>
+              <n-switch v-model:value="accountSettings.blackMarketPurchase" />
+            </div>
+            <div class="switch-row">
+              <span class="switch-label">付费招募</span>
+              <n-switch v-model:value="accountSettings.payRecruit" />
+            </div>
+          </div>
+        </div>
+        <n-space justify="end" style="margin-top: 20px" :size="8">
+          <n-button :disabled="savingAccountSettings" @click="showAccountSettings = false">取消</n-button>
+          <n-button type="primary" :loading="savingAccountSettings" @click="saveAccountSettings">
+            保存设置
+          </n-button>
+        </n-space>
+      </div>
+    </n-modal>
     </template>
   </div>
 </template>
@@ -406,13 +494,15 @@ import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
 import { useCloudAuth } from "@/stores/cloudAuth";
 import { useMobile } from "@/composables/useMobile";
-import { validateCronExpression, calculateNextRuns } from "@/utils/batch/cronUtils.js";
 import {
-  ServerPushClient,
   scheduledTasksApi,
+  ServerPushClient,
+  settingsApi,
   statusApi,
   tokenApi,
 } from "@/api/serverApi";
+import { bossTimesOptions, formationOptions } from "@/utils/batch/constants.js";
+import { validateCronExpression, calculateNextRuns } from "@/utils/batch/cronUtils.js";
 
 const { isMobile } = useMobile();
 
@@ -509,7 +599,18 @@ async function syncAllTokens() {
   syncResult.value = null;
   let ok = 0;
   let fail = 0;
+  let seeded = 0;
   try {
+    // 批量读云端已有的账号设置 key（已有则不覆盖，云端编辑为准）
+    let existingSettings = {};
+    try {
+      existingSettings =
+        (await settingsApi.batchGet(
+          localTokens.value.map((t) => `daily-settings:${t.id}`),
+        )) || {};
+    } catch {
+      /* 读失败则当作全缺失，按本地值补种 */
+    }
     for (const t of localTokens.value) {
       try {
         await tokenApi.importTokens([
@@ -525,6 +626,19 @@ async function syncAllTokens() {
             avatar: t.avatar || "",
           },
         ]);
+        // 本地任务设置补种（云端缺失才推，含竞技场阵容等）
+        const settingsKey = `daily-settings:${t.id}`;
+        if (existingSettings[settingsKey] == null) {
+          const localRaw = localStorage.getItem(settingsKey);
+          if (localRaw) {
+            try {
+              await settingsApi.put(settingsKey, JSON.parse(localRaw));
+              seeded++;
+            } catch {
+              /* 设置补种失败不影响 token 同步 */
+            }
+          }
+        }
         // BIN 数据（有才传；游戏连接解密需要）
         try {
           const bin = await getArrayBuffer(t.id);
@@ -539,11 +653,66 @@ async function syncAllTokens() {
     }
     syncResult.value = {
       type: fail ? "warning" : "success",
-      message: `同步完成：成功 ${ok} 个${fail ? `，失败 ${fail} 个` : ""}`,
+      message: `同步完成：成功 ${ok} 个${fail ? `，失败 ${fail} 个` : ""}${seeded ? `，补种设置 ${seeded} 个` : ""}`,
     };
     await refreshCloudTokens();
   } finally {
     syncing.value = false;
+  }
+}
+
+/* ---------- 账号任务设置（云端 KV，执行时以该 K-V 为准） ---------- */
+const DEFAULT_ACCOUNT_SETTINGS = {
+  arenaFormation: 1,
+  towerFormation: 1,
+  bossFormation: 1,
+  bossTimes: 2,
+  claimBottle: true,
+  claimHangUp: true,
+  arenaEnable: true,
+  openBox: true,
+  claimEmail: true,
+  blackMarketPurchase: true,
+  payRecruit: true,
+  freeGachaEnable: true,
+};
+const showAccountSettings = ref(false);
+const savingAccountSettings = ref(false);
+const settingsToken = ref(null);
+const accountSettings = ref({ ...DEFAULT_ACCOUNT_SETTINGS });
+
+async function openAccountSettings(t) {
+  settingsToken.value = t;
+  showAccountSettings.value = true;
+  savingAccountSettings.value = true;
+  try {
+    const value = await settingsApi.get(`daily-settings:${t.id}`);
+    accountSettings.value = { ...DEFAULT_ACCOUNT_SETTINGS, ...(value || {}) };
+  } catch (e) {
+    accountSettings.value = { ...DEFAULT_ACCOUNT_SETTINGS };
+    pushLog("error", `读取账号设置失败: ${e.response?.data?.error || e.message}`);
+  } finally {
+    savingAccountSettings.value = false;
+  }
+}
+
+async function saveAccountSettings() {
+  if (!settingsToken.value) return;
+  savingAccountSettings.value = true;
+  try {
+    await settingsApi.put(
+      `daily-settings:${settingsToken.value.id}`,
+      accountSettings.value,
+    );
+    pushLog(
+      "success",
+      `账号「${settingsToken.value.name}」任务设置已保存（竞技场阵容${accountSettings.value.arenaFormation}），下次云端执行生效`,
+    );
+    showAccountSettings.value = false;
+  } catch (e) {
+    pushLog("error", `保存账号设置失败: ${e.response?.data?.error || e.message}`);
+  } finally {
+    savingAccountSettings.value = false;
   }
 }
 
@@ -785,7 +954,11 @@ async function runTaskNow(t) {
   pushLog("info", `手动执行「${t.name || t.id}」...`);
   try {
     const result = await scheduledTasksApi.run(t.id);
-    pushLog("success", `执行完成: ${JSON.stringify(result).slice(0, 200)}`);
+    if (result?.status === "started") {
+      pushLog("info", `「${t.name || t.id}」已在后台开始执行，进度见实时日志，结果稍后写入任务列表`);
+    } else {
+      pushLog("success", `执行完成: ${JSON.stringify(result).slice(0, 200)}`);
+    }
     await refreshTasks();
   } catch (e) {
     pushLog("error", `执行失败: ${e.response?.data?.error || e.message}`);
@@ -1644,5 +1817,51 @@ onUnmounted(() => {
   .task-actions {
     margin-left: auto;
   }
+}
+
+/* 账号任务设置弹窗 */
+.settings-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.setting-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.switch-row:last-child {
+  border-bottom: none;
+}
+
+.switch-label {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 </style>
