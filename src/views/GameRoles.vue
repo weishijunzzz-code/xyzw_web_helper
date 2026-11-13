@@ -414,7 +414,7 @@ onMounted(async () => {
 
   &.active {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: var(--shadow-light);
   }
 }
 

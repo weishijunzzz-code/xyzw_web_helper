@@ -1879,7 +1879,7 @@ onMounted(() => {
   border-radius: var(--border-radius-medium);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .battle-header h2 {
@@ -1892,7 +1892,7 @@ onMounted(() => {
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-light);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .club-info {
@@ -1945,7 +1945,7 @@ onMounted(() => {
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--border-light);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   margin-bottom: var(--spacing-sm);
 }
 
@@ -1978,7 +1978,7 @@ onMounted(() => {
   background: var(--bg-secondary);
   border-radius: var(--border-radius-medium);
   padding: var(--spacing-md);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .stats-title {
@@ -2050,7 +2050,7 @@ onMounted(() => {
   border-radius: var(--border-radius-medium);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .ranking-title {
@@ -2086,7 +2086,7 @@ onMounted(() => {
   padding: var(--spacing-sm);
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .rank-number {
@@ -2128,8 +2128,8 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2163,7 +2163,7 @@ onMounted(() => {
   background: var(--bg-secondary);
   border-radius: var(--border-radius-medium);
   padding: var(--spacing-md);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .god-ranking-title {
@@ -2191,7 +2191,7 @@ onMounted(() => {
   margin-bottom: var(--spacing-sm);
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
@@ -2237,7 +2237,7 @@ onMounted(() => {
   margin-bottom: var(--spacing-xs);
   border-radius: var(--border-radius-sm);
   background: var(--bg-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .god-rank-number {
@@ -2516,7 +2516,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   color: #fff;
 }
 
@@ -2555,7 +2555,7 @@ onMounted(() => {
   padding: 6px;
   text-align: center;
   font-weight: bold;
-  font-size: 13px;
+  font-size: 12px;
   color: #fff;
 }
 
@@ -2589,7 +2589,7 @@ onMounted(() => {
   align-items: center;
   padding: 6px 10px;
   border-bottom: 1px solid #f0f0f0;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .top3-name {
@@ -2657,7 +2657,7 @@ onMounted(() => {
 }
 
 .trophy-icon {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .title-text h2 {
@@ -2701,7 +2701,7 @@ onMounted(() => {
 }
 
 .stat-label-mini {
-  font-size: 11px;
+  font-size: 12px;
   color: #888;
   margin-bottom: 2px;
 }
@@ -2786,7 +2786,7 @@ onMounted(() => {
 .player-name-s2 {
   font-weight: 600;
   color: #333;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2808,7 +2808,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   color: #fff;
 }
 
@@ -2823,7 +2823,7 @@ onMounted(() => {
   width: 20px;
   text-align: right;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 12px;
 }
 .bar-val.red {
   color: #ff5252;

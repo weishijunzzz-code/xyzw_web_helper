@@ -121,9 +121,9 @@
 /* ==================== 主要按钮样式 ==================== */
 .btn-primary-enhanced {
   position: relative;
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  background: var(--primary-color);
   border: none;
-  color: white;
+  color: var(--accent-on-primary);
   font: var(--text-button);
   padding: 10px 20px;
   border-radius: var(--radius-button);
@@ -328,10 +328,10 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  background: var(--bg-primary);
   border: none;
-  color: white;
-  font-size: 24px;
+  color: var(--text-primary);
+  font-size: 20px;
   cursor: pointer;
   box-shadow: var(--shadow-elevation-3);
   transition: all var(--duration-normal) var(--ease-out-back);

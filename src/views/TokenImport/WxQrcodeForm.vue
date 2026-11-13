@@ -1103,7 +1103,7 @@ onUnmounted(() => {
 
   &:hover {
     border-color: var(--primary-color);
-    background: rgba(102, 126, 234, 0.05);
+    background: color-mix(in srgb, var(--primary-color) 5%, transparent);
   }
 
   p {

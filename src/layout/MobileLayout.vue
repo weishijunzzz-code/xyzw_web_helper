@@ -38,6 +38,7 @@
       <div class="header-right">
         <!-- 活动日历 -->
         <ActivityCalendarDropdown />
+        <ThemeSettings />
         <slot name="header-right"></slot>
       </div>
     </header>
@@ -150,6 +151,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ThemeSettings from '@/components/Common/ThemeSettings.vue'
 import { useTokenStore } from '@/stores/tokenStore'
 import ActivityCalendarDropdown from '@/views/TaskScheduler/components/ActivityCalendarDropdown.vue'
 import {
@@ -295,14 +297,14 @@ const isActiveRoute = (path) => {
   justify-content: space-between;
   height: 64px;
   padding: 0 16px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-primary);
+  backdrop-filter: none;
+  backdrop-filter: none;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
   /* 深色主题适配 */
   [data-theme="dark"] & {
-    background: rgba(30, 41, 59, 0.9);
+    background: var(--bg-primary);
     border-bottom-color: rgba(255, 255, 255, 0.05);
   }
 }
@@ -324,7 +326,7 @@ const isActiveRoute = (path) => {
 }
 
 .header-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -381,7 +383,7 @@ const isActiveRoute = (path) => {
   height: 36px;
   border-radius: var(--radius-full);
   overflow: hidden;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  background: var(--primary-color-light);
   border: 2px solid transparent;
   transition: all 0.3s;
   
@@ -436,7 +438,7 @@ const isActiveRoute = (path) => {
 }
 
 .token-status {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -492,7 +494,7 @@ const isActiveRoute = (path) => {
     }
 
     .n-icon {
-      font-size: 18px;
+      font-size: 16px;
     }
 
     /* 隐藏文字和小徽章 */
@@ -517,16 +519,7 @@ const isActiveRoute = (path) => {
   // 页面内 position: sticky 元素将相对它吸附（而它高度随内容增长、永不滚动）。
   // 移动端实际滚动由 body 承担，横向溢出也在 body 上裁剪（见 global.scss）。
 
-  // 内容紧凑缩放：只缩放页面内容，顶栏/底部导航保持原生尺寸。
-  // 动机：浏览器整体缩放（双指/自适应缩小）会连带 fixed 导航一起变小，
-  // 从布局层面预先提高内容密度后，用户无需再缩小页面。
-  @media (max-width: 768px) {
-    --mobile-content-zoom: 0.6;
-
-    > :deep(*) {
-      zoom: var(--mobile-content-zoom);
-    }
-  }
+  // Density is controlled by spacing, preserving readable text and touch sizes.
 }
 
 // 底部导航栏 - 悬浮胶囊设计
@@ -538,8 +531,8 @@ const isActiveRoute = (path) => {
   z-index: 100;
   padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 20px));
   background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: none;
+  backdrop-filter: none;
 
   /* 深色主题适配 */
   [data-theme="dark"] & {
@@ -583,10 +576,10 @@ const isActiveRoute = (path) => {
     color: #6366f1;
     
     .nav-icon-wrapper {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: var(--shadow-light);
     }
     
     .nav-label {
@@ -608,7 +601,7 @@ const isActiveRoute = (path) => {
 }
 
 .nav-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   transition: all 0.3s;
 }
@@ -638,7 +631,7 @@ const isActiveRoute = (path) => {
   }
   
   .drawer-subtitle {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-tertiary);
     margin: 0;
   }
@@ -648,7 +641,7 @@ const isActiveRoute = (path) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 12px;
@@ -672,13 +665,14 @@ const isActiveRoute = (path) => {
   align-items: center;
   gap: 16px;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-light);
 }
 
 .card-glow {
+  display: none;
   position: absolute;
   top: -50%;
   right: -20%;
@@ -710,9 +704,9 @@ const isActiveRoute = (path) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
-  color: white;
+  color: var(--text-primary);
 }
 
 .token-details {
@@ -721,9 +715,9 @@ const isActiveRoute = (path) => {
 }
 
 .token-name-large {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -742,7 +736,7 @@ const isActiveRoute = (path) => {
   border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 500;
-  color: white;
+  color: var(--text-primary);
 }
 
 .status-badge {
@@ -784,7 +778,7 @@ const isActiveRoute = (path) => {
   color: var(--text-tertiary);
 
   .empty-icon {
-    font-size: 48px;
+    font-size: 20px;
     margin-bottom: 12px;
   }
 
@@ -836,7 +830,7 @@ const isActiveRoute = (path) => {
   height: 40px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  background: var(--primary-color-light);
   flex-shrink: 0;
   
   img {
@@ -908,5 +902,70 @@ const isActiveRoute = (path) => {
 .slide-leave-to {
   opacity: 0;
   transform: translateX(-20px);
+}
+
+/* Reserve both edge controls; the account chip uses only the remaining width. */
+@media (max-width: 768px) {
+  .mobile-header { display: grid; grid-template-columns: minmax(0, 112px) minmax(0, 1fr) 44px; gap: 8px; padding: 0 12px; }
+  .header-left { grid-column: 1; min-width: 0; gap: 4px; }
+  .header-title { min-width: 0; }
+  .header-left .back-btn { flex: 0 0 44px; width: 44px; height: 44px; }
+  .header-center { grid-column: 2; min-width: 0; }
+  .header-right { grid-column: 3; min-width: 0; }
+  .header-right :deep(.activity-calendar-btn) { width: 44px; height: 44px; }
+  .token-selector { width: 100%; max-width: 260px; min-width: 0; gap: 6px; padding: 5px 6px; }
+  .token-avatar-wrapper { flex: 0 0 28px; }
+  .token-avatar { width: 28px; height: 28px; }
+  .token-info { min-width: 0; flex: 1; }
+  .token-name { max-width: none; width: 100%; }
+  .dropdown-btn { flex: 0 0 16px; width: 16px; }
+}
+
+/* Compact mobile chrome leaves more of the viewport for page content. */
+@media (max-width: 768px) {
+  .mobile-header { height: 52px; grid-template-columns: auto minmax(0, 1fr) 76px; gap: 6px; padding: 0 10px; }
+  .header-left { max-width: 104px; }
+  .header-title { font-size: 14px; }
+  .header-left .back-btn { flex-basis: 36px; width: 36px; height: 36px; }
+  .header-right :deep(.activity-calendar-btn) { width: 36px; height: 36px; }
+  .token-selector { gap: 4px; padding: 3px 5px; }
+  .token-avatar-wrapper { flex-basis: 24px; }
+  .token-avatar { width: 24px; height: 24px; }
+  .token-name { font-size: 12px; }
+  .token-status { font-size: 12px; }
+  .mobile-main { padding-top: 52px; }
+  .mobile-main.has-bottom-nav { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-bottom-nav { padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)); }
+  .nav-container { padding: 2px 4px; }
+  .nav-item { min-width: 44px; min-height: 44px; padding: 0 8px; gap: 0; }
+  .nav-icon-wrapper { width: 26px; height: 26px; }
+  .nav-item.active, .nav-item.active .nav-label { color: var(--primary-color); }
+}
+
+@media (max-width: 768px) {
+  .header-right { gap: 4px; flex-wrap: nowrap; }
+  .header-right > :deep(*) { flex-shrink: 0; }
+  .header-right :deep(.theme-settings), .header-right :deep(.theme-toggle-btn) { width: 36px; height: 36px; }
+  .token-selector { overflow: hidden; }
+}
+
+/* Fill the bottom bar instead of shrinking the capsule to its content width. */
+@media (max-width: 768px) {
+  // Override the legacy global fixed height so safe-area padding can expand the bar.
+  .mobile-bottom-nav {
+    display: block !important;
+    height: auto !important;
+    min-height: 56px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mobile-bottom-nav .nav-container {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  .mobile-bottom-nav .nav-item { width: 100%; min-width: 0; min-height: 44px; padding: 0; box-sizing: border-box; }
 }
 </style>

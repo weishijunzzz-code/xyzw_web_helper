@@ -1,20 +1,20 @@
 <template>
   <div class="theme-settings">
-    <n-popover trigger="click" placement="bottom" :show-arrow="false">
+    <NPopover trigger="click" placement="bottom" :show-arrow="false">
       <template #trigger>
-        <n-button circle size="medium" class="theme-toggle-btn">
+        <NButton circle size="medium" class="theme-toggle-btn" aria-label="主题设置">
           <template #icon>
-            <n-icon v-if="currentTheme === 'dark'">
+            <NIcon v-if="currentTheme === 'dark'">
               <Moon />
-            </n-icon>
-            <n-icon v-else-if="currentTheme === 'light'">
+            </NIcon>
+            <NIcon v-else-if="currentTheme === 'light'">
               <Sunny />
-            </n-icon>
-            <n-icon v-else>
+            </NIcon>
+            <NIcon v-else>
               <DesktopOutline />
-            </n-icon>
+            </NIcon>
           </template>
-        </n-button>
+        </NButton>
       </template>
 
       <div class="theme-panel">
@@ -44,9 +44,9 @@
                 </div>
               </div>
               <span class="theme-name">{{ theme.label }}</span>
-              <n-icon v-if="currentTheme === theme.value" class="check-icon">
+              <NIcon v-if="currentTheme === theme.value" class="check-icon">
                 <Checkmark />
-              </n-icon>
+              </NIcon>
             </div>
           </div>
         </div>
@@ -55,19 +55,17 @@
         <div class="theme-section">
           <label class="section-label">强调色</label>
           <div class="color-options">
-            <div
-              v-for="color in accentColors"
+            <button
+              v-for="color in accentOptions"
               :key="color.value"
-              class="color-option"
-              :class="{ active: accentColor === color.value }"
-              :style="{ background: color.color }"
-              @click="setAccentColor(color.value)"
+              type="button"
+              class="accent-swatch"
+              :aria-label="color.label"
+              :aria-pressed="accent === color.value"
+              :style="{ '--swatch-color': color.color }"
+              @click="setAccent(color.value)"
               :title="color.label"
-            >
-              <n-icon v-if="accentColor === color.value">
-                <Checkmark />
-              </n-icon>
-            </div>
+            >{{ accent === color.value ? '✓' : '' }}</button>
           </div>
         </div>
 
@@ -76,7 +74,7 @@
           <label class="section-label">字体大小</label>
           <div class="font-size-slider">
             <span class="size-label small">A</span>
-            <n-slider
+            <NSlider
               v-model:value="fontSizeScale"
               :min="0.875"
               :max="1.25"
@@ -92,7 +90,7 @@
         <div class="theme-section">
           <div class="compact-toggle">
             <span>紧凑模式</span>
-            <n-switch v-model:value="isCompact" @update:value="toggleCompact" />
+            <NSwitch v-model:value="isCompact" @update:value="toggleCompact" />
           </div>
         </div>
 
@@ -100,22 +98,24 @@
         <div class="theme-section">
           <div class="compact-toggle">
             <span>动画效果</span>
-            <n-switch v-model:value="animationsEnabled" @update:value="toggleAnimations" />
+            <NSwitch v-model:value="animationsEnabled" @update:value="toggleAnimations" />
           </div>
         </div>
       </div>
-    </n-popover>
+    </NPopover>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { Moon, Sunny, DesktopOutline, Checkmark } from '@vicons/ionicons5';
-import { NButton, NIcon, NPopover, NSwitch, NSlider } from 'naive-ui';
-import { useTheme } from '@/composables/useTheme';
+import { Checkmark, DesktopOutline, Moon, Sunny } from '@vicons/ionicons5';
+import { NButton, NIcon, NPopover, NSlider, NSwitch } from 'naive-ui';
+import { onMounted, ref } from 'vue';
+import { useAccent } from '@/composables/useAccent';
 import { applyCompactModeClass } from '@/composables/useCompactMode';
+import { useTheme } from '@/composables/useTheme';
 
-const { isDark, setDarkTheme, setLightTheme, getCurrentTheme } = useTheme();
+const { themeMode: currentTheme, setThemeMode: setTheme } = useTheme();
+const { accent, accentOptions, setAccent } = useAccent();
 
 // 主题选项
 const themeOptions = [
@@ -124,33 +124,13 @@ const themeOptions = [
   { value: 'system', label: '跟随系统' },
 ];
 
-// 强调色选项
-const accentColors = [
-  { value: 'blue', label: '蓝色', color: '#3b82f6' },
-  { value: 'purple', label: '紫色', color: '#8b5cf6' },
-  { value: 'green', label: '绿色', color: '#10b981' },
-  { value: 'orange', label: '橙色', color: '#f59e0b' },
-  { value: 'pink', label: '粉色', color: '#ec4899' },
-  { value: 'red', label: '红色', color: '#ef4444' },
-];
-
-// 当前主题
-const currentTheme = ref('system');
-const accentColor = ref('blue');
 const fontSizeScale = ref(1);
 const isCompact = ref(false);
 const animationsEnabled = ref(true);
 
 // 从 localStorage 加载设置
 onMounted(() => {
-  const savedTheme = localStorage.getItem('theme-mode') || 'system';
-  currentTheme.value = savedTheme;
-
-  const savedAccent = localStorage.getItem('theme-accent') || 'blue';
-  accentColor.value = savedAccent;
-  applyAccentColor(savedAccent);
-
-  const savedFontSize = parseFloat(localStorage.getItem('theme-font-size') || '1');
+  const savedFontSize = Number.parseFloat(localStorage.getItem('theme-font-size') || '1');
   fontSizeScale.value = savedFontSize;
   applyFontSize(savedFontSize);
 
@@ -162,58 +142,7 @@ onMounted(() => {
   animationsEnabled.value = savedAnimations;
   applyAnimations(savedAnimations);
 
-  // 应用主题
-  applyTheme(savedTheme);
 });
-
-// 设置主题
-const setTheme = (theme) => {
-  currentTheme.value = theme;
-  localStorage.setItem('theme-mode', theme);
-  applyTheme(theme);
-};
-
-// 应用主题
-const applyTheme = (theme) => {
-  if (theme === 'dark') {
-    setDarkTheme();
-  } else if (theme === 'light') {
-    setLightTheme();
-  } else {
-    // 跟随系统
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDark) {
-      setDarkTheme();
-    } else {
-      setLightTheme();
-    }
-  }
-};
-
-// 设置强调色
-const setAccentColor = (color) => {
-  accentColor.value = color;
-  localStorage.setItem('theme-accent', color);
-  applyAccentColor(color);
-};
-
-// 应用强调色
-const applyAccentColor = (color) => {
-  const colorMap = {
-    blue: { primary: '#3b82f6', primaryHover: '#2563eb' },
-    purple: { primary: '#8b5cf6', primaryHover: '#7c3aed' },
-    green: { primary: '#10b981', primaryHover: '#059669' },
-    orange: { primary: '#f59e0b', primaryHover: '#d97706' },
-    pink: { primary: '#ec4899', primaryHover: '#db2777' },
-    red: { primary: '#ef4444', primaryHover: '#dc2626' },
-  };
-
-  const colors = colorMap[color];
-  if (colors) {
-    document.documentElement.style.setProperty('--color-primary-500', colors.primary);
-    document.documentElement.style.setProperty('--color-primary-600', colors.primaryHover);
-  }
-};
 
 // 更新字体大小
 const updateFontSize = (value) => {
@@ -256,18 +185,6 @@ const applyAnimations = (enabled) => {
   }
 };
 
-// 监听系统主题变化
-if (typeof window !== 'undefined') {
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    if (currentTheme.value === 'system') {
-      if (e.matches) {
-        setDarkTheme();
-      } else {
-        setLightTheme();
-      }
-    }
-  });
-}
 </script>
 
 <style scoped lang="scss">
@@ -279,11 +196,12 @@ if (typeof window !== 'undefined') {
   transition: all var(--duration-normal) var(--ease-out);
 
   &:hover {
-    transform: scale(1.1) rotate(15deg);
+    transform: translateY(-1px);
   }
 }
 
 .theme-panel {
+  .color-options { gap: 6px; }
   width: 280px;
   padding: var(--space-4);
 
@@ -335,8 +253,8 @@ if (typeof window !== 'undefined') {
   }
 
   &.active {
-    border-color: var(--color-primary-500);
-    background: var(--color-primary-50);
+    border-color: var(--primary-color);
+    background: var(--primary-color-light);
   }
 
   .theme-name {
@@ -351,7 +269,7 @@ if (typeof window !== 'undefined') {
     position: absolute;
     top: 4px;
     right: 4px;
-    color: var(--color-primary-500);
+    color: var(--primary-color);
     font-size: 12px;
   }
 }
@@ -445,39 +363,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// 颜色选项
-.color-options {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.color-option {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--duration-fast) var(--ease-out);
-  border: 2px solid transparent;
-
-  &:hover {
-    transform: scale(1.1);
-  }
-
-  &.active {
-    border-color: var(--color-text-primary);
-    transform: scale(1.15);
-  }
-
-  .n-icon {
-    color: white;
-    font-size: 16px;
-  }
-}
-
 // 字体大小滑块
 .font-size-slider {
   display: flex;
@@ -493,7 +378,7 @@ if (typeof window !== 'undefined') {
     }
 
     &.large {
-      font-size: 18px;
+      font-size: 16px;
     }
   }
 

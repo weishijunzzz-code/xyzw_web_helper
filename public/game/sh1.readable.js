@@ -698,7 +698,7 @@
         font-size:12px; transition:background 0.15s; gap:6px;
       }
       .binItem:hover { background:#f5f5f5; }
-      .binItem.active { background:#e6f7ff; border-left:3px solid #4a90d9; }
+      .binItem.active { background:var(--primary-color-light, #EFF6FF); border-left:3px solid #4a90d9; }
       .binItemName { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .binItemInfo { color:#999; font-size:11px; margin-left:6px; white-space:nowrap; }
       .binItemToggle,.binItemEdit,.binItemDelete {

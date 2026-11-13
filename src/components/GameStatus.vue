@@ -784,7 +784,7 @@ onUnmounted(() => {
   border-radius: 999px;
   background: var(--bg-primary);
   color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-light);
   cursor: pointer;
 }
 
@@ -828,8 +828,8 @@ onUnmounted(() => {
   cursor: pointer;
 
   &.active {
-    color: var(--primary-color, #667eea);
-    background: var(--primary-color-light, rgba(102, 126, 234, 0.18));
+    color: var(--primary-color);
+    background: var(--primary-color-light, color-mix(in srgb, var(--primary-color) 18%, transparent));
     border-color: transparent;
     font-weight: 600;
   }
@@ -917,16 +917,12 @@ onUnmounted(() => {
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
     border: 1px solid var(--border-light);
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-light);
     transition: all 0.2s ease-in-out;
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow:
-        0 4px 6px rgba(0, 0, 0, 0.1),
-        0 2px 4px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-light);
     }
   }
 

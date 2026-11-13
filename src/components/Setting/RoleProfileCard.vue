@@ -323,20 +323,17 @@ watch(wsStatus, async (newStatus) => {
   margin-bottom: var(--spacing-md);
   padding: var(--spacing-md);
   border-radius: var(--border-radius-large);
-  background: linear-gradient(
-    135deg,
-    var(--bg-primary) 0%,
-    rgba(102, 126, 234, 0.03) 100%
-  );
+  background: var(--bg-primary);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   transition: all 0.3s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-light);
 
     .glow-border {
+  display: none;
       opacity: 1;
     }
   }
@@ -361,7 +358,7 @@ watch(wsStatus, async (newStatus) => {
   height: 45px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   object-fit: cover;
   background: var(--bg-tertiary);
 }
@@ -412,7 +409,7 @@ watch(wsStatus, async (newStatus) => {
   padding: 4px 8px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: var(--border-radius-medium);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   max-width: 80px;
 }
 
@@ -422,7 +419,7 @@ watch(wsStatus, async (newStatus) => {
 }
 
 .rank-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   white-space: nowrap;
@@ -451,15 +448,11 @@ watch(wsStatus, async (newStatus) => {
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease;
-  background: linear-gradient(
-    90deg,
-    var(--primary-color),
-    rgba(102, 126, 234, 0.8)
-  );
+  background: var(--primary-color);
 }
 
 .progress-text {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: var(--font-weight-medium);
   line-height: 1;
@@ -467,18 +460,13 @@ watch(wsStatus, async (newStatus) => {
 
 // 炫光边框
 .glow-border {
+  display: none;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    45deg,
-    rgba(102, 126, 234, 0.4),
-    rgba(118, 75, 162, 0.4),
-    rgba(254, 202, 87, 0.4),
-    rgba(102, 126, 234, 0.4)
-  );
+  background: var(--bg-primary);
   background-size: 300% 300%;
   border-radius: var(--border-radius-large);
   opacity: 0;
@@ -604,14 +592,10 @@ watch(wsStatus, async (newStatus) => {
 
 // 深色主题优化
 [data-theme="dark"] .role-profile-card {
-  background: linear-gradient(
-    135deg,
-    var(--bg-secondary) 0%,
-    rgba(102, 126, 234, 0.08) 100%
-  );
+  background: var(--bg-primary);
 
   .role-name {
-    color: #ffffff;
+    color: var(--text-primary);
   }
 
   .level-text {
@@ -702,7 +686,7 @@ watch(wsStatus, async (newStatus) => {
 
   .level-text,
   .power-value {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .rank-section {
@@ -711,7 +695,7 @@ watch(wsStatus, async (newStatus) => {
   }
 
   .rank-title {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .progress-section {
@@ -719,7 +703,7 @@ watch(wsStatus, async (newStatus) => {
   }
 
   .progress-text {
-    font-size: 9px;
+    font-size: 12px;
   }
 }
 </style>

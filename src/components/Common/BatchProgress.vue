@@ -221,7 +221,7 @@ const showErrorDetails = () => {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -235,7 +235,7 @@ const showErrorDetails = () => {
   padding: 24px;
   width: 90%;
   max-width: 480px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-light);
   animation: slideUp 0.3s ease-out;
 }
 
@@ -247,7 +247,7 @@ const showErrorDetails = () => {
 }
 
 .progress-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary, #333333);
   margin: 0;
@@ -276,7 +276,7 @@ const showErrorDetails = () => {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: var(--primary-color);
   border-radius: 9999px;
   transition: width 0.3s ease-out;
   position: relative;
@@ -390,7 +390,7 @@ const showErrorDetails = () => {
   }
 
   .eta-value {
-    color: #667eea;
+    color: var(--primary-color);
     font-weight: 500;
   }
 }
@@ -525,7 +525,7 @@ const showErrorDetails = () => {
   }
 
   .stat-item {
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 </style>

@@ -595,6 +595,7 @@ loadDebugState();
     }
 
     .side-item {
+  position: relative;
       justify-content: center;
       padding: 10px 0;
     }
@@ -635,7 +636,7 @@ loadDebugState();
 
 .nav-group-label {
   padding: var(--space-3, 12px) var(--space-3, 12px) var(--space-1, 4px);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--font-weight-semibold, 600);
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -644,6 +645,7 @@ loadDebugState();
 }
 
 .side-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3, 12px);
@@ -667,8 +669,18 @@ loadDebugState();
   }
 
   &.active {
-    background: var(--primary-color-light);
+    background: transparent;
     color: var(--primary-color);
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 999px;
+      background: var(--primary-color);
+    }
     font-weight: var(--font-weight-semibold, 600);
   }
 
@@ -948,13 +960,7 @@ loadDebugState();
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 
-    // 内容紧凑缩放：与 MobileLayout 一致，只缩放页面内容，
-    // 顶栏/面包屑/底部导航保持原生尺寸（云端任务等 admin 页面在手机上的密度来源）
-    --mobile-content-zoom: 0.6;
-
-    > :deep(*) {
-      zoom: var(--mobile-content-zoom);
-    }
+    // Density is controlled by spacing, preserving readable text and touch sizes.
   }
 }
 
@@ -1041,7 +1047,7 @@ loadDebugState();
 }
 
 .bottom-nav-label {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.2;
 }
 
@@ -1074,7 +1080,8 @@ loadDebugState();
 }
 
 .drawer-item.router-link-active {
-  background: var(--primary-color-light);
+  background: transparent;
+  border-left: 3px solid var(--primary-color);
   color: var(--primary-color);
 }
 

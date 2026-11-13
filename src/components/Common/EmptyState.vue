@@ -274,7 +274,7 @@ const handleExtraClick = () => {
   align-items: center;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--primary-color-light, rgba(102, 126, 234, 0.1));
+  background: var(--primary-color-light, color-mix(in srgb, var(--primary-color) 10%, transparent));
   border-radius: var(--border-radius-large);
   color: var(--primary-color);
   font-size: var(--font-size-sm);
@@ -295,7 +295,7 @@ const handleExtraClick = () => {
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      box-shadow: var(--shadow-light);
     }
     
     &:active {
@@ -374,7 +374,7 @@ const handleExtraClick = () => {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: var(--font-weight-bold);
   transition: all 0.3s ease;
 }
@@ -417,7 +417,7 @@ const handleExtraClick = () => {
 
 .empty-token {
   .action-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--primary-color);
     border: none;
   }
 }

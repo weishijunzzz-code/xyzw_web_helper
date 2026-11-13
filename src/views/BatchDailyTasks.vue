@@ -5,30 +5,11 @@
       <div class="left-column">
         <!-- Header -->
         <div
-          class="page-header"
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-          "
+          class="batch-page-header"
         >
-          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; row-gap: 8px">
+          <div class="schedule-heading">
             <h2 style="white-space: nowrap; margin: 0">批量日常任务</h2>
-            <div
-              style="
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 8px 12px;
-                background-color: var(--color-bg-secondary);
-                border-radius: 8px;
-                border: 1px solid var(--color-border-default);
-                flex-wrap: wrap;
-                row-gap: 6px;
-              "
-            >
+            <div class="schedule-panel">
               <div style="font-size: 14px; color: var(--color-text-secondary); white-space: nowrap">
                 共 {{ scheduledTasks.length }} 个定时任务
               </div>
@@ -43,7 +24,7 @@
               <div v-else style="font-size: 14px; color: var(--color-text-tertiary); white-space: nowrap">
                 暂无定时任务
               </div>
-              <div style="display: flex; gap: 8px">
+              <div class="schedule-actions">
                 <n-button type="primary" size="small" @click="openTaskModal">
                   新增定时任务
                 </n-button>
@@ -63,17 +44,7 @@
               </div>
             </div>
           </div>
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              gap: 12px;
-              padding: 8px 12px;
-              background-color: var(--color-bg-secondary);
-              border-radius: 8px;
-              border: 1px solid var(--color-border-default);
-            "
-          >
+          <div class="execution-actions">
             <n-button
               type="primary"
               @click="startBatch"
@@ -234,9 +205,9 @@
             </n-checkbox>
             <n-checkbox-group v-model:value="selectedTokens">
               <n-grid
-                :x-gap="12"
+                :x-gap="isMobile ? 8 : 12"
                 :y-gap="8"
-                :cols="batchSettings.tokenListColumns"
+                :cols="isMobile ? 2 : batchSettings.tokenListColumns"
               >
                 <n-grid-item
                   v-for="gameToken in sortedTokens"
@@ -245,11 +216,11 @@
                   <div class="token-row">
                     <n-checkbox
                       :value="gameToken.id"
-                      :label="gameToken.name"
+                      :aria-label="gameToken.name"
                       style="flex: 1"
                     >
-                      <div class="token-item">
-                        <span>{{ gameToken.name }}</span>
+                      <div class="batch-token-content">
+                        <span class="token-display-name" :title="gameToken.name">{{ gameToken.name }}</span>
                         <n-tag
                           size="small"
                           :type="getStatusType(gameToken.id)"
@@ -1353,7 +1324,7 @@
                   height: 80px;
                   border-radius: 50%;
                   overflow: hidden;
-                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  background: var(--primary-color);
                   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
                   display: flex;
                   align-items: center;
@@ -1384,7 +1355,7 @@
                     justify-content: center;
                     width: 100%;
                     height: 100%;
-                    color: white;
+                    color: var(--accent-on-primary);
                     font-size: 24px;
                     font-weight: bold;
                     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -7211,14 +7182,20 @@ const stopBatch = () => {
   height: auto;
 }
 
-.page-header {
+.batch-page-header {
+  flex-wrap: wrap;
+  gap: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.token-item {
+.schedule-heading { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; row-gap: 8px; min-width: 0; }
+.schedule-panel, .execution-actions { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--color-bg-secondary); border-radius: 12px; border: 1px solid var(--color-border-default); }
+.schedule-panel { flex-wrap: wrap; row-gap: 6px; }
+.schedule-actions { display: flex; gap: 8px; }
+.batch-token-content {
   display: flex;
   align-items: center;
 }
@@ -7289,7 +7266,7 @@ const stopBatch = () => {
 
 .cron-next-runs li {
   padding: 6px 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
 }
@@ -7474,51 +7451,40 @@ const stopBatch = () => {
     flex: none;
   }
 
-  .page-header {
+  .batch-page-header {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
   }
 
-  /* 页头紧凑化：标题与状态文字同行，操作按钮独占一行 */
-  .page-header {
-    flex-direction: column;
+  .batch-page-header { align-items: stretch; gap: 8px; }
+  .schedule-heading, .schedule-panel { width: 100%; min-width: 0; }
+  .batch-page-header h2 { display: none; }
+  .schedule-panel { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 10px; }
+  .schedule-panel > div:not(.schedule-actions) { min-width: 0; max-width: 100%; white-space: normal !important; overflow-wrap: anywhere; }
+  .schedule-actions, .execution-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    align-items: stretch;
+    width: 100%;
+    min-width: 0;
   }
-
-  .page-header > div:first-child {
-    flex-wrap: wrap;
-    row-gap: 4px;
-  }
-
-  /* 应用头部已展示页面标题，页内 h2 在移动端隐藏，页头收敛为单行 */
-  .page-header h2 {
-    display: none;
-  }
-
-  /* 状态胶囊（共 X 个定时任务 / 暂无定时任务 + 按钮组） */
-  .page-header > div:first-child > div {
-    flex-wrap: nowrap;
-    row-gap: 4px;
-  }
-
-  .page-header > div:first-child > div > div {
-    white-space: nowrap;
-    font-size: 12px;
-  }
-
-  /* 操作按钮行：独占一整行且不换行 */
-  .page-header > div:first-child > div > div:last-child {
-    flex: 1 1 100%;
-    flex-wrap: nowrap;
-    white-space: normal;
-  }
-
-  .page-header .actions {
-    display: flex;
-    gap: 8px;
-  }
+  .schedule-actions { flex: 1 1 100%; }
+  .execution-actions { padding: 10px; }
+  .schedule-actions :deep(.n-button), .execution-actions :deep(.n-button) { width: 100%; min-height: 44px; }
+  .schedule-actions :deep(.n-upload), .schedule-actions :deep(.n-upload-trigger) { display: block; width: 100%; }
+  .token-list-card :deep(.n-card__content), .token-list-card :deep(.n-card-header) { padding: 12px; }
+  .token-list-card :deep(.n-checkbox-group) { width: 100%; }
+  .token-row { gap: 8px; width: 100%; min-width: 0; min-height: 52px; }
+  .token-row :deep(.n-checkbox) { min-width: 0; align-items: center; }
+  .token-row :deep(.n-checkbox__label) { min-width: 0; flex: 1; }
+  .batch-token-content { min-width: 0; flex-wrap: wrap; gap: 4px; }
+  .token-display-name { flex: 1 1 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .batch-token-content :deep(.n-tag) { margin-left: 0 !important; }
+  .token-row > :deep(.n-button) { flex: 0 0 44px; width: 44px; height: 44px; }
+  .sort-buttons :deep(.n-space), .sort-buttons :deep(.n-space > div), .sort-buttons :deep(.n-button-group) { width: 100%; min-width: 0; }
+  .sort-buttons :deep(.n-button-group) { display: flex; }
+  .sort-buttons :deep(.n-button) { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 4px; }
 
   .log-card {
     height: auto !important;
@@ -7564,13 +7530,13 @@ const stopBatch = () => {
   /* 批量功法残卷赠送样式 */
   .recipient-info:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-light);
   }
 
   /* 头像悬停效果 */
   .avatar-container:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-light);
   }
 
   /* 加载动画 */
@@ -7604,7 +7570,7 @@ const stopBatch = () => {
 
   .group-tag:hover {
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
   }
 
   .group-tag-selected {
@@ -7667,5 +7633,31 @@ const stopBatch = () => {
   .bm-edit-row {
     grid-template-columns: 1fr !important;
   }
+}
+
+/* Mobile defaults prioritize the account list over oversized control panels. */
+@media (max-width: 768px) {
+  .batch-daily-tasks { padding: 8px; }
+  .main-layout { gap: 12px; }
+  .batch-page-header { margin-bottom: 10px; gap: 6px; }
+  .schedule-panel, .execution-actions { padding: 8px; border-radius: var(--border-radius-medium); gap: 6px; }
+  .schedule-panel > div:not(.schedule-actions) { font-size: 12px !important; line-height: 1.5; }
+  .schedule-actions { gap: 6px; }
+  .schedule-actions :deep(.n-button), .execution-actions :deep(.n-button) {
+    height: 36px; min-height: 36px; padding: 0 4px; font-size: 12px;
+  }
+  .token-list-card :deep(.n-card-header) { padding: 10px 10px 6px; }
+  .token-list-card :deep(.n-card-header__main) { font-size: 16px; }
+  .token-list-card :deep(.n-card__content) { padding: 8px 10px; }
+  .token-list-card :deep(.n-button--small-type) { min-height: 32px; font-size: 12px; }
+  .group-selection-section { padding: 8px; }
+  .token-row { min-height: 44px; padding-right: 0; gap: 6px; }
+  .token-row :deep(.n-checkbox) { min-height: 44px; }
+  .token-display-name { font-size: 12px; line-height: 1.5; }
+  .token-row > :deep(.n-button) { flex-basis: 36px; width: 36px; height: 36px; }
+  .sort-buttons :deep(.n-button) { min-height: 32px; height: 32px; font-size: 12px; }
+}
+@media (min-width: 375px) and (max-width: 768px) {
+  .schedule-actions, .execution-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 </style>

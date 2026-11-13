@@ -503,7 +503,7 @@ onMounted(() => {
   background: var(--bg-primary, white);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .section-header {
@@ -522,7 +522,7 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary, #1f2937);
   margin: 0;
@@ -548,7 +548,7 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary, #1f2937);
   
@@ -620,7 +620,7 @@ onMounted(() => {
 }
 
 .status-icon {
-  font-size: 18px;
+  font-size: 16px;
   
   .success & { color: #10b981; }
   .failed & { color: #ef4444; }
@@ -649,7 +649,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary, #6b7280);
     
     &.success { color: #10b981; }
@@ -721,7 +721,7 @@ onMounted(() => {
 }
 
 .account-message {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary, #6b7280);
   margin-left: 24px;
 }
@@ -737,7 +737,7 @@ onMounted(() => {
 [data-theme="dark"] {
   .task-history-section {
     background: var(--bg-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
   }
   
   .section-title {

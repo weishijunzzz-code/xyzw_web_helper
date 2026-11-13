@@ -120,7 +120,7 @@
   &:active { transform: scale(0.98); opacity: 0.9; }
 
   &.btn-primary {
-    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
+    background: var(--primary-color);
     color: var(--color-text-inverse);
   }
   &.btn-secondary { background: var(--color-bg-secondary); color: var(--color-text-primary); }
@@ -136,7 +136,7 @@
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
+  background: var(--bg-primary);
   color: var(--color-text-inverse);
   display: flex;
   align-items: center;

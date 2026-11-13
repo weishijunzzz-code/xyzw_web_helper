@@ -1187,14 +1187,14 @@ onUnmounted(() => {
 
 .cloud-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .cloud-sub {
   display: block;
   margin-top: 2px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .cloud-header-actions {
@@ -1250,17 +1250,17 @@ onUnmounted(() => {
   border: 1px solid var(--border-light);
   border-left: 4px solid transparent;
   border-radius: 12px;
-  box-shadow: var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+  box-shadow: var(--shadow-light);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .stat-total {
-  border-left-color: #3b82f6;
+  border-left-color: var(--primary-color);
 }
 
 .stat-conn {
@@ -1268,7 +1268,7 @@ onUnmounted(() => {
 }
 
 .stat-sched {
-  border-left-color: #8b5cf6;
+  border-left-color: var(--primary-color);
 }
 
 .stat-enabled {
@@ -1282,14 +1282,14 @@ onUnmounted(() => {
   width: 44px;
   height: 44px;
   margin-right: 14px;
-  font-size: 22px;
+  font-size: 20px;
   border-radius: 10px;
   flex-shrink: 0;
 }
 
 .stat-total .stat-icon {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  color: var(--primary-color);
 }
 
 .stat-conn .stat-icon {
@@ -1298,8 +1298,8 @@ onUnmounted(() => {
 }
 
 .stat-sched .stat-icon {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  color: var(--primary-color);
 }
 
 .stat-enabled .stat-icon {
@@ -1316,7 +1316,7 @@ onUnmounted(() => {
 
 .stat-value {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.1;
   color: var(--text-primary);
@@ -1347,18 +1347,18 @@ onUnmounted(() => {
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
 .hi-blue {
-  background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
 }
 
 .hi-violet {
-  background: rgba(139, 92, 246, 0.12);
-  color: #8b5cf6;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
 }
 
 .hi-green {
@@ -1367,7 +1367,7 @@ onUnmounted(() => {
 }
 
 .card-head-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -1421,10 +1421,10 @@ onUnmounted(() => {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--text-primary);
+  background: var(--bg-primary);
   border-radius: 50%;
 }
 
@@ -1447,7 +1447,7 @@ onUnmounted(() => {
 .account-name {
   overflow: hidden;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1456,7 +1456,7 @@ onUnmounted(() => {
 .account-server {
   flex-shrink: 0;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   background: var(--bg-tertiary);
   border-radius: var(--border-radius-full);
@@ -1624,7 +1624,7 @@ onUnmounted(() => {
 .task-cron {
   padding: 1px 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   background: var(--bg-tertiary);
   border-radius: var(--border-radius-small);
@@ -1696,16 +1696,16 @@ onUnmounted(() => {
   margin-bottom: var(--spacing-md);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+  box-shadow: var(--shadow-light);
 }
 
 /* 彩色描边用 inset 阴影实现，避免覆盖 n-card 自身边框 */
 .card-sync {
-  box-shadow: inset 4px 0 0 #3b82f6, var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+  box-shadow: inset 4px 0 0 var(--primary-color), var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
 }
 
 .card-sched {
-  box-shadow: inset 4px 0 0 #8b5cf6, var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+  box-shadow: inset 4px 0 0 var(--primary-color), var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
 }
 
 .card-log {
@@ -1783,7 +1783,7 @@ onUnmounted(() => {
     width: 36px;
     height: 36px;
     margin-right: 10px;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .stat-value {

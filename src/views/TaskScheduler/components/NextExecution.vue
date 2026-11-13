@@ -184,7 +184,7 @@ const handleDetail = () => {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .section-header {
@@ -195,7 +195,7 @@ const handleDetail = () => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary, #1f2937);
   margin: 0;
@@ -250,7 +250,7 @@ const handleDetail = () => {
   
   .task-icon {
     color: #3b82f6;
-    font-size: 18px;
+    font-size: 16px;
   }
   
   .name-text {
@@ -265,11 +265,11 @@ const handleDetail = () => {
   
   .time-text {
     color: var(--text-secondary, #6b7280);
-    font-size: 13px;
+    font-size: 12px;
   }
   
   .countdown {
-    font-size: 13px;
+    font-size: 12px;
     color: #3b82f6;
     font-weight: 500;
     
@@ -348,7 +348,7 @@ const handleDetail = () => {
   }
   
   .countdown {
-    font-size: 13px;
+    font-size: 12px;
     color: #3b82f6;
     font-weight: 500;
     
@@ -383,7 +383,7 @@ const handleDetail = () => {
 [data-theme="dark"] {
   .next-execution-section {
     background: var(--bg-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
   }
   
   .section-title {

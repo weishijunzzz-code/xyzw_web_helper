@@ -74,11 +74,20 @@
         <a-form>
           <a-form-item label="主题设置">
             <n-select
-              v-model:value="preferences.theme"
+              :value="themeMode"
               :options="themeOptions"
               @update:value="updateTheme"
             />
             <template #extra> 选择您喜欢的界面主题 </template>
+          </a-form-item>
+          <a-form-item label="强调色">
+            <div class="accent-swatches" role="group" aria-label="强调色">
+              <button v-for="color in accentOptions" :key="color.value"
+                type="button" class="accent-swatch" :aria-label="color.label"
+                :aria-pressed="accent === color.value" :title="color.label"
+                :style="{ '--swatch-color': color.color }"
+                @click="setAccent(color.value)">{{ accent === color.value ? '✓' : '' }}</button>
+            </div>
           </a-form-item>
           <a-form-item label="语言设置">
             <n-select
@@ -145,9 +154,13 @@
 import { useDialog, useMessage } from "naive-ui";
 import { onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useAccent } from "@/composables/useAccent";
+import { useTheme } from "@/composables/useTheme";
 import { useAuthStore } from "@/stores/auth";
 import { collectFullBackup, downloadBackupFile } from "@/utils/fullBackup";
 
+const { themeMode, setThemeMode } = useTheme();
+const { accent, accentOptions, setAccent } = useAccent();
 useRouter();
 const message = useMessage();
 const dialog = useDialog();
@@ -172,7 +185,6 @@ const passwordForm = reactive({
 
 // 系统偏好
 const preferences = reactive({
-  theme: "auto",
   language: "zh-CN",
   notifications: true,
   autoExecute: false,
@@ -182,7 +194,7 @@ const preferences = reactive({
 
 // 选项数据
 const themeOptions = [
-  { label: "跟随系统", value: "auto" },
+  { label: "跟随系统", value: "system" },
   { label: "浅色主题", value: "light" },
   { label: "深色主题", value: "dark" },
 ];
@@ -220,22 +232,7 @@ const changePassword = async () => {
   }
 };
 
-const updateTheme = (theme) => {
-  preferences.theme = theme;
-  localStorage.setItem("theme", theme);
-  if (theme === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
-  } else if (theme === "light") {
-    document.documentElement.removeAttribute("data-theme");
-  } else {
-    const prefersDark =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (prefersDark)
-      document.documentElement.setAttribute("data-theme", "dark");
-    else document.documentElement.removeAttribute("data-theme");
-  }
-};
+const updateTheme = setThemeMode;
 
 const setupTwoFactor = () => {
   message.info("两步验证设置功能开发中...");

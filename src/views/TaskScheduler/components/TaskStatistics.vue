@@ -461,7 +461,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
   color: var(--text-primary, #1f2937);
@@ -486,7 +486,7 @@ onUnmounted(() => {
   background: var(--bg-primary, white);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .chart-header {
@@ -514,7 +514,7 @@ onUnmounted(() => {
   
   .chart-card {
     background: var(--bg-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
   }
   
   .chart-header h4 {

@@ -129,7 +129,7 @@ const getTypeLabel = (type) => {
 }
 
 .changelog-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   transform: translateY(-2px);
 }
 
@@ -147,25 +147,25 @@ const getTypeLabel = (type) => {
   font-weight: 700;
   padding: 8px 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-light);
 }
 
 .version-badge.badge-major {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: var(--bg-primary);
 }
 
 .version-badge.badge-minor {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: var(--bg-primary);
 }
 
 .version-badge.badge-patch {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: var(--bg-primary);
 }
 
 .version-badge.badge-hotfix {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: var(--bg-primary);
 }
 
 .changelog-meta {
@@ -213,7 +213,7 @@ const getTypeLabel = (type) => {
 }
 
 .changelog-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 8px;
@@ -271,7 +271,7 @@ const getTypeLabel = (type) => {
   --bg-color: #f9fafb;
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
-  --primary-color: #667eea;
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -281,7 +281,7 @@ const getTypeLabel = (type) => {
     --bg-color: #111827;
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
-    --primary-color: #818cf8;
+
   }
 }
 

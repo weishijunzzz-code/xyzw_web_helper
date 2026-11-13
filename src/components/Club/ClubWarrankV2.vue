@@ -2911,7 +2911,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 .player-avatar {
   border: 2px solid var(--primary-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .player-info-detail h3 {
@@ -3080,7 +3080,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     }
 
     .hero-placeholder {
-      font-size: 36px;
+      font-size: 20px;
       font-weight: var(--font-weight-bold);
       color: var(--text-secondary);
     }
@@ -3582,7 +3582,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
         background: #ffffff;
         border: 1px solid #d9d9d9;
         border-radius: 6px;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        box-shadow: var(--shadow-light);
       }
 
       .stat-calendar-header {
@@ -3744,7 +3744,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
     .announcement-text {
       color: #8b4513;
-      font-size: 22px !important;
+      font-size: 20px !important;
       font-weight: var(--font-weight-bold);
       text-align: center;
       line-height: 1.5;
@@ -4025,7 +4025,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-light);
 
       // 确保所有标题头居中对齐
       .table-cell {
@@ -4092,7 +4092,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
       &:hover {
         background: var(--bg-secondary);
         transform: translateX(2px);
-        box-shadow: inset 3px 0 0 var(--primary-color);
+        box-shadow: var(--shadow-light);
       }
 
       &:last-child {
@@ -4188,7 +4188,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
           font-weight: bold;
           font-size: var(--font-size-base);
           color: white;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          box-shadow: var(--shadow-light);
           margin: 0 6px;
 
           &::before {
@@ -4348,12 +4348,8 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
           }
 
           .hero-avatar-placeholder {
-            background: linear-gradient(
-              135deg,
-              var(--primary-color) 0%,
-              var(--primary-color-light) 100%
-            );
-            color: white;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -4446,12 +4442,8 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
         span {
           display: inline-block;
           padding: 2px 8px;
-          background: linear-gradient(
-            135deg,
-            var(--primary-color-light) 0%,
-            var(--primary-color) 100%
-          );
-          color: white;
+          background: var(--bg-primary);
+          color: var(--text-primary);
           border-radius: var(--border-radius-full);
           font-weight: var(--font-weight-bold);
           font-size: var(--font-size-sm);
@@ -4616,7 +4608,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     border-radius: 999px;
     background: #eb2f96;
     color: #ffffff;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
@@ -4703,7 +4695,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     padding-right: 8px;
     text-align: right;
     color: #4b5563;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
   }
@@ -4716,7 +4708,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     width: 100%;
     height: 100%;
     padding: 0 8px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     text-align: center;
     white-space: nowrap;
@@ -5068,7 +5060,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
       padding-right: 8px;
       text-align: right;
       color: #4b5563;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       white-space: nowrap;
     }
@@ -5081,7 +5073,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
       width: 100%;
       height: 100%;
       padding: 0 8px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       text-align: center;
       white-space: nowrap;
@@ -5364,12 +5356,8 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     }
 
     .table-header {
-      background: linear-gradient(
-        135deg,
-        var(--primary-color) 0%,
-        var(--primary-color-light) 100%
-      );
-      color: white;
+      background: var(--bg-primary);
+      color: var(--text-primary);
 
       .table-cell {
         padding: var(--spacing-sm) var(--spacing-md);
@@ -5435,12 +5423,8 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
             }
 
             .member-avatar-placeholder {
-              background: linear-gradient(
-                135deg,
-                var(--primary-color) 0%,
-                var(--primary-color-light) 100%
-              );
-              color: white;
+              background: var(--bg-primary);
+              color: var(--text-primary);
               display: flex;
               align-items: center;
               justify-content: center;
@@ -5520,12 +5504,8 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
             }
 
             .hero-avatar-placeholder {
-              background: linear-gradient(
-                135deg,
-                var(--primary-color) 0%,
-                var(--primary-color-light) 100%
-              );
-              color: white;
+              background: var(--bg-primary);
+              color: var(--text-primary);
               display: flex;
               align-items: center;
               justify-content: center;
@@ -5552,7 +5532,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
                 }
 
                 .hero-holy-beast {
-                  font-size: 10px;
+                  font-size: 12px;
                   color: white;
                   background: linear-gradient(135deg, #ff6b6b, #ee5a24);
                   padding: 1px 4px;

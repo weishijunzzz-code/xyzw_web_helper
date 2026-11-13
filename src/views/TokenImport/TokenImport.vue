@@ -2419,7 +2419,7 @@ onUnmounted(() => {
 
 .stat-value {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.1;
   color: var(--text-primary);
@@ -2551,7 +2551,7 @@ onUnmounted(() => {
     &.is-mobile {
       :deep(.n-radio-button) {
         padding: 6px 10px;
-        font-size: 13px;
+        font-size: 12px;
       }
     }
   }
@@ -2888,7 +2888,7 @@ onUnmounted(() => {
 
   &.active {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: var(--shadow-light);
   }
 
   &.connected {
@@ -3287,7 +3287,7 @@ onUnmounted(() => {
 
   &.active {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+    box-shadow: var(--shadow-light);
   }
 }
 

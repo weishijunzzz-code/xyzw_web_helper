@@ -703,7 +703,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true });
   background: var(--bg-primary);
   border-radius: var(--border-radius-xl);
   padding: var(--spacing-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 /* 下落动画 */
@@ -871,26 +871,21 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true });
     gap: 2px;
 
     .label {
-      font-size: 11px;
+      font-size: 12px;
     }
 
     .value {
-      font-size: 13px;
+      font-size: 12px;
     }
   }
 }
 
 .glow-border {
+  display: none;
   position: absolute;
   inset: 0;
   border-radius: var(--border-radius-large);
-  background: linear-gradient(
-    45deg,
-    rgba(102, 126, 234, 0.4),
-    rgba(118, 75, 162, 0.4),
-    rgba(254, 202, 87, 0.4),
-    rgba(102, 126, 234, 0.4)
-  );
+  background: var(--bg-primary);
   background-size: 300% 300%;
   opacity: 0.6;
   z-index: 1;

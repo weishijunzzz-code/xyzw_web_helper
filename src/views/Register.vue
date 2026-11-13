@@ -224,7 +224,7 @@ const handleRegister = async () => {
 <style scoped lang="scss">
 .register-page {
   min-height: 100dvh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,7 +234,7 @@ const handleRegister = async () => {
 
 /* 深色主题下背景 */
 [data-theme="dark"] .register-page {
-  background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
+  background: var(--bg-secondary);
 }
 
 .register-container {
@@ -243,17 +243,17 @@ const handleRegister = async () => {
 }
 
 .register-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
+  background: var(--bg-primary);
+  backdrop-filter: none;
   border-radius: var(--border-radius-xl);
   padding: var(--spacing-2xl);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* 深色主题下注册卡片 */
 [data-theme="dark"] .register-card {
-  background: rgba(17, 24, 39, 0.85);
+  background: var(--bg-primary);
   border-color: rgba(255, 255, 255, 0.1);
 }
 

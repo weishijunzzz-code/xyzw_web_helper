@@ -309,12 +309,12 @@ const currentActivity = computed(() => {
   align-items: center;
   padding: 16px 20px;
   cursor: pointer;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--ts-border-default);
   transition: background var(--ts-duration-fast) var(--ts-ease-out);
   
   &:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+    background: var(--bg-hover);
   }
   
   .header-left {

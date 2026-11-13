@@ -1073,7 +1073,7 @@ onMounted(() => {
   max-width: 360px;
   background: var(--bg-primary, #fff);
   border-radius: var(--border-radius-large, 12px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-light);
   overflow: hidden;
 }
 
@@ -1143,7 +1143,7 @@ onMounted(() => {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   background: var(--bg-tertiary);

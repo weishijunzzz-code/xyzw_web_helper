@@ -76,7 +76,7 @@ const displayProgress = computed(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,7 +90,7 @@ const displayProgress = computed(() => {
   padding: var(--spacing-xl, 32px);
   min-width: 280px;
   max-width: 400px;
-  box-shadow: var(--shadow-heavy, 0 10px 15px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--shadow-light);
   animation: slideUp 0.3s ease;
 }
 
@@ -112,7 +112,7 @@ const displayProgress = computed(() => {
   height: 100%;
   border-radius: 50%;
   border: 3px solid transparent;
-  border-top-color: var(--primary-color, #667eea);
+  border-top-color: var(--primary-color);
   animation: spin 1s linear infinite;
 }
 
@@ -127,7 +127,7 @@ const displayProgress = computed(() => {
   left: 12.5%;
   animation-duration: 0.8s;
   animation-direction: reverse;
-  border-top-color: var(--secondary-color, #764ba2);
+  border-top-color: var(--secondary-color);
 }
 
 .spinner-ring:nth-child(3) {
@@ -136,7 +136,7 @@ const displayProgress = computed(() => {
   top: 25%;
   left: 25%;
   animation-duration: 0.6s;
-  border-top-color: var(--primary-color-hover, #5a67d8);
+  border-top-color: var(--primary-color-hover);
 }
 
 .loading-info {
@@ -174,7 +174,7 @@ const displayProgress = computed(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-color, #667eea), var(--secondary-color, #764ba2));
+  background: var(--primary-color);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -182,7 +182,7 @@ const displayProgress = computed(() => {
 .progress-text {
   font-size: var(--font-size-sm, 14px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--primary-color, #667eea);
+  color: var(--primary-color);
   min-width: 40px;
   text-align: right;
 }
@@ -211,7 +211,7 @@ const displayProgress = computed(() => {
 }
 
 .task-progress {
-  color: var(--primary-color, #667eea);
+  color: var(--primary-color);
   font-weight: var(--font-weight-medium, 500);
   font-size: var(--font-size-xs, 12px);
 }
@@ -219,7 +219,7 @@ const displayProgress = computed(() => {
 .task-dot {
   width: 6px;
   height: 6px;
-  background: var(--primary-color, #667eea);
+  background: var(--primary-color);
   border-radius: 50%;
   animation: pulse 1.5s ease infinite;
 }

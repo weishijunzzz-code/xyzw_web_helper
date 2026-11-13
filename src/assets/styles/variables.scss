@@ -19,13 +19,9 @@ $tablet-breakpoint: $bp-lg;
 
 // 颜色变量
 :root {
-  // 主题色
-  --primary-color: #667eea;
-  --primary-color-hover: #5a67d8;
-  --primary-color-light: #e6f7ff;
+  // 强调色在下方 data-accent 块统一定义。
 
   // 辅助色（语义色定稿：现代 SaaS 色板，全站唯一来源）
-  --secondary-color: #764ba2;
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -46,7 +42,7 @@ $tablet-breakpoint: $bp-lg;
 
   // 背景色
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f7fa;
+  --bg-secondary: #F9FAFB;
   --bg-tertiary: #f0f2f5;
   --bg-overlay: rgba(0, 0, 0, 0.5);
   --bg-color: var(--bg-secondary);
@@ -58,14 +54,14 @@ $tablet-breakpoint: $bp-lg;
   --border-dark: #9ca3af;
   --border-color: var(--border-light);
 
-  // 阴影（边框优先审美：极浅层次阴影，1px 描边承担分层）
-  --shadow-light: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-medium: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.12);
+  // 阴影：柔和弥散层次
+  --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-heavy: 0 8px 24px rgba(0, 0, 0, 0.08);
 
   // 圆角
-  --border-radius-small: 4px;
-  --border-radius-medium: 8px;
+  --border-radius-small: 12px;
+  --border-radius-medium: 12px;
   --border-radius-large: 12px;
   --border-radius-xl: 12px;
   // 别名：修复历史上引用了 --border-radius-sm / md / full 却从未定义的问题
@@ -89,10 +85,10 @@ $tablet-breakpoint: $bp-lg;
   --font-size-xs: 12px;
   --font-size-sm: 14px;
   --font-size-md: 16px;
-  --font-size-lg: 18px;
+  --font-size-lg: 16px;
   --font-size-xl: 20px;
-  --font-size-2xl: 24px;
-  --font-size-3xl: 32px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 20px;
 
   --font-weight-light: 300;
   --font-weight-normal: 400;
@@ -101,12 +97,12 @@ $tablet-breakpoint: $bp-lg;
   --font-weight-bold: 700;
 
   // 行高
-  --line-height-tight: 1.2;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.75;
+  --line-height-tight: 1.6;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.6;
 
   // 动画
-  --transition-fast: 0.15s ease;
+  --transition-fast: 0.3s ease;
   --transition-normal: 0.3s ease;
   --transition-slow: 0.5s ease;
 
@@ -124,11 +120,7 @@ $tablet-breakpoint: $bp-lg;
 // 暗色主题（data-theme 由 main.js 设置，.dark 由 useTheme 同步，双选择器兜底）
 [data-theme="dark"],
 .dark {
-  --primary-color: #667eea;
-  --primary-color-hover: #7c94f0;
-  --primary-color-light: rgba(102, 126, 234, 0.18);
 
-  --secondary-color: #9f7ad1;
 
   // 暗色下语义色提亮一档，保证对比度
   --success-color: #34d399;
@@ -158,20 +150,20 @@ $tablet-breakpoint: $bp-lg;
   --border-dark: #9ca3af;
   --border-color: var(--border-light);
 
-  --shadow-light: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-medium: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-heavy: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 @media (max-width: $bp-md) {
   :root {
     --font-size-xs: 12px;
-    --font-size-sm: 13px;
-    --font-size-md: 15px;
+    --font-size-sm: 14px;
+    --font-size-md: 16px;
     --font-size-lg: 16px;
-    --font-size-xl: 18px;
-    --font-size-2xl: 22px;
-    --font-size-3xl: 28px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 20px;
+    --font-size-3xl: 20px;
 
     --spacing-xs: 4px;
     --spacing-sm: 8px;
@@ -184,7 +176,82 @@ $tablet-breakpoint: $bp-lg;
 
 @media (max-width: $bp-sm) {
   :root {
-    --font-size-md: 14px;
+    --font-size-md: 16px;
     --spacing-md: 10px;
   }
+}
+
+:root[data-accent="violet"] {
+  --primary-color: #7C3AED;
+  --primary-color-hover: #6D28D9;
+  --primary-color-pressed: #5B21B6;
+  --primary-color-light: #F5F3FF;
+  --secondary-color: #8B5CF6;
+}
+:root[data-accent="violet"]:is([data-theme="dark"], .dark) {
+  --primary-color: #A78BFA;
+  --primary-color-hover: #C4B5FD;
+  --primary-color-pressed: #8B5CF6;
+  --primary-color-light: rgba(167,139,250,.18);
+  --secondary-color: #A78BFA;
+}
+
+:root[data-accent="slate"] {
+  --primary-color: #475569;
+  --primary-color-hover: #334155;
+  --primary-color-pressed: #1E293B;
+  --primary-color-light: #F1F5F9;
+  --secondary-color: #64748B;
+}
+:root[data-accent="slate"]:is([data-theme="dark"], .dark) {
+  --primary-color: #94A3B8;
+  --primary-color-hover: #CBD5E1;
+  --primary-color-pressed: #E2E8F0;
+  --primary-color-light: rgba(148,163,184,.18);
+  --secondary-color: #64748B;
+}
+
+:root, :root[data-accent="blue"] {
+  --primary-color: #2563EB;
+  --primary-color-hover: #1D4ED8;
+  --primary-color-pressed: #1E40AF;
+  --primary-color-light: #EFF6FF;
+  --secondary-color: #3B82F6;
+}
+:root:is([data-theme="dark"], .dark), :root[data-accent="blue"]:is([data-theme="dark"], .dark) {
+  --primary-color: #60A5FA;
+  --primary-color-hover: #93C5FD;
+  --primary-color-pressed: #3B82F6;
+  --primary-color-light: rgba(96,165,250,.18);
+  --secondary-color: #60A5FA;
+}
+
+:root[data-accent="emerald"] {
+  --primary-color: #059669;
+  --primary-color-hover: #047857;
+  --primary-color-pressed: #065F46;
+  --primary-color-light: #ECFDF5;
+  --secondary-color: #10B981;
+}
+:root[data-accent="emerald"]:is([data-theme="dark"], .dark) {
+  --primary-color: #34D399;
+  --primary-color-hover: #6EE7B7;
+  --primary-color-pressed: #10B981;
+  --primary-color-light: rgba(52,211,153,.18);
+  --secondary-color: #34D399;
+}
+
+:root[data-accent="rose"] {
+  --primary-color: #E11D48;
+  --primary-color-hover: #BE123C;
+  --primary-color-pressed: #9F1239;
+  --primary-color-light: #FFF1F2;
+  --secondary-color: #F43F5E;
+}
+:root[data-accent="rose"]:is([data-theme="dark"], .dark) {
+  --primary-color: #FB7185;
+  --primary-color-hover: #FDA4AF;
+  --primary-color-pressed: #F43F5E;
+  --primary-color-light: rgba(251,113,133,.18);
+  --secondary-color: #FB7185;
 }

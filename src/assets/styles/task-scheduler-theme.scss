@@ -6,16 +6,16 @@
 // ==================== 基础变量 ====================
 :root {
   // 主色调
-  --ts-primary: #3b82f6;
-  --ts-primary-light: #60a5fa;
-  --ts-primary-dark: #2563eb;
-  --ts-primary-rgb: 59, 130, 246;
+  --ts-primary: var(--primary-color);
+  --ts-primary-light: var(--primary-color-light);
+  --ts-primary-dark: var(--primary-color-hover);
+  --ts-primary-rgb: var(--primary-6);
   
   // 背景色
   --ts-bg-page: #f3f4f6;
   --ts-bg-card: #ffffff;
   --ts-bg-hover: #f9fafb;
-  --ts-bg-active: #eff6ff;
+  --ts-bg-active: var(--primary-color-light);
   --ts-bg-elevated: #ffffff;
   
   // 文字色
@@ -27,7 +27,7 @@
   // 边框色
   --ts-border-default: #e5e7eb;
   --ts-border-hover: #d1d5db;
-  --ts-border-active: #3b82f6;
+  --ts-border-active: var(--primary-color);
   
   // 状态色
   --ts-status-success: #22c55e;
@@ -39,7 +39,7 @@
   --ts-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --ts-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --ts-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --ts-shadow-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+  --ts-shadow-glow: var(--shadow-light);
   
   // 动画
   --ts-duration-fast: 150ms;
@@ -55,7 +55,7 @@
   --ts-bg-page: #0f172a;
   --ts-bg-card: #1e293b;
   --ts-bg-hover: #334155;
-  --ts-bg-active: rgba(59, 130, 246, 0.15);
+  --ts-bg-active: color-mix(in srgb, var(--primary-color) 15%, transparent);
   --ts-bg-elevated: #1e293b;
   
   // 文字色
@@ -67,13 +67,13 @@
   // 边框色
   --ts-border-default: #374151;
   --ts-border-hover: #4b5563;
-  --ts-border-active: #3b82f6;
+  --ts-border-active: var(--primary-color);
   
   // 阴影
   --ts-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --ts-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
   --ts-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
-  --ts-shadow-glow: 0 0 30px rgba(59, 130, 246, 0.4);
+  --ts-shadow-glow: var(--shadow-light);
 }
 
 // ==================== 任务调度器页面样式 ====================
@@ -116,10 +116,10 @@
     }
     
     [data-theme="dark"] & {
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-light);
       
       &:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+        box-shadow: var(--shadow-light);
       }
     }
   }
@@ -258,7 +258,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 13px;
+      font-size: 12px;
       color: var(--ts-text-secondary);
       
       .n-icon {
@@ -278,7 +278,7 @@
       flex: 1;
       
       &.execute {
-        background: linear-gradient(135deg, var(--ts-primary), var(--ts-primary-dark));
+        background: var(--primary-color);
         border: none;
         
         &:hover {
@@ -306,7 +306,7 @@
     right: 0;
     width: 100px;
     height: 100px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%);
     transform: translate(30%, -30%);
     transition: transform var(--ts-duration-slow) var(--ts-ease-out);
   }
@@ -342,7 +342,7 @@
       font-size: 20px;
       
       &.primary {
-        background: rgba(59, 130, 246, 0.1);
+        background: color-mix(in srgb, var(--primary-color) 10%, transparent);
         color: var(--ts-primary);
       }
       
@@ -364,7 +364,7 @@
   }
   
   .stat-value {
-    font-size: 32px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--ts-text-primary);
     line-height: 1.2;
@@ -375,7 +375,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: 12px;
     
     &.up {
       color: var(--ts-status-success);
@@ -397,7 +397,7 @@
     border-bottom: 1px solid var(--ts-border-default);
     
     .modal-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
       color: var(--ts-text-primary);
       margin: 0;
@@ -447,7 +447,7 @@
     
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--ts-primary), var(--ts-primary-light));
+      background: var(--primary-color);
       border-radius: 4px;
       transition: width var(--ts-duration-normal) var(--ts-ease-out);
       position: relative;
@@ -509,7 +509,7 @@
   }
   
   .empty-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--ts-text-primary);
     margin-bottom: 8px;
@@ -631,7 +631,7 @@
       padding: 16px;
       
       .stat-value {
-        font-size: 24px;
+        font-size: 20px;
       }
       
       .stat-icon {
@@ -647,7 +647,7 @@
     
     .task-header {
       .task-name {
-        font-size: 15px;
+        font-size: 14px;
       }
     }
     

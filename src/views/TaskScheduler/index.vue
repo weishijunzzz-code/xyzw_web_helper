@@ -285,7 +285,7 @@ const {
   background: var(--bg-primary, #fff);
   border: 1px solid var(--border-light, #e5e7eb);
   border-radius: 999px;
-  box-shadow: var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
+  box-shadow: var(--shadow-light);
 
   .segment-item {
     flex: 1;
@@ -309,9 +309,9 @@ const {
     }
 
     &.active {
-      color: #fff;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      box-shadow: var(--shadow-light);
     }
   }
 

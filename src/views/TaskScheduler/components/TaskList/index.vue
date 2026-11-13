@@ -227,7 +227,7 @@ onUnmounted(() => {
   background: var(--bg-primary, white);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .section-header {
@@ -240,7 +240,7 @@ onUnmounted(() => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary, #1f2937);
   margin: 0;
@@ -285,7 +285,7 @@ onUnmounted(() => {
   
   &.dragging {
     background: #dbeafe;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-light);
   }
 }
 
@@ -332,7 +332,7 @@ onUnmounted(() => {
 [data-theme="dark"] {
   .task-list-section {
     background: var(--bg-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
   }
   
   .section-title {

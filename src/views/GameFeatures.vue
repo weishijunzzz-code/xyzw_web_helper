@@ -491,12 +491,12 @@ onUnmounted(() => {
   background: var(--bg-primary);
   border-radius: var(--border-radius-xl);
   padding: var(--spacing-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   transition: all var(--transition-normal);
   border-left: 4px solid var(--primary-color);
 
   &:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-light);
     transform: translateY(-2px);
   }
 
@@ -649,7 +649,7 @@ onUnmounted(() => {
   background: var(--bg-primary);
   border-radius: var(--border-radius-large);
   padding: var(--spacing-lg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .status-header {

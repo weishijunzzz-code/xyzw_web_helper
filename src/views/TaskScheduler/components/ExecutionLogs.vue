@@ -58,7 +58,7 @@ defineExpose({
   background: var(--bg-primary, white);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .logs-header {
@@ -87,7 +87,7 @@ defineExpose({
   display: flex;
   gap: 12px;
   padding: 6px 0;
-  font-size: 13px;
+  font-size: 12px;
   border-bottom: 1px solid var(--border-light, #e5e7eb);
   
   &:last-child {
@@ -124,7 +124,7 @@ defineExpose({
 [data-theme="dark"] {
   .execution-logs {
     background: var(--bg-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
   }
   
   .logs-title {

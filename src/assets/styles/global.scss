@@ -476,9 +476,9 @@ img {
 
 // 玻璃效果
 .glass {
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-primary);
+  border: none;
+  box-shadow: var(--shadow-light);
 }
 
 // 悬停效果

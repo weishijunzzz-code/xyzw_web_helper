@@ -1415,7 +1415,7 @@ h4 {
   font-size: var(--font-size-sm);
   transition: all 0.2s;
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-light);
   min-width: 140px;
   flex: 0 0 calc(25% - 8px);
   box-sizing: border-box;

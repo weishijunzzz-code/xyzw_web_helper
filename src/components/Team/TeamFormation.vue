@@ -437,7 +437,7 @@ watch(
   border-radius: 8px;
   background: var(--bg-primary, #ffffff);
   color: var(--text-secondary, #6b7280);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
@@ -448,12 +448,12 @@ watch(
   border-color: var(--border-hover, #d1d5db);
   color: var(--text-primary, #374151);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .refresh-button:active {
   transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
 .refresh-button:disabled {
@@ -547,7 +547,7 @@ watch(
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .hero-avatar {
@@ -611,7 +611,7 @@ watch(
   }
 
   .hero-name {
-    font-size: 10px;
+    font-size: 12px;
     min-width: 0;
     max-width: 60px;
     overflow: hidden;

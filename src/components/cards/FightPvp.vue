@@ -1024,12 +1024,12 @@ onMounted(() => {
   background: var(--bg-primary);
   border-radius: var(--border-radius-xl);
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   transition: all 0.3s ease;
 }
 
 .main-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   transform: translateY(-2px);
 }
 
@@ -1055,7 +1055,7 @@ onMounted(() => {
 
 .card-header .status-info h3 {
   margin: 0 0 4px 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -1139,7 +1139,7 @@ onMounted(() => {
 }
 
 .info-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
   transform: translateY(-1px);
 }
 
@@ -1166,7 +1166,7 @@ onMounted(() => {
 }
 
 .info-card .card-title .hero-count {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -1234,7 +1234,7 @@ onMounted(() => {
 
 .info-table td {
   padding: 2px 5px; /* 进一步减少内边距 */
-  font-size: 13px; /* 略微减小字体大小 */
+  font-size: 12px; /* 略微减小字体大小 */
   vertical-align: middle;
   height: 24px; /* 进一步减小行高 */
   line-height: 24px; /* 确保行高与内容对齐 */
@@ -1247,7 +1247,7 @@ onMounted(() => {
 }
 
 .info-table .opponent-avatar {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   border: 2px solid var(--primary-color-light);
 }
 
@@ -1388,7 +1388,7 @@ onMounted(() => {
 
 .hero-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-light);
   border-color: var(--primary-color-light);
 }
 
@@ -1422,7 +1422,7 @@ onMounted(() => {
   justify-content: center;
   overflow: hidden;
   margin: 0 auto 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .hero-card.compact .hero-circle {
@@ -1437,7 +1437,7 @@ onMounted(() => {
 }
 
 .hero-placeholder {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -1470,13 +1470,13 @@ onMounted(() => {
 }
 
 .hero-card.compact .hero-name {
-  font-size: 13px;
+  font-size: 12px;
   margin: 0;
   line-height: 22px; /* 与行高保持一致 */
 }
 
 .holy-beast-tag {
-  font-size: 10px;
+  font-size: 12px;
   padding: 2px 6px;
   margin: 0;
   display: inline-flex;
@@ -1497,7 +1497,7 @@ onMounted(() => {
 }
 
 .hero-card.compact .hero-stats .stat-item {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 16px;
 }
 
@@ -1586,7 +1586,7 @@ onMounted(() => {
 }
 
 .battle-result-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .battle-result-item.win {
@@ -1702,7 +1702,7 @@ onMounted(() => {
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--primary-color-light);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .hero-modal-basic {
@@ -1711,7 +1711,7 @@ onMounted(() => {
 
 .hero-modal-name {
   margin: 0 0 12px 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
 }
 
@@ -1728,7 +1728,7 @@ onMounted(() => {
 }
 
 .hero-modal-stats .stat-item:first-child {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--primary-color);
 }

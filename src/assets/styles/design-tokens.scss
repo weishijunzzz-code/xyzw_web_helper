@@ -7,16 +7,6 @@
   /* ==================== 颜色系统 ==================== */
   
   /* 主色调 - 蓝色系 */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
   
   /* 成功色 - 绿色系（与 variables.scss --success-color 定稿一致） */
   --color-success-50: #ecfdf5;
@@ -71,7 +61,7 @@
   
   --color-border-default: #e5e7eb;
   --color-border-hover: #d1d5db;
-  --color-border-active: #3b82f6;
+  --color-border-active: var(--primary-color);
   
   /* ==================== 间距系统 ==================== */
   --space-0: 0;
@@ -87,34 +77,34 @@
   --space-16: 4rem;     /* 64px */
   
   /* ==================== 字体系统 ==================== */
-  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-base: Inter, "PingFang SC", system-ui, sans-serif;
   --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
   
-  --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.875rem;   /* 14px */
-  --font-size-base: 1rem;     /* 16px */
-  --font-size-lg: 1.125rem;   /* 18px */
-  --font-size-xl: 1.25rem;    /* 20px */
-  --font-size-2xl: 1.5rem;    /* 24px */
-  --font-size-3xl: 1.875rem;  /* 30px */
-  --font-size-4xl: 2.25rem;   /* 36px */
+  --font-size-xs: 12px;    /* 12px */
+  --font-size-sm: 14px;   /* 14px */
+  --font-size-base: 16px;     /* 16px */
+  --font-size-lg: 16px;   /* 18px */
+  --font-size-xl: 20px;    /* 20px */
+  --font-size-2xl: 20px;    /* 24px */
+  --font-size-3xl: 20px;  /* 30px */
+  --font-size-4xl: 20px;   /* 36px */
   
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   
-  --line-height-tight: 1.25;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.75;
+  --line-height-tight: 1.6;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.6;
   
   /* ==================== 圆角系统 ==================== */
   --radius-none: 0;
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius-md: 0.375rem;  /* 6px */
-  --radius-lg: 0.5rem;    /* 8px */
-  --radius-xl: 0.75rem;   /* 12px */
-  --radius-2xl: 1rem;     /* 16px */
+  --radius-sm: 12px;   /* 4px */
+  --radius-md: 12px;  /* 6px */
+  --radius-lg: 12px;    /* 8px */
+  --radius-xl: 12px;   /* 12px */
+  --radius-2xl: 12px;     /* 16px */
   --radius-full: 9999px;
   
   /* ==================== 阴影系统（边框优先：极浅层次） ==================== */
@@ -122,7 +112,7 @@
   --shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 6px -2px rgba(0, 0, 0, 0.06);
   --shadow-xl: 0 12px 28px -6px rgba(0, 0, 0, 0.14), 0 4px 10px -4px rgba(0, 0, 0, 0.06);
-  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.5);
+  --shadow-glow: 0 4px 16px color-mix(in srgb, var(--primary-color) 10%, transparent);
   --shadow-glow-success: 0 0 20px rgba(16, 185, 129, 0.5);
   --shadow-glow-warning: 0 0 20px rgba(245, 158, 11, 0.5);
   --shadow-glow-error: 0 0 20px rgba(239, 68, 68, 0.5);
@@ -130,7 +120,7 @@
   /* ==================== 动画系统 ==================== */
   --duration-instant: 0ms;
   --duration-fast: 150ms;
-  --duration-normal: 250ms;
+  --duration-normal: 300ms;
   --duration-slow: 350ms;
   --duration-slower: 500ms;
   
@@ -153,7 +143,8 @@
 }
 
 /* ==================== 深色模式 ==================== */
-.dark {
+.dark,
+[data-theme="dark"] {
   --color-bg-primary: #0f172a;
   --color-bg-secondary: #1e293b;
   --color-bg-tertiary: #334155;
@@ -166,9 +157,74 @@
   
   --color-border-default: #374151;
   --color-border-hover: #4b5563;
-  --color-border-active: #3b82f6;
+  --color-border-active: var(--primary-color);
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.35), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-accent="violet"] {
+  --color-primary-50: #F5F3FF;
+  --color-primary-100: #EDE9FE;
+  --color-primary-200: #DDD6FE;
+  --color-primary-300: #C4B5FD;
+  --color-primary-400: #A78BFA;
+  --color-primary-500: #8B5CF6;
+  --color-primary-600: #7C3AED;
+  --color-primary-700: #6D28D9;
+  --color-primary-800: #5B21B6;
+  --color-primary-900: #4C1D95;
+}
+
+:root[data-accent="slate"] {
+  --color-primary-50: #F8FAFC;
+  --color-primary-100: #F1F5F9;
+  --color-primary-200: #E2E8F0;
+  --color-primary-300: #CBD5E1;
+  --color-primary-400: #94A3B8;
+  --color-primary-500: #64748B;
+  --color-primary-600: #475569;
+  --color-primary-700: #334155;
+  --color-primary-800: #1E293B;
+  --color-primary-900: #0F172A;
+}
+
+:root, :root[data-accent="blue"] {
+  --color-primary-50: #EFF6FF;
+  --color-primary-100: #DBEAFE;
+  --color-primary-200: #BFDBFE;
+  --color-primary-300: #93C5FD;
+  --color-primary-400: #60A5FA;
+  --color-primary-500: #3B82F6;
+  --color-primary-600: #2563EB;
+  --color-primary-700: #1D4ED8;
+  --color-primary-800: #1E40AF;
+  --color-primary-900: #1E3A8A;
+}
+
+:root[data-accent="emerald"] {
+  --color-primary-50: #ECFDF5;
+  --color-primary-100: #D1FAE5;
+  --color-primary-200: #A7F3D0;
+  --color-primary-300: #6EE7B7;
+  --color-primary-400: #34D399;
+  --color-primary-500: #10B981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065F46;
+  --color-primary-900: #064E3B;
+}
+
+:root[data-accent="rose"] {
+  --color-primary-50: #FFF1F2;
+  --color-primary-100: #FFE4E6;
+  --color-primary-200: #FECDD3;
+  --color-primary-300: #FDA4AF;
+  --color-primary-400: #FB7185;
+  --color-primary-500: #F43F5E;
+  --color-primary-600: #E11D48;
+  --color-primary-700: #BE123C;
+  --color-primary-800: #9F1239;
+  --color-primary-900: #881337;
 }

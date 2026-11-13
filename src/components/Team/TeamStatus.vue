@@ -591,15 +591,16 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   background: var(--bg-primary);
   border-radius: var(--border-radius-xl);
   padding: var(--spacing-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   transition: all var(--transition-normal);
   overflow: hidden;
 
   &:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-light);
     transform: translateY(-2px);
 
     .glow-border {
+  display: none;
       opacity: 1;
     }
   }
@@ -673,7 +674,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   border-radius: 8px;
   background: var(--bg-primary, #ffffff);
   color: var(--text-secondary, #6b7280);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
@@ -683,12 +684,12 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
     border-color: var(--border-hover, #d1d5db);
     color: var(--text-primary, #374151);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-light);
   }
 
   &:active {
     transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-light);
   }
 
   &:disabled {
@@ -721,7 +722,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   }
 
   .refresh-text {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1;
   }
 }
@@ -806,7 +807,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
 }
 
 .hero-name {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   text-align: center;
   font-weight: var(--font-weight-medium);
@@ -844,7 +845,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
     height: 35px;
   }
   .hero-name {
-    font-size: 10px;
+    font-size: 12px;
     max-width: 45px;
   }
 }
@@ -855,11 +856,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   margin-bottom: var(--spacing-xl);
   padding: var(--spacing-md);
   border-radius: var(--border-radius-large);
-  background: linear-gradient(
-    135deg,
-    var(--bg-primary) 0%,
-    rgba(102, 126, 234, 0.03) 100%
-  );
+  background: var(--bg-primary);
   overflow: hidden;
 }
 
@@ -883,7 +880,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   height: 45px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   object-fit: cover;
   background: var(--bg-tertiary);
 }
@@ -934,7 +931,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   padding: 6px 12px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: var(--border-radius-medium);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   min-width: 90px;
   max-width: 140px;
   white-space: nowrap;
@@ -956,18 +953,13 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
 
 // 炫光边框
 .glow-border {
+  display: none;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    45deg,
-    rgba(102, 126, 234, 0.4),
-    rgba(118, 75, 162, 0.4),
-    rgba(254, 202, 87, 0.4),
-    rgba(102, 126, 234, 0.4)
-  );
+  background: var(--bg-primary);
   background-size: 300% 300%;
   border-radius: var(--border-radius-large);
   opacity: 0;
@@ -1083,11 +1075,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
 // 深色主题优化
 [data-theme="dark"] .team-status-card {
   .role-profile-header {
-    background: linear-gradient(
-      135deg,
-      var(--bg-secondary) 0%,
-      rgba(102, 126, 234, 0.08) 100%
-    );
+    background: var(--bg-primary);
   }
 
   .role-name {
@@ -1173,7 +1161,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
 
   .level-text,
   .power-value {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .rank-section {
@@ -1182,7 +1170,7 @@ watch(() => roleInfo.value, initializeAvatar, { deep: true, immediate: true });
   }
 
   .rank-title {
-    font-size: 10px;
+    font-size: 12px;
   }
 }
 </style>

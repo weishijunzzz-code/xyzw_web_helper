@@ -180,11 +180,11 @@
 
 <script setup>
 import {
+  ChatbubbleOutline,
   ImageOutline,
   LogInOutline,
   MapOutline,
   RefreshOutline,
-  ChatbubbleOutline,
 } from "@vicons/ionicons5";
 import html2canvas from "html2canvas";
 import { useMessage } from "naive-ui";
@@ -457,7 +457,7 @@ const drawHexagon = (x, y, color) => {
 
 // 联盟颜色映射
 const allianceColors = {
-  大联盟: "#667eea", // var(--primary-color)
+  get 大联盟() { return getComputedStyle(document.documentElement).getPropertyValue("--primary-color").trim(); }, // var(--primary-color)
   梦盟: "#18a058", // var(--success-color)
   正义联盟: "#2080f0", // var(--info-color)
   龙盟: "#d03050", // var(--error-color)
@@ -749,8 +749,12 @@ const initializeCanvas = async () => {
   return true;
 };
 
+let themeObserver;
+
 // 生命周期钩子
 onMounted(async () => {
+  themeObserver = new MutationObserver(() => drawCanvasContent());
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-accent", "data-theme", "class"] });
   await initializeCanvas();
 
   try {
@@ -767,6 +771,7 @@ watch(isAccessible, async (accessible) => {
 });
 
 onUnmounted(() => {
+  themeObserver?.disconnect();
   if (resizeHandler) {
     window.removeEventListener("resize", resizeHandler);
     resizeHandler = null;
@@ -782,10 +787,7 @@ onUnmounted(() => {
   .legion-war-map-card {
     background: #fff;
     border-radius: 8px;
-    box-shadow:
-      0 1px 2px -2px rgba(0, 0, 0, 0.08),
-      0 3px 6px 0 rgba(0, 0, 0, 0.06),
-      0 5px 12px 4px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--shadow-light);
 
     .access-denied-container {
       display: flex;
@@ -827,7 +829,7 @@ onUnmounted(() => {
         .header-title {
           h2 {
             margin: 0;
-            font-size: 18px;
+            font-size: 16px;
             color: #333;
           }
           p {
@@ -849,7 +851,7 @@ onUnmounted(() => {
           gap: 8px;
 
           .stat-label {
-            font-size: 13px;
+            font-size: 12px;
             color: #666;
           }
         }
@@ -912,7 +914,7 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         z-index: 20;
-        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+        box-shadow: var(--shadow-light);
 
         .panel-header {
           padding: 12px 16px;
@@ -956,7 +958,7 @@ onUnmounted(() => {
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 10px;
+              font-size: 12px;
               font-weight: bold;
               margin-right: 6px;
               flex-shrink: 0;
@@ -970,7 +972,7 @@ onUnmounted(() => {
               justify-content: space-between; /* 两端对齐 */
 
               .legion-name {
-                font-size: 13px; /* 缩小字体 */
+                font-size: 12px; /* 缩小字体 */
                 color: #333;
                 font-weight: 500;
                 white-space: nowrap;
@@ -982,7 +984,7 @@ onUnmounted(() => {
 
                 .legion-id {
                   color: #999;
-                  font-size: 11px;
+                  font-size: 12px;
                   margin-right: 4px;
                   font-weight: normal;
                 }
@@ -992,7 +994,7 @@ onUnmounted(() => {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                font-size: 11px;
+                font-size: 12px;
                 flex-shrink: 0; /* 防止被压缩 */
 
                 .stat-red {
@@ -1016,13 +1018,13 @@ onUnmounted(() => {
 
               .group-name {
                 font-weight: bold;
-                font-size: 13px; /* 缩小字体 */
+                font-size: 12px; /* 缩小字体 */
                 color: #333;
                 margin-right: 6px;
               }
 
               .group-count {
-                font-size: 11px;
+                font-size: 12px;
                 color: #999;
               }
             }

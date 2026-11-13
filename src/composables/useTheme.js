@@ -1,162 +1,66 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { listenForThemeChanges } from "@/utils/themeListener.js";
 
-// 全局响应式主题状态
 const isDark = ref(false);
+const themeMode = ref("system");
+const normalizeMode = (mode) => ["light", "dark"].includes(mode) ? mode : "system";
 
-// 检查当前主题状态
-const checkCurrentTheme = () => {
-  return (
-    document.documentElement.classList.contains("dark") ||
-    document.documentElement.getAttribute("data-theme") === "dark"
-  );
-};
+/** Read the authoritative mode, with compatibility for the legacy key. */
+export function initTheme() {
+  themeMode.value = normalizeMode(localStorage.getItem("theme-mode") || localStorage.getItem("theme"));
+  applyTheme();
+}
 
-// 更新响应式状态
 const updateReactiveState = () => {
-  isDark.value = checkCurrentTheme();
+  isDark.value = document.documentElement.classList.contains("dark") ||
+    document.documentElement.dataset.theme === "dark";
 };
 
-/**
- * Share reactive theme state while owning each instance's DOM and media listeners.
- * @returns {object} Theme state, setters, initialization and listener setup functions.
- */
+const applyTheme = () => {
+  const dark = themeMode.value === "dark" || (themeMode.value === "system" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches);
+  for (const element of [document.documentElement, document.body]) {
+    element.classList.toggle("dark", dark);
+    if (dark) element.dataset.theme = "dark";
+    else delete element.dataset.theme;
+  }
+  isDark.value = dark;
+  window.dispatchEvent(new CustomEvent("theme-change", { detail: { isDark: dark } }));
+};
+
+/** Persist user intent separately from the resolved system appearance. */
+export function setThemeMode(mode) {
+  themeMode.value = normalizeMode(mode);
+  localStorage.setItem("theme-mode", themeMode.value);
+  localStorage.setItem("theme", themeMode.value);
+  applyTheme();
+}
+
+/** Share theme state; each consumer cleans up its own listeners. */
 export function useTheme() {
-  let mutationObserver = null;
-  let removeSystemThemeListener = null;
-
-  // 初始化主题
-  const initTheme = () => {
-    // 优先读取 ThemeSettings 组件写入的 theme-mode，兼容旧 theme 键
-    const savedTheme =
-      localStorage.getItem("theme-mode") || localStorage.getItem("theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-
-    if (savedTheme === "dark") {
-      setDarkTheme();
-    } else if (savedTheme === "light") {
-      setLightTheme();
-    } else if (prefersDark) {
-      // 无保存值或为 system 时跟随系统
-      setDarkTheme();
-    } else {
-      setLightTheme();
-    }
-
-    // 立即更新响应式状态
-    updateReactiveState();
-  };
-
-  // 设置深色主题
-  const setDarkTheme = () => {
-    document.documentElement.classList.add("dark");
-    document.documentElement.setAttribute("data-theme", "dark");
-    document.body.classList.add("dark");
-    document.body.setAttribute("data-theme", "dark");
-    localStorage.setItem("theme", "dark");
-
-    // 立即更新响应式状态
-    isDark.value = true;
-
-    // 触发主题更新事件
-    window.dispatchEvent(
-      new CustomEvent("theme-change", { detail: { isDark: true } }),
-    );
-  };
-
-  // 设置浅色主题
-  const setLightTheme = () => {
-    document.documentElement.classList.remove("dark");
-    document.documentElement.removeAttribute("data-theme");
-    document.body.classList.remove("dark");
-    document.body.removeAttribute("data-theme");
-    localStorage.setItem("theme", "light");
-
-    // 立即更新响应式状态
-    isDark.value = false;
-
-    // 触发主题更新事件
-    window.dispatchEvent(
-      new CustomEvent("theme-change", { detail: { isDark: false } }),
-    );
-  };
-
-  // 切换主题
-  const toggleTheme = () => {
-    if (isDark.value) {
-      setLightTheme();
-    } else {
-      setDarkTheme();
-    }
-  };
-
-  // 监听系统主题变化
-  /** Register one system-theme listener per composable instance. */
+  let observer;
+  let removeSystemListener;
   const setupSystemThemeListener = () => {
-    removeSystemThemeListener?.();
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      if (!localStorage.getItem("theme")) initTheme();
-    };
-    removeSystemThemeListener = listenForThemeChanges(mediaQuery, onChange);
+    removeSystemListener?.();
+    removeSystemListener = listenForThemeChanges(
+      window.matchMedia("(prefers-color-scheme: dark)"),
+      () => { if (themeMode.value === "system") applyTheme(); },
+    );
   };
-
-  // 设置DOM变化监听器（确保响应式状态同步）
-  const setupDOMObserver = () => {
-    if (typeof window !== "undefined") {
-      mutationObserver = new MutationObserver(() => {
-        updateReactiveState();
-      });
-
-      // 监听documentElement和body的变化
-      mutationObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme"],
-      });
-
-      mutationObserver.observe(document.body, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme"],
-      });
-    }
-  };
-
-  // 清理监听器
-  const cleanup = () => {
-    removeSystemThemeListener?.();
-    removeSystemThemeListener = null;
-    if (mutationObserver) {
-      mutationObserver.disconnect();
-      mutationObserver = null;
-    }
-  };
-
-  // 获取当前主题
-  const getCurrentTheme = () => {
-    return isDark.value ? "dark" : "light";
-  };
-
-  // 组件挂载时初始化
   onMounted(() => {
-    setupDOMObserver();
     updateReactiveState();
+    observer = new MutationObserver(updateReactiveState);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
   });
-
-  // 组件卸载时清理
   onUnmounted(() => {
-    cleanup();
+    observer?.disconnect();
+    removeSystemListener?.();
   });
-
   return {
-    isDark,
-    initTheme,
-    toggleTheme,
-    setDarkTheme,
-    setLightTheme,
-    setupSystemThemeListener,
-    getCurrentTheme,
-    updateReactiveState,
+    isDark, themeMode, initTheme, setThemeMode, updateReactiveState, setupSystemThemeListener,
+    setDarkTheme: () => setThemeMode("dark"),
+    setLightTheme: () => setThemeMode("light"),
+    toggleTheme: () => setThemeMode(isDark.value ? "light" : "dark"),
+    getCurrentTheme: () => isDark.value ? "dark" : "light",
   };
 }

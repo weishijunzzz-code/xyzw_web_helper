@@ -264,7 +264,7 @@ onMounted(() => {
 <style scoped lang="scss">
 .login-page {
   min-height: 100dvh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -275,7 +275,7 @@ onMounted(() => {
 
 /* 深色主题下背景 */
 [data-theme="dark"] .login-page {
-  background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
+  background: var(--bg-secondary);
 }
 
 .login-container {
@@ -288,17 +288,17 @@ onMounted(() => {
 }
 
 .login-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
+  background: var(--bg-primary);
+  backdrop-filter: none;
   border-radius: var(--border-radius-xl);
   padding: var(--spacing-2xl);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* 深色主题下登录卡片 */
 [data-theme="dark"] .login-card {
-  background: rgba(17, 24, 39, 0.85);
+  background: var(--bg-primary);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -388,7 +388,7 @@ onMounted(() => {
 
 // 功能展示区域
 .features-showcase {
-  color: white;
+  color: var(--text-primary);
   padding: var(--spacing-xl);
 }
 
@@ -419,22 +419,22 @@ onMounted(() => {
   display: flex;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-primary);
   border-radius: var(--border-radius-large);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all var(--transition-normal);
 
   &:hover {
     transform: translateX(8px);
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--bg-primary);
   }
 }
 
 .feature-icon {
   width: 48px;
   height: 48px;
-  color: white;
+  color: var(--text-primary);
   flex-shrink: 0;
 
   :deep(svg) {
@@ -473,7 +473,7 @@ onMounted(() => {
 .decoration-circle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-primary);
   animation: float 6s ease-in-out infinite;
 }
 

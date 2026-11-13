@@ -116,6 +116,8 @@ import {
   Cloud,
   Cube,
   GameController,
+  PersonCircle,
+  Time,
 } from "@vicons/ionicons5";
 import lz4 from "lz4js";
 import { useMessage } from "naive-ui";
@@ -401,15 +403,11 @@ onMounted(async () => {
 
 // 欢迎区域
 .welcome-section {
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    var(--secondary-color) 100%
-  );
+  background: var(--bg-primary);
   border-radius: var(--border-radius-xl);
   padding: var(--spacing-2xl);
   margin-bottom: var(--spacing-xl);
-  color: white;
+  color: var(--text-primary);
 }
 
 .welcome-content {

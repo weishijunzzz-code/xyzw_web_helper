@@ -1599,8 +1599,8 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1682,7 +1682,7 @@ onMounted(() => {
 
   .daily-stats .stat-item,
   .total-stats .stat-item {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .header-section {
@@ -1728,7 +1728,7 @@ onMounted(() => {
 .style1-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .style1-table th {
@@ -1817,7 +1817,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 8px;
   border-bottom: 1px solid #eee;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .top3-item {
@@ -1825,7 +1825,7 @@ onMounted(() => {
   align-items: center;
   padding: 8px;
   border-bottom: 1px solid #eee;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .top3-rank {
@@ -1856,7 +1856,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
 }
 .top3-name {
   white-space: nowrap;
@@ -1881,12 +1881,12 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .style2-title {
@@ -1895,11 +1895,11 @@ onMounted(() => {
   gap: 15px;
 }
 .trophy-icon {
-  font-size: 40px;
+  font-size: 20px;
 }
 .title-text h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   color: white;
 }
 .date-text {
@@ -1932,7 +1932,7 @@ onMounted(() => {
   background: white;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
   text-align: center;
 }
 .stat-label-mini {
@@ -1941,7 +1941,7 @@ onMounted(() => {
   margin-bottom: 5px;
 }
 .stat-value-mini {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #333;
 }
@@ -1985,11 +1985,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: 20px;
   border: 3px solid #d48806;
 }
 .mvp-crown {
-  font-size: 30px;
+  font-size: 20px;
   position: absolute;
   top: -15px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -2020,7 +2020,7 @@ onMounted(() => {
   background: white;
   border-radius: 8px;
   padding: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
   border-top: 3px solid #ccc;
 }
 .red-border {
@@ -2108,7 +2108,7 @@ onMounted(() => {
   background: #fff;
   padding: 0;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-light);
   overflow: hidden;
   margin-top: 20px;
 }
@@ -2126,7 +2126,7 @@ onMounted(() => {
   color: #fff;
   padding: 12px 8px;
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
 }
@@ -2142,7 +2142,7 @@ onMounted(() => {
   border-bottom: 1px solid #f1f1f1;
   vertical-align: middle;
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   color: #444;
 }
 
@@ -2151,7 +2151,7 @@ onMounted(() => {
 }
 
 .medal-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 .rank-num-plain {
   color: #888;
@@ -2174,7 +2174,7 @@ onMounted(() => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #e6f7ff;
+  background: var(--primary-color-light);
   color: #1890ff;
   display: flex;
   align-items: center;

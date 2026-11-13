@@ -343,7 +343,7 @@ onMounted(() => {
 <style scoped lang="scss">
 .home-page {
   min-height: 100dvh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   position: relative;
   overflow-x: hidden;
   padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
@@ -386,7 +386,7 @@ onMounted(() => {
   right: 0;
   z-index: var(--z-fixed);
   padding: var(--spacing-md) 0;
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -415,7 +415,7 @@ onMounted(() => {
 .brand-text {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: white;
+  color: var(--text-primary);
 }
 
 .nav-actions {
@@ -444,7 +444,7 @@ onMounted(() => {
 }
 
 .hero-text {
-  color: white;
+  color: var(--text-primary);
 }
 
 .hero-title {
@@ -452,13 +452,9 @@ onMounted(() => {
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   margin-bottom: var(--spacing-md);
-  background: linear-gradient(
-    45deg,
-    var(--bg-primary),
-    var(--primary-color-light)
-  );
+  background: var(--bg-primary);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: currentColor;
   background-clip: text;
 }
 
@@ -487,8 +483,8 @@ onMounted(() => {
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: var(--bg-primary);
+  backdrop-filter: none;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--border-radius-large);
   padding: var(--spacing-lg);
@@ -496,14 +492,14 @@ onMounted(() => {
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
   }
 }
 
 .card-icon {
   width: 48px;
   height: 48px;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: var(--spacing-md);
 
   :deep(svg) {
@@ -513,14 +509,14 @@ onMounted(() => {
 }
 
 .card-content h3 {
-  color: white;
+  color: var(--text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   margin-bottom: var(--spacing-sm);
 }
 
 .card-content p {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-relaxed);
 }
@@ -596,7 +592,7 @@ onMounted(() => {
 // 统计区域
 .stats-section {
   padding: var(--spacing-2xl) 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
 }
 
 /* 深色主题下统计区背景 */
@@ -612,7 +608,7 @@ onMounted(() => {
 
 .stat-item {
   text-align: center;
-  color: white;
+  color: var(--text-primary);
 }
 
 .stat-number {
@@ -629,7 +625,7 @@ onMounted(() => {
 // 页脚
 .footer {
   background: rgba(0, 0, 0, 0.8);
-  color: white;
+  color: var(--text-primary);
   padding: var(--spacing-xl) 0;
 }
 
@@ -661,11 +657,11 @@ onMounted(() => {
 }
 
 .footer-link {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
   transition: color var(--transition-fast);
 
   &:hover {
-    color: white;
+    color: var(--text-primary);
   }
 }
 
@@ -673,7 +669,7 @@ onMounted(() => {
   text-align: center;
   padding-top: var(--spacing-lg);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-primary);
 }
 
 // 响应式设计

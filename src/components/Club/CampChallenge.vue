@@ -3525,7 +3525,7 @@ onMounted(() => {
 }
 
 .match-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--n-text-color);
 }
@@ -3547,7 +3547,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   color: #fff;
 }
 
@@ -3575,7 +3575,7 @@ onMounted(() => {
 }
 
 .club-server {
-  font-size: 11px;
+  font-size: 12px;
   padding: 2px 6px;
   border-radius: 4px;
   background: #3b82f6;
@@ -3583,12 +3583,12 @@ onMounted(() => {
 }
 
 .club-name {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .club-power-text {
-  font-size: 13px;
+  font-size: 12px;
   color: #fbbf24;
   margin-bottom: 4px;
 }
@@ -3612,7 +3612,7 @@ onMounted(() => {
 }
 
 .vs-badge {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 900;
   letter-spacing: 2px;
 }
@@ -3651,7 +3651,7 @@ onMounted(() => {
   border: 1px solid var(--n-border-color, #e2e8f0);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-light);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -3659,7 +3659,7 @@ onMounted(() => {
 }
 
 .stats-panel:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
 }
 
 .weekly-panel {
@@ -3683,7 +3683,7 @@ onMounted(() => {
 }
 
 .panel-icon {
-  font-size: 18px;
+  font-size: 16px;
   color: #3b82f6;
 }
 
@@ -3692,7 +3692,7 @@ onMounted(() => {
 }
 
 .panel-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--n-text-color);
 }
@@ -3732,7 +3732,7 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
   margin-bottom: 4px;
 }
@@ -3769,21 +3769,21 @@ onMounted(() => {
 }
 
 .metric-unit {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: normal;
   color: #94a3b8;
   margin-left: 2px;
 }
 
 .sub-rate {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: normal;
   color: #64748b;
   margin-left: 2px;
 }
 
 .level-tag {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* 本周排位赛程速览卡片 */
@@ -3797,7 +3797,7 @@ onMounted(() => {
 }
 
 .schedule-title {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
   font-weight: 600;
 }
@@ -3832,7 +3832,7 @@ onMounted(() => {
 }
 
 .chip-day {
-  font-size: 10px;
+  font-size: 12px;
   color: #64748b;
   font-weight: 600;
 }
@@ -3847,7 +3847,7 @@ onMounted(() => {
 }
 
 .chip-power {
-  font-size: 11px;
+  font-size: 12px;
   color: #f59e0b;
   font-weight: 600;
 }
@@ -3865,7 +3865,7 @@ onMounted(() => {
 .progress-info {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
   font-weight: 600;
 }
@@ -3883,7 +3883,7 @@ onMounted(() => {
 }
 
 .lineup-stats-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--n-text-color);
 }
@@ -3906,7 +3906,7 @@ onMounted(() => {
   background: var(--n-card-color, rgba(0, 0, 0, 0.03));
   border: 1px solid var(--n-border-color, #e2e8f0);
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .hero-card-header {
@@ -3917,7 +3917,7 @@ onMounted(() => {
 }
 
 .hero-slot-badge {
-  font-size: 10px;
+  font-size: 12px;
   padding: 1px 4px;
   background: #6366f1;
   color: #fff;
@@ -3935,7 +3935,7 @@ onMounted(() => {
 }
 
 .hb-badge {
-  font-size: 10px;
+  font-size: 12px;
   padding: 1px 4px;
   background: #f59e0b;
   color: #fff;
@@ -3944,7 +3944,7 @@ onMounted(() => {
 
 .hero-card-pearl {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 12px;
   color: #059669;
 }
 
@@ -4015,7 +4015,7 @@ onMounted(() => {
 }
 
 .summary-box .s-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
 }
 
@@ -4049,7 +4049,7 @@ onMounted(() => {
 }
 
 .combat-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-light);
 }
 
 .combat-item.combat-win {
@@ -4097,7 +4097,7 @@ onMounted(() => {
 }
 
 .enemy-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--n-text-color);
 }
@@ -4171,7 +4171,7 @@ onMounted(() => {
 }
 
 .indicator-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--n-text-color);
 }
@@ -4209,12 +4209,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-light);
 }
 
 .fortress-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   border-color: #3b82f6;
 }
 
@@ -4248,7 +4248,7 @@ onMounted(() => {
 }
 
 .slot-badge {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #64748b;
   background: rgba(100, 116, 139, 0.1);
@@ -4262,7 +4262,7 @@ onMounted(() => {
 }
 
 .stamp {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -4297,7 +4297,7 @@ onMounted(() => {
   position: absolute;
   bottom: -4px;
   right: -6px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   background: #ff4d4f;
   color: #fff;
@@ -4320,7 +4320,7 @@ onMounted(() => {
 }
 
 .member-power {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #f59e0b;
   margin-bottom: 4px;
@@ -4332,7 +4332,7 @@ onMounted(() => {
   align-items: center;
   border-top: 1px dashed var(--n-border-color, #e2e8f0);
   padding-top: 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .combat-stat-text {
@@ -4367,7 +4367,7 @@ onMounted(() => {
   border-radius: 12px;
   padding: 18px 24px;
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   gap: 14px;
 }
 
@@ -4389,7 +4389,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -4400,7 +4400,7 @@ onMounted(() => {
 }
 
 .score-num {
-  font-size: 38px;
+  font-size: 20px;
   font-weight: 900;
   font-family: "DIN Alternate", "Arial Black", sans-serif;
 }
@@ -4414,7 +4414,7 @@ onMounted(() => {
 }
 
 .score-label {
-  font-size: 13px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
@@ -4444,7 +4444,7 @@ onMounted(() => {
 }
 
 .combat-rate-display .rate-detail {
-  font-size: 11px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
@@ -4462,7 +4462,7 @@ onMounted(() => {
 }
 
 .vs-text-styled {
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 900;
   font-style: italic;
   letter-spacing: 2px;
@@ -4512,7 +4512,7 @@ onMounted(() => {
 
 .bar-center-title {
   color: #cbd5e1;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .bar-right-text {
@@ -4569,7 +4569,7 @@ onMounted(() => {
 }
 
 .att-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--n-text-color);
 }
@@ -4581,7 +4581,7 @@ onMounted(() => {
 }
 
 .box-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #d97706;
 }
@@ -4622,7 +4622,7 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--n-text-color);
   margin-bottom: 12px;
@@ -4644,7 +4644,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: normal;
   color: #64748b;
 }
@@ -4667,7 +4667,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--n-text-color);
   margin-bottom: 14px;
@@ -4727,7 +4727,7 @@ onMounted(() => {
 }
 
 .club-main-info .server-tag {
-  font-size: 11px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
@@ -4739,7 +4739,7 @@ onMounted(() => {
 }
 
 .club-rank-score .score-val {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #6366f1;
 }

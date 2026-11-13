@@ -2526,7 +2526,7 @@ onMounted(() => {
   &:hover {
     background: var(--primary-color-light);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
   }
 
   &.dragging {
@@ -2555,7 +2555,7 @@ onMounted(() => {
   border-radius: 50%;
   background: var(--primary-color);
   color: white;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -2611,14 +2611,14 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: currentColor;
   background-clip: text;
 }
 
 .hero-level-small-inline {
-  font-size: 10px;
+  font-size: 12px;
   color: white;
   font-weight: 600;
   white-space: nowrap;
@@ -2724,7 +2724,7 @@ onMounted(() => {
   color: white;
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -2866,16 +2866,16 @@ onMounted(() => {
 }
 
 .hero-name-small {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-primary);
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: currentColor;
   background-clip: text;
 }
 
@@ -2916,7 +2916,7 @@ onMounted(() => {
 }
 
 .hero-stats-small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
@@ -2960,13 +2960,13 @@ onMounted(() => {
 }
 
 .hero-fish-name {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--primary-color);
   font-weight: 500;
 }
 
 .hero-fish-skill-name {
-  font-size: 10px;
+  font-size: 12px;
   background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
   color: white;
   padding: 2px 6px;

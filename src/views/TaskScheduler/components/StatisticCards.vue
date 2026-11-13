@@ -90,12 +90,12 @@ const stats = computed(() => ({
   padding: 20px;
   background: var(--bg-primary, white);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
   transition: transform 0.2s, box-shadow 0.2s;
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-light);
   }
   
   &.total { border-left: 4px solid #3b82f6; }
@@ -130,7 +130,7 @@ const stats = computed(() => ({
   justify-content: center;
   border-radius: 10px;
   margin-right: 16px;
-  font-size: 24px;
+  font-size: 20px;
   color: white;
   flex-shrink: 0;
   
@@ -142,7 +142,7 @@ const stats = computed(() => ({
   @media (max-width: 640px) {
     width: 36px;
     height: 36px;
-    font-size: 18px;
+    font-size: 16px;
     margin-right: 0;
     margin-bottom: 8px;
   }
@@ -153,13 +153,13 @@ const stats = computed(() => ({
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary, #1f2937);
   line-height: 1;
   
   @media (max-width: 640px) {
-    font-size: 22px;
+    font-size: 20px;
   }
 }
 
@@ -187,10 +187,10 @@ const stats = computed(() => ({
 [data-theme="dark"] {
   .stat-card {
     background: var(--bg-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
     
     &:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-light);
     }
   }
   

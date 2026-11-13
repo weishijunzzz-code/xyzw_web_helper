@@ -9,8 +9,8 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
   }
   
   &:active {
@@ -20,34 +20,17 @@
 }
 
 .card-hover-lift {
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   
   &:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 
-      0 20px 60px rgba(102, 126, 234, 0.2),
-      0 8px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
   }
 }
 
 .card-hover-glow {
-  position: relative;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    border-radius: inherit;
-    opacity: 0;
-    z-index: -1;
-    transition: opacity 0.3s ease;
-    filter: blur(8px);
-  }
-  
-  &:hover::before {
-    opacity: 0.5;
-  }
+  transition: transform 300ms ease, box-shadow 300ms ease;
+  &:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
 }
 
 // --------------------------------------------
@@ -79,12 +62,12 @@
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-light);
   }
   
   &:active {
     transform: translateY(0);
-    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
+    box-shadow: var(--shadow-light);
   }
 }
 
@@ -160,7 +143,7 @@
   
   &:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: var(--shadow-light);
     transform: translateY(-1px);
   }
 }
@@ -169,9 +152,7 @@
   transition: all 0.3s ease;
   
   &:focus {
-    box-shadow: 
-      0 0 0 3px rgba(102, 126, 234, 0.1),
-      0 0 20px rgba(102, 126, 234, 0.2);
+    box-shadow: var(--shadow-light);
   }
 }
 
@@ -746,9 +727,7 @@
   
   .card-hover:hover,
   .card-hover-lift:hover {
-    box-shadow: 
-      0 12px 40px rgba(0, 0, 0, 0.4),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
+    box-shadow: var(--shadow-light);
   }
 }
 

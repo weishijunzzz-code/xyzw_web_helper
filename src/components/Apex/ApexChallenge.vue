@@ -2274,7 +2274,7 @@ watch(
 
 /* 助威对话框 */
 .vote-dialog-tip {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--n-text-color-2, #666);
   line-height: 1.6;
 }
@@ -2288,7 +2288,7 @@ watch(
 }
 
 .vote-num {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   min-width: 64px;
   text-align: center;
@@ -2313,17 +2313,17 @@ watch(
   position: absolute;
   right: 200px;
   top: -20px;
-  font-size: 110px;
+  font-size: 20px;
   opacity: 0.08;
   transform: rotate(12deg);
 }
 .banner-title {
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: 2px;
   background: linear-gradient(90deg, #ffd76e, #ff9a3c);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: currentColor;
 }
 .banner-sub {
   margin-top: 6px;
@@ -2338,7 +2338,7 @@ watch(
   text-align: center;
 }
 .banner-num {
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffd76e;
 }
@@ -2356,17 +2356,17 @@ watch(
   padding: 16px;
   border-radius: 12px;
   color: #fff;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-light);
   transition:
     transform 0.2s,
     box-shadow 0.2s;
 }
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-light);
 }
 .stat-icon {
-  font-size: 28px;
+  font-size: 20px;
   width: 44px;
   height: 44px;
   display: flex;
@@ -2383,7 +2383,7 @@ watch(
   opacity: 0.85;
 }
 .stat-value2 {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   font-family: "DIN", "Helvetica Neue", sans-serif;
 }
@@ -2451,7 +2451,7 @@ watch(
   }
 }
 .stage-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -2463,7 +2463,7 @@ watch(
   margin-top: 2px;
 }
 .stage-sids {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--n-text-color-3, #aaa);
   margin-top: 2px;
 }
@@ -2499,7 +2499,7 @@ watch(
 }
 .vote-team-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-light);
 }
 .vote-rank {
   position: absolute;
@@ -2517,7 +2517,7 @@ watch(
   line-height: 1.3;
 }
 .vote-meta {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--n-text-color-3, #888);
   margin-top: 3px;
 }
@@ -2537,7 +2537,7 @@ watch(
   transition: width 0.6s ease;
 }
 .vote-cheer-num {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--n-text-color-2, #666);
   margin-top: 4px;
 }

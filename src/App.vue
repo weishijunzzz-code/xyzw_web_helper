@@ -27,17 +27,17 @@
 
 <script setup>
 import { darkTheme } from "naive-ui";
-import { computed, onMounted, onUnmounted, ref, provide } from "vue";
-import { useTheme } from "@/composables/useTheme";
+import { computed, onMounted, onUnmounted, provide, ref } from "vue";
+import BackToTop from "@/components/Common/BackToTop.vue";
+import CommandPalette from "@/components/Common/CommandPalette.vue";
+import ErrorBoundary from "@/components/Common/ErrorBoundary.vue";
+import GlobalLoading from "@/components/Common/GlobalLoading.vue";
+import SuccessAnimation from "@/components/Common/SuccessAnimation.vue";
+import DebugPanel from "@/components/DebugPanel.vue";
 import { useCompactMode } from "@/composables/useCompactMode";
+import { useTheme } from "@/composables/useTheme";
 import { initCapacitor, isNativePlatform } from "@/utils/capacitor";
 import { initUpdateChecker } from "@/utils/updateChecker";
-import GlobalLoading from "@/components/Common/GlobalLoading.vue";
-import DebugPanel from "@/components/DebugPanel.vue";
-import ErrorBoundary from "@/components/Common/ErrorBoundary.vue";
-import BackToTop from "@/components/Common/BackToTop.vue";
-import SuccessAnimation from "@/components/Common/SuccessAnimation.vue";
-import CommandPalette from "@/components/Common/CommandPalette.vue";
 
 const { isDark, initTheme, setupSystemThemeListener, updateReactiveState } =
   useTheme();
@@ -66,6 +66,44 @@ const openCommandPalette = () => {
 provide('showSuccessAnimation', showSuccessAnimation);
 provide('openCommandPalette', openCommandPalette);
 
+const primaryTextColor = (color) => {
+  const rgb = color.match(/[a-f\d]{2}/gi)?.map((part) => Number.parseInt(part, 16) / 255) || [0, 0, 0];
+  const linear = rgb.map((part) => part <= 0.04045 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4);
+  const luminance = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  return luminance > 0.179 ? '#000000' : '#ffffff';
+};
+const accentPalette = ref({ primary: '', hover: '', pressed: '' });
+let accentObserver;
+const refreshAccentPalette = () => {
+  const style = getComputedStyle(document.documentElement);
+  // Arco owns body-level variables, so use distinct root tokens and body aliases.
+  const channels = (color) => (color.match(/[a-f\d]{2}/gi) || []).map((part) => Number.parseInt(part, 16));
+  const dark = document.documentElement.classList.contains('dark') || document.documentElement.dataset.theme === 'dark';
+  if (dark) document.body.setAttribute('arco-theme', 'dark');
+  else document.body.removeAttribute('arco-theme');
+  const primary = style.getPropertyValue('--primary-color').trim();
+  const surface = channels(style.getPropertyValue('--bg-primary').trim());
+  for (let step = 1; step <= 10; step++) {
+    const token = ({ 5: '--primary-color-hover', 6: '--primary-color', 7: '--primary-color-pressed' })[step];
+    let rgb = channels(style.getPropertyValue(token || `--color-primary-${[50, 100, 200, 300, 400, 500, 600, 700, 800, 900][step - 1]}`).trim());
+    if (dark && step <= 4) {
+      const opacity = [0.08, 0.12, 0.18, 0.24][step - 1];
+      rgb = channels(primary).map((value, index) => Math.round(value * opacity + surface[index] * (1 - opacity)));
+    }
+    document.documentElement.style.setProperty(`--accent-arco-${step}`, rgb.join(', '));
+    document.documentElement.style.setProperty(`--primary-${step}`, rgb.join(', '));
+  }
+  accentPalette.value = {
+    primary: style.getPropertyValue('--primary-color').trim(),
+    hover: style.getPropertyValue('--primary-color-hover').trim(),
+    pressed: style.getPropertyValue('--primary-color-pressed').trim(),
+  };
+  for (const [state, color] of Object.entries(accentPalette.value)) {
+    document.documentElement.style.setProperty(`--accent-on-${state}`, primaryTextColor(color));
+  }
+};
+refreshAccentPalette();
+
 // Naive UI 主题
 const naiveTheme = computed(() => {
   return isDark.value ? darkTheme : null;
@@ -77,9 +115,16 @@ const themeOverrides = computed(() => {
   const isDarkMode = isDark.value;
   return {
     common: {
-      primaryColor: '#667eea',
-      primaryColorHover: '#5a67d8',
-      primaryColorPressed: '#4c51bf',
+      primaryColor: accentPalette.value.primary,
+      primaryColorHover: accentPalette.value.hover,
+      primaryColorPressed: accentPalette.value.pressed,
+      primaryColorSuppl: accentPalette.value.hover,
+      borderRadius: '12px',
+      fontFamily: 'Inter, "PingFang SC", system-ui, sans-serif',
+      fontSize: '14px',
+      lineHeight: '1.6',
+      cubicBezierEaseInOut: 'ease',
+      cubicBezierEaseOut: 'ease',
       // 语义色与 CSS 令牌定稿一致（variables.scss）
       successColor: '#10b981',
       successColorHover: '#34d399',
@@ -97,7 +142,7 @@ const themeOverrides = computed(() => {
       textColor1: isDarkMode ? '#ffffff' : '#333333',
       textColor2: isDarkMode ? '#d1d5db' : '#666666',
       textColor3: isDarkMode ? '#9ca3af' : '#999999',
-      bodyColor: isDarkMode ? '#1f2937' : '#ffffff',
+      bodyColor: isDarkMode ? '#1f2937' : '#F9FAFB',
       cardColor: isDarkMode ? '#374151' : '#ffffff',
       modalColor: isDarkMode ? '#374151' : '#ffffff',
       popoverColor: isDarkMode ? '#374151' : '#ffffff',
@@ -105,6 +150,13 @@ const themeOverrides = computed(() => {
       dividerColor: isDarkMode ? '#4b5563' : '#e5e7eb',
       placeholderColor: isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
       disabledOpacity: 0.5,
+    },
+    Card: { borderColor: 'transparent', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' },
+    Button: {
+      textColorPrimary: primaryTextColor(accentPalette.value.primary),
+      textColorHoverPrimary: primaryTextColor(accentPalette.value.hover),
+      textColorPressedPrimary: primaryTextColor(accentPalette.value.pressed),
+      textColorFocusPrimary: primaryTextColor(accentPalette.value.hover),
     },
     Form: {
       asteriskColor: '#d03050',
@@ -115,13 +167,16 @@ const themeOverrides = computed(() => {
 // 监听主题变化事件
 const handleThemeChange = () => {
   updateReactiveState();
-  setTimeout(() => {
-    updateReactiveState();
-  }, 50);
+  refreshAccentPalette();
 };
 
 onMounted(() => {
   initTheme();
+  refreshAccentPalette();
+  accentObserver = new MutationObserver(refreshAccentPalette);
+  accentObserver.observe(document.documentElement, {
+    attributes: true, attributeFilter: ['data-accent', 'data-theme', 'class'],
+  });
   setupSystemThemeListener();
   window.addEventListener("theme-change", handleThemeChange);
   updateReactiveState();
@@ -134,6 +189,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  accentObserver?.disconnect();
   window.removeEventListener("theme-change", handleThemeChange);
 });
 </script>
@@ -141,7 +197,7 @@ onUnmounted(() => {
 <style>
 /* 主题变量 - 现代 SaaS 风格：中性底色，品牌色只做点缀 */
 :root {
-  --app-background: #f5f7fa;
+  --app-background: #F9FAFB;
 }
 
 /* 深色主题变量 */
@@ -167,18 +223,7 @@ onUnmounted(() => {
 html,
 body {
   height: 100%;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Microsoft YaHei",
-    "Helvetica Neue",
-    Helvetica,
-    Arial,
-    sans-serif;
+  font-family: var(--font-family-base);
   font-variant-numeric: tabular-nums;
   transition: color 0.3s ease;
 }

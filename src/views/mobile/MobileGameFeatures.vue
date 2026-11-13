@@ -285,25 +285,25 @@ const goToApex = () => {
   align-items: center;
   gap: var(--spacing-sm);
   padding: 10px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   border-radius: var(--border-radius-large);
-  color: white;
+  color: var(--text-primary);
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-light);
   min-width: 0;
 
   &:active {
     transform: scale(0.98);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    box-shadow: var(--shadow-light);
   }
 
   &.apex {
-    background: linear-gradient(135deg, #f6b93b 0%, #e58e26 55%, #d63031 100%);
-    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.35);
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-light);
 
     &:active {
-      box-shadow: 0 2px 8px rgba(230, 126, 34, 0.25);
+      box-shadow: var(--shadow-light);
     }
   }
 }
@@ -319,7 +319,7 @@ const goToApex = () => {
 }
 
 .entry-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   margin-bottom: 2px;
   white-space: nowrap;
@@ -328,7 +328,7 @@ const goToApex = () => {
 }
 
 .entry-desc {
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.85;
   line-height: 1.35;
 }

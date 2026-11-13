@@ -1543,13 +1543,13 @@ onMounted(() => {
 
 .club-logo {
   border: 4px solid #fff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   transition: all 0.3s ease;
   cursor: default;
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
     border-color: #1890ff;
   }
 }
@@ -1559,7 +1559,7 @@ onMounted(() => {
 }
 
 .club-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #333;
 }
@@ -1577,7 +1577,7 @@ onMounted(() => {
 }
 
 .vs-badge {
-  font-size: 32px;
+  font-size: 20px;
   font-weight: 900;
   color: #ff7875;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
@@ -1638,7 +1638,7 @@ onMounted(() => {
 
   &:hover {
     transform: scale(1.2);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
     border-color: #1890ff;
   }
 }
@@ -1674,7 +1674,7 @@ onMounted(() => {
 
 .player-avatar {
   border: 2px solid var(--primary-color, #1890ff);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .player-info-detail h3 {
@@ -1843,7 +1843,7 @@ onMounted(() => {
     }
 
     .hero-placeholder {
-      font-size: 36px;
+      font-size: 20px;
       font-weight: var(--font-weight-bold, bold);
       color: var(--text-secondary, #999);
     }
@@ -2164,7 +2164,7 @@ onMounted(() => {
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+    box-shadow: var(--shadow-light);
     border-color: var(--primary-color, #1890ff);
   }
 }

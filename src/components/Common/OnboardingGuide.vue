@@ -70,7 +70,7 @@
     >
       <div class="welcome-content">
         <div class="welcome-icon">
-          <n-icon size="64" color="#667eea">
+          <n-icon size="64" color="var(--primary-color)">
             <Rocket />
           </n-icon>
         </div>
@@ -317,20 +317,22 @@ defineExpose({
   z-index: 1;
 
   .highlight-box {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     width: 100%;
     height: 100%;
     border-radius: var(--border-radius-large);
-    box-shadow: 0 0 0 4px var(--primary-color), 0 0 20px rgba(102, 126, 234, 0.5);
-    animation: pulse 2s ease-in-out infinite;
+    box-shadow: var(--shadow-light);
+
   }
 }
 
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 0 0 4px var(--primary-color), 0 0 20px rgba(102, 126, 234, 0.5);
+    box-shadow: var(--shadow-light);
   }
   50% {
-    box-shadow: 0 0 0 4px var(--primary-color), 0 0 40px rgba(102, 126, 234, 0.8);
+    box-shadow: var(--shadow-light);
   }
 }
 

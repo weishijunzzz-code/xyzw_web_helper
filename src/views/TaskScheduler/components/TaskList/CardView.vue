@@ -283,7 +283,7 @@ const getStatusText = (status) => {
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
   }
   
   &.running {
@@ -337,11 +337,11 @@ const getStatusText = (status) => {
   
   .task-icon {
     color: #3b82f6;
-    font-size: 18px;
+    font-size: 16px;
   }
   
   .name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary, #1f2937);
   }
@@ -367,7 +367,7 @@ const getStatusText = (status) => {
   
   &.next-run {
     .time-info {
-      font-size: 13px;
+      font-size: 12px;
       color: #3b82f6;
       font-weight: 500;
     }
@@ -439,7 +439,7 @@ const getStatusText = (status) => {
     border-color: var(--border-light, #4b5563);
     
     &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-light);
     }
   }
   

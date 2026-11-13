@@ -4,13 +4,13 @@
       <h4 class="chart-title">{{ title }}</h4>
       <div v-if="subtitle" class="chart-subtitle">{{ subtitle }}</div>
     </div>
-    <div ref="chartRef" class="chart-container" :style="{ height: height + 'px' }"></div>
+    <div ref="chartRef" class="chart-container" :style="{ height: `${height  }px` }"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
   title: String,
@@ -34,7 +34,7 @@ const props = defineProps({
   },
   colors: {
     type: Array,
-    default: () => ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe']
+    default: () => []
   },
   showLegend: {
     type: Boolean,
@@ -56,6 +56,8 @@ const props = defineProps({
 
 const chartRef = ref(null)
 let chartInstance = null
+let resizeObserver
+let themeObserver
 
 // 初始化图表
 const initChart = () => {
@@ -65,7 +67,7 @@ const initChart = () => {
   updateChart()
 
   // 响应式
-  const resizeObserver = new ResizeObserver(() => {
+  resizeObserver = new ResizeObserver(() => {
     chartInstance?.resize()
   })
   resizeObserver.observe(chartRef.value)
@@ -81,15 +83,18 @@ const updateChart = () => {
 
 // 生成图表配置
 const generateOption = () => {
+  const style = getComputedStyle(document.documentElement)
+  const token = (name) => style.getPropertyValue(name).trim()
+  const colors = props.colors.length ? props.colors : [token('--primary-color'), token('--secondary-color'), token('--color-primary-400'), token('--color-primary-700'), token('--color-primary-300'), token('--color-primary-800')]
   const baseOption = {
-    color: props.colors,
+    color: colors,
     tooltip: props.showTooltip ? {
       trigger: props.type === 'pie' || props.type === 'doughnut' ? 'item' : 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderColor: '#e5e7eb',
+      backgroundColor: token('--bg-primary'),
+      borderColor: token('--border-light'),
       borderWidth: 1,
       textStyle: {
-        color: '#333'
+        color: token('--text-primary')
       }
     } : undefined,
     legend: props.showLegend ? {
@@ -97,7 +102,7 @@ const generateOption = () => {
       icon: 'circle',
       itemGap: 20,
       textStyle: {
-        color: '#666'
+        color: token('--text-secondary')
       }
     } : undefined,
     grid: {
@@ -116,14 +121,14 @@ const generateOption = () => {
         xAxis: {
           type: 'category',
           data: props.labels,
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          axisLabel: { color: '#666' }
+          axisLine: { lineStyle: { color: token('--border-light') } },
+          axisLabel: { color: token('--text-secondary') }
         },
         yAxis: {
           type: 'value',
           axisLine: { show: false },
-          splitLine: { lineStyle: { color: '#f0f0f0' } },
-          axisLabel: { color: '#666' }
+          splitLine: { lineStyle: { color: token('--border-light') } },
+          axisLabel: { color: token('--text-secondary') }
         },
         series: [{
           data: props.data,
@@ -134,10 +139,7 @@ const generateOption = () => {
           lineStyle: { width: 3 },
           areaStyle: props.areaStyle ? {
             opacity: 0.2,
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: props.colors[0] },
-              { offset: 1, color: 'rgba(102, 126, 234, 0.1)' }
-            ])
+            color: colors[0]
           } : undefined
         }]
       }
@@ -148,14 +150,14 @@ const generateOption = () => {
         xAxis: {
           type: 'category',
           data: props.labels,
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          axisLabel: { color: '#666' }
+          axisLine: { lineStyle: { color: token('--border-light') } },
+          axisLabel: { color: token('--text-secondary') }
         },
         yAxis: {
           type: 'value',
           axisLine: { show: false },
-          splitLine: { lineStyle: { color: '#f0f0f0' } },
-          axisLabel: { color: '#666' }
+          splitLine: { lineStyle: { color: token('--border-light') } },
+          axisLabel: { color: token('--text-secondary') }
         },
         series: [{
           data: props.data,
@@ -196,7 +198,7 @@ const generateOption = () => {
         radar: {
           indicator: props.labels.map(label => ({ name: label, max: 100 })),
           radius: '65%',
-          axisName: { color: '#666' }
+          axisName: { color: token('--text-secondary') }
         },
         series: [{
           type: 'radar',
@@ -257,12 +259,17 @@ const generateOption = () => {
 watch(() => props.data, updateChart, { deep: true })
 watch(() => props.labels, updateChart)
 watch(() => props.type, updateChart)
+watch(() => props.colors, updateChart, { deep: true })
 
 onMounted(() => {
   nextTick(initChart)
+  themeObserver = new MutationObserver(updateChart)
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-accent', 'data-theme', 'class'] })
 })
 
 onUnmounted(() => {
+  themeObserver?.disconnect()
+  resizeObserver?.disconnect()
   chartInstance?.dispose()
   chartInstance = null
 })

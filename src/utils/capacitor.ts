@@ -33,7 +33,7 @@ export const initCapacitor = async () => {
   try {
     // 设置状态栏
     await StatusBar.setStyle({ style: StatusBarStyle.Dark })
-    await StatusBar.setBackgroundColor({ color: '#667eea' })
+    await StatusBar.setBackgroundColor({ color: '#2563EB' })
     await StatusBar.setOverlaysWebView({ overlay: false })
 
     // 设置键盘

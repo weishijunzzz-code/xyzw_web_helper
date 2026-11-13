@@ -1,4 +1,7 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+// 消息中心 Store
+import { defineStore } from 'pinia'
+
+import { computed, onMounted, ref } from 'vue'
 
 export function useNotification() {
   const isSupported = ref(false)
@@ -118,10 +121,6 @@ export function useNotification() {
     markAsRead
   }
 }
-
-// 消息中心 Store
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref([])

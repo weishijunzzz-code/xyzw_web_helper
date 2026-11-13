@@ -2253,7 +2253,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
       background: #ffffff;
       border: 1px solid #d9d9d9;
       border-radius: 6px;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--shadow-light);
     }
 
     .peach-calendar-header {
@@ -2424,7 +2424,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 .club-logo-inline {
   border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
   flex-shrink: 0;
 }
 
@@ -2440,13 +2440,13 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 }
 
 .club-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #2c3e50;
 }
 
 .club-server {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #2c3e50;
 }
@@ -2475,7 +2475,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 .club-announce-text {
   color: #8a9aaa;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 /* 我方服号和名字：蓝色系 */
@@ -2508,10 +2508,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     #c1544f 60%,
     #a03030 100%
   );
-  box-shadow:
-    0 0 0 3px #fff,
-    0 0 0 5px rgba(42, 127, 184, 0.4),
-    0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-light);
   font-family: "Arial Black", "Impact", "Segoe UI Black", sans-serif;
   font-style: italic;
   font-weight: 900;
@@ -2541,7 +2538,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 .vs-v {
   color: #e8f4ff;
-  font-size: 30px;
+  font-size: 20px;
   text-shadow:
     0 0 8px rgba(255, 255, 255, 0.6),
     1px 2px 4px rgba(0, 0, 0, 0.4);
@@ -2550,7 +2547,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 .vs-s {
   color: #ffe8e8;
-  font-size: 30px;
+  font-size: 20px;
   text-shadow:
     0 0 8px rgba(255, 200, 200, 0.6),
     1px 2px 4px rgba(0, 0, 0, 0.4);
@@ -2665,7 +2662,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 :deep(.sim-full-rate) {
   color: #389e0d;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -2727,7 +2724,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 }
 
 :deep(.lineup-card-row-pearl) {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 :deep(.lineup-pearl-empty) {
@@ -2831,7 +2828,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 }
 
 :deep(.pet-level) {
-  font-size: 11px;
+  font-size: 12px;
   color: #8c8c8c;
 }
 
@@ -2851,7 +2848,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
   background: #f6ffed;
   border: 1px solid #b7eb8f;
   color: #389e0d;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
   line-height: 1.4;
   padding: 0 4px;
@@ -2872,7 +2869,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
   &:hover {
     transform: scale(1.2);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
     border-color: #1890ff;
   }
 }
@@ -2908,7 +2905,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
 .player-avatar {
   border: 2px solid var(--primary-color, #1890ff);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .player-info-detail h3 {
@@ -3077,7 +3074,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
     }
 
     .hero-placeholder {
-      font-size: 36px;
+      font-size: 20px;
       font-weight: var(--font-weight-bold, bold);
       color: var(--text-secondary, #999);
     }
@@ -3398,7 +3395,7 @@ watch(selectedTokenId, (newTokenId, oldTokenId) => {
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+    box-shadow: var(--shadow-light);
     border-color: var(--primary-color, #1890ff);
   }
 }

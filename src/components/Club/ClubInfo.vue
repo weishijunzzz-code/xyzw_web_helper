@@ -2228,7 +2228,7 @@ const formatNumber = (num) => {
   .section-title {
     position: relative;
     padding-left: 10px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.4;
     color: var(--n-text-color, #333);
@@ -2358,7 +2358,7 @@ const formatNumber = (num) => {
 .apply-item-hover {
   background: var(--bg-tertiary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .apply-left {
@@ -2442,7 +2442,7 @@ const formatNumber = (num) => {
 
 .player-avatar {
   border: 2px solid var(--primary-color, #1890ff);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .player-info-detail h3 {
@@ -2509,7 +2509,7 @@ const formatNumber = (num) => {
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+    box-shadow: var(--shadow-light);
     border-color: var(--primary-color, #1890ff);
   }
 }

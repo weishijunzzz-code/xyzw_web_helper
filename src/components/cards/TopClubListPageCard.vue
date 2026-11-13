@@ -1538,7 +1538,7 @@ onMounted(() => {
 
 .player-avatar {
   border: 2px solid var(--primary-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .player-info-detail h3 {
@@ -1707,7 +1707,7 @@ onMounted(() => {
     }
 
     .hero-placeholder {
-      font-size: 36px;
+      font-size: 20px;
       font-weight: var(--font-weight-bold);
       color: var(--text-secondary);
     }
@@ -2266,11 +2266,7 @@ onMounted(() => {
 
 // 公告区域
 .announcement-section {
-  background: linear-gradient(
-    135deg,
-    var(--primary-color-light) 0%,
-    var(--primary-color) 100%
-  );
+  background: var(--bg-primary);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-sm);
   border-radius: var(--border-radius-md);
@@ -2283,7 +2279,7 @@ onMounted(() => {
     align-items: center;
 
     .announcement-text {
-      color: white;
+      color: var(--text-primary);
       font-size: var(--font-size-sm);
       font-weight: var(--font-weight-medium);
       text-align: center;
@@ -2296,7 +2292,7 @@ onMounted(() => {
 // 联盟分类标签栏
 .alliance-tabs-section {
   display: flex;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   padding: var(--spacing-xs);
   gap: var(--spacing-xs);
   flex-shrink: 0;
@@ -2311,7 +2307,7 @@ onMounted(() => {
     border-radius: var(--border-radius-md);
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-medium);
-    color: white;
+    color: var(--text-primary);
     cursor: pointer;
     transition: all var(--transition-fast);
     background: rgba(255, 255, 255, 0.15);
@@ -2450,7 +2446,7 @@ onMounted(() => {
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-light);
 
       // 确保所有标题头居中对齐
       .table-cell {
@@ -2470,7 +2466,7 @@ onMounted(() => {
       &:hover {
         background: var(--bg-secondary);
         transform: translateX(2px);
-        box-shadow: inset 3px 0 0 var(--primary-color);
+        box-shadow: var(--shadow-light);
       }
 
       &:last-child {
@@ -2559,7 +2555,7 @@ onMounted(() => {
           font-weight: bold;
           font-size: var(--font-size-base);
           color: white;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          box-shadow: var(--shadow-light);
           margin: 0 6px;
 
           &::before {
@@ -2644,12 +2640,8 @@ onMounted(() => {
           width: 32px;
           height: 32px;
           border-radius: 50%;
-          background: linear-gradient(
-            135deg,
-            var(--primary-color) 0%,
-            var(--primary-color-light) 100%
-          );
-          color: white;
+          background: var(--bg-primary);
+          color: var(--text-primary);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -2779,12 +2771,8 @@ onMounted(() => {
           width: 40px;
           height: 40px;
           border-radius: 50%;
-          background: linear-gradient(
-            135deg,
-            var(--primary-color) 0%,
-            var(--primary-color-light) 100%
-          );
-          color: white;
+          background: var(--bg-primary);
+          color: var(--text-primary);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -2796,7 +2784,7 @@ onMounted(() => {
 
           &:hover {
             transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-light);
           }
 
           &:active {
@@ -2915,12 +2903,8 @@ onMounted(() => {
         span {
           display: inline-block;
           padding: 2px 8px;
-          background: linear-gradient(
-            135deg,
-            var(--primary-color-light) 0%,
-            var(--primary-color) 100%
-          );
-          color: white;
+          background: var(--bg-primary);
+          color: var(--text-primary);
           border-radius: var(--border-radius-full);
           font-weight: var(--font-weight-bold);
           font-size: var(--font-size-sm);

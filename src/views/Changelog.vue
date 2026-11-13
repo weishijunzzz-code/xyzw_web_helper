@@ -183,7 +183,7 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 36px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 12px 0;
@@ -194,7 +194,7 @@ onMounted(() => {
 }
 
 .icon-history {
-  font-size: 40px;
+  font-size: 20px;
 }
 
 .page-description {
@@ -269,11 +269,11 @@ onMounted(() => {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .stat-icon {
-  font-size: 32px;
+  font-size: 20px;
 }
 
 .stat-content {
@@ -281,7 +281,7 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 4px;
@@ -307,7 +307,7 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 64px;
+  font-size: 20px;
   margin-bottom: 16px;
 }
 
@@ -330,7 +330,7 @@ onMounted(() => {
 
 .reset-filter-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-light);
 }
 
 /* 订阅部分 */
@@ -339,17 +339,17 @@ onMounted(() => {
 }
 
 .subscribe-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   border-radius: 12px;
   padding: 32px;
   display: flex;
   align-items: center;
   gap: 20px;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-light);
 }
 
 .subscribe-icon {
-  font-size: 48px;
+  font-size: 20px;
 }
 
 .subscribe-content {
@@ -372,7 +372,7 @@ onMounted(() => {
 .subscribe-btn {
   padding: 12px 32px;
   background: white;
-  color: #667eea;
+  color: var(--primary-color);
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -383,7 +383,7 @@ onMounted(() => {
 
 .subscribe-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-light);
 }
 
 /* 过渡动画 */
@@ -409,7 +409,7 @@ onMounted(() => {
   --border-color: #e5e7eb;
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
-  --primary-color: #667eea;
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -419,7 +419,7 @@ onMounted(() => {
     --border-color: #374151;
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
-    --primary-color: #818cf8;
+
   }
 }
 
@@ -430,7 +430,7 @@ onMounted(() => {
   }
 
   .page-title {
-    font-size: 28px;
+    font-size: 20px;
   }
 
   .stats-grid {
