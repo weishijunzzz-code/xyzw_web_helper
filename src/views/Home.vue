@@ -1,39 +1,46 @@
 <template>
   <div class="home-page">
     <!-- 导航栏 -->
-    <nav class="navbar glass">
-      <div class="container">
-        <div class="nav-content">
-          <div class="nav-brand">
-            <img src="/icons/xiaoyugan.png" alt="XYZW" class="brand-logo" />
-            <span class="brand-text">XYZW 游戏管理系统</span>
+    <nav class="home-navbar">
+      <div class="home-container">
+        <div class="home-nav-content">
+          <div class="home-nav-brand">
+            <img
+              src="/icons/xiaoyugan.png"
+              alt="XYZW"
+              class="home-brand-logo"
+            />
+            <span class="home-brand-text">XYZW 游戏管理系统</span>
           </div>
 
-          <div class="mobile-menu-button">
-            <n-button text @click="isMobileMenuOpen = true">
+          <div class="home-mobile-menu-button">
+            <n-button
+              text
+              aria-label="打开导航菜单"
+              :aria-expanded="isMobileMenuOpen"
+              @click="isMobileMenuOpen = true"
+            >
               <n-icon>
                 <Menu />
               </n-icon>
             </n-button>
           </div>
 
-          <div class="nav-actions">
+          <div class="home-nav-actions">
             <template v-if="!authStore.isAuthenticated">
               <n-button
                 text
                 type="primary"
                 size="large"
-                @click="router.push('/login')"
+                @click="router.push('/tokens')"
+                >管理账号</n-button
               >
-                登录
-              </n-button>
               <n-button
                 type="primary"
                 size="large"
-                @click="router.push('/register')"
+                @click="router.push('/admin/dashboard')"
+                >进入控制台</n-button
               >
-                注册
-              </n-button>
             </template>
             <template v-else>
               <n-button
@@ -54,10 +61,10 @@
       placement="left"
       style="width: 260px"
     >
-      <div class="drawer-menu">
+      <div class="home-drawer-menu">
         <router-link
           to="/"
-          class="drawer-item"
+          class="home-drawer-item"
           @click="isMobileMenuOpen = false"
         >
           <n-icon>
@@ -67,7 +74,7 @@
         </router-link>
         <router-link
           to="/admin/dashboard"
-          class="drawer-item"
+          class="home-drawer-item"
           @click="isMobileMenuOpen = false"
         >
           <n-icon>
@@ -77,7 +84,7 @@
         </router-link>
         <router-link
           to="/admin/game-features"
-          class="drawer-item"
+          class="home-drawer-item"
           @click="isMobileMenuOpen = false"
         >
           <n-icon>
@@ -87,7 +94,7 @@
         </router-link>
         <router-link
           to="/tokens"
-          class="drawer-item"
+          class="home-drawer-item"
           @click="isMobileMenuOpen = false"
         >
           <n-icon>
@@ -97,7 +104,7 @@
         </router-link>
         <router-link
           to="/changelog"
-          class="drawer-item"
+          class="home-drawer-item"
           @click="isMobileMenuOpen = false"
         >
           <n-icon>
@@ -105,76 +112,72 @@
           </n-icon>
           <span>更新日志</span>
         </router-link>
-        <div class="drawer-actions">
+        <div class="home-drawer-actions">
           <n-button
             type="primary"
             block
             @click="
-              router.push('/login');
+              router.push('/tokens');
               isMobileMenuOpen = false;
             "
-            >登录</n-button
+            >管理账号</n-button
           >
           <n-button
             type="primary"
             block
             @click="
-              router.push('/register');
+              router.push('/admin/dashboard');
               isMobileMenuOpen = false;
             "
-            >注册</n-button
+            >进入控制台</n-button
           >
         </div>
       </div>
     </n-drawer>
 
     <!-- 主要内容 -->
-    <main class="main-content">
+    <main class="home-main-content">
       <!-- 英雄区域 -->
-      <section class="hero-section">
-        <div class="container">
-          <div class="hero-content">
-            <div class="hero-text">
-              <h1 class="hero-title">专业的游戏管理平台</h1>
-              <p class="hero-subtitle">让游戏变得更简单，让管理变得更高效</p>
-              <div class="hero-actions">
+      <section class="home-hero-section">
+        <div class="home-container">
+          <div class="home-hero-content">
+            <div class="home-hero-text">
+              <h1 class="home-hero-title">账号与日常任务，集中管理</h1>
+              <p class="home-hero-subtitle">
+                管理多个游戏账号，安排日常任务，查看角色状态。
+              </p>
+              <div class="home-hero-actions">
                 <n-button
                   type="primary"
                   size="large"
-                  class="hero-button"
-                  @click="
-                    router.push(
-                      authStore.isAuthenticated
-                        ? '/admin/dashboard'
-                        : '/register',
-                    )
-                  "
+                  class="home-hero-button"
+                  @click="router.push('/tokens')"
                 >
-                  {{ authStore.isAuthenticated ? "进入控制台" : "立即开始" }}
+                  管理账号
                 </n-button>
                 <n-button
                   text
                   type="primary"
                   size="large"
-                  class="hero-button"
+                  class="home-hero-button"
                   @click="scrollToFeatures"
                 >
-                  了解更多
+                  查看功能
                 </n-button>
               </div>
             </div>
 
-            <div class="hero-visual">
-              <div class="feature-cards">
+            <div class="home-hero-visual">
+              <div class="home-feature-cards">
                 <div
                   v-for="card in featureCards"
                   :key="card.id"
-                  class="feature-card"
+                  class="home-feature-card"
                 >
-                  <div class="card-icon">
+                  <div class="home-card-icon">
                     <component :is="card.icon" />
                   </div>
-                  <div class="card-content">
+                  <div class="home-card-content">
                     <h3>{{ card.title }}</h3>
                     <p>{{ card.description }}</p>
                   </div>
@@ -186,26 +189,28 @@
       </section>
 
       <!-- 功能特性 -->
-      <section ref="featuresSection" class="features-section">
-        <div class="container">
-          <div class="section-header">
-            <h2 class="section-title">核心功能</h2>
-            <p class="section-subtitle">为您提供全方位的游戏管理解决方案</p>
+      <section ref="featuresSection" class="home-features-section">
+        <div class="home-container">
+          <div class="home-section-header">
+            <h2 class="home-section-title">核心功能</h2>
+            <p class="home-section-subtitle">
+              整理账号、执行任务，按需要配置自己的工作流程。
+            </p>
           </div>
 
-          <div class="features-grid">
+          <div class="home-features-grid">
             <div
               v-for="feature in features"
               :key="feature.id"
-              class="feature-item"
+              class="home-feature-item"
             >
-              <div class="feature-icon">
+              <div class="home-feature-icon">
                 <component :is="feature.icon" />
               </div>
-              <h3 class="feature-title">
+              <h3 class="home-feature-title">
                 {{ feature.title }}
               </h3>
-              <p class="feature-description">
+              <p class="home-feature-description">
                 {{ feature.description }}
               </p>
             </div>
@@ -214,14 +219,14 @@
       </section>
 
       <!-- 统计数据 -->
-      <section class="stats-section">
-        <div class="container">
-          <div class="stats-grid">
-            <div v-for="stat in stats" :key="stat.id" class="stat-item">
-              <div class="stat-number">
+      <section class="home-stats-section">
+        <div class="home-container">
+          <div class="home-stats-grid">
+            <div v-for="stat in stats" :key="stat.id" class="home-stat-item">
+              <div class="home-stat-number">
                 {{ stat.number }}
               </div>
-              <div class="stat-label">
+              <div class="home-stat-label">
                 {{ stat.label }}
               </div>
             </div>
@@ -231,25 +236,51 @@
     </main>
 
     <!-- 页脚 -->
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-content">
-          <div class="footer-brand">
-            <img src="/icons/xiaoyugan.png" alt="XYZW" class="footer-logo" />
-            <span class="footer-text">XYZW 游戏管理系统</span>
+    <footer class="home-footer">
+      <div class="home-container">
+        <div class="home-footer-content">
+          <div class="home-footer-brand">
+            <img
+              src="/icons/xiaoyugan.png"
+              alt="XYZW"
+              class="home-footer-logo"
+            />
+            <span class="home-footer-text">XYZW 游戏管理系统</span>
           </div>
-          <div class="footer-links">
-            <router-link to="/changelog" class="footer-link">
+          <div class="home-footer-links">
+            <router-link to="/changelog" class="home-footer-link">
               更新日志
             </router-link>
-            <a href="#" class="footer-link">关于我们</a>
-            <a href="#" class="footer-link">隐私政策</a>
-            <a href="#" class="footer-link">服务条款</a>
-            <a href="#" class="footer-link">联系我们</a>
+            <a
+              href="/tokens"
+              class="home-footer-link"
+              @click="navigateFooter($event, '/tokens')"
+              >账号管理</a
+            >
+            <a
+              href="/admin/dashboard"
+              class="home-footer-link"
+              @click="navigateFooter($event, '/admin/dashboard')"
+              >控制台</a
+            >
+            <a
+              href="/admin/game-features"
+              class="home-footer-link"
+              @click="navigateFooter($event, '/admin/game-features')"
+              >游戏功能</a
+            >
+            <a
+              href="/admin/backup"
+              class="home-footer-link"
+              @click="navigateFooter($event, '/admin/backup')"
+              >配置备份</a
+            >
           </div>
         </div>
-        <div class="footer-bottom">
-          <p>&copy; 2024 XYZW. All rights reserved.</p>
+        <div class="home-footer-bottom">
+          <p>
+            &copy; {{ new Date().getFullYear() }} XYZW. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
@@ -319,19 +350,36 @@ const features = ref([
 
 // 统计数据
 const stats = ref([
-  { id: 1, number: "1000+", label: "活跃用户" },
-  { id: 2, number: "50K+", label: "管理角色" },
-  { id: 3, number: "100K+", label: "完成任务" },
-  { id: 4, number: "99.9%", label: "系统稳定性" },
+  { id: 1, number: "多账号管理", label: "统一整理账号与分组" },
+  { id: 2, number: "批量日常", label: "按配置执行日常任务" },
+  { id: 3, number: "定时任务", label: "按计划安排任务执行" },
+  { id: 4, number: "本地备份", label: "导入导出本地配置" },
 ]);
 
 // 滚动到功能区域
 const scrollToFeatures = () => {
   if (featuresSection.value) {
     featuresSection.value.scrollIntoView({
-      behavior: "smooth",
+      behavior:
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        document.documentElement.classList.contains("reduce-motion")
+          ? "instant"
+          : "smooth",
     });
   }
+};
+
+const navigateFooter = (event, path) => {
+  if (
+    event.button !== 0 ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    event.altKey
+  )
+    return;
+  event.preventDefault();
+  router.push(path);
 };
 
 onMounted(() => {
@@ -342,373 +390,345 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .home-page {
+  --home-header-height: 64px;
   min-height: 100dvh;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-family-base);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.home-container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+.home-navbar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: var(--z-fixed);
+  height: var(--home-header-height);
   background: var(--bg-primary);
-  position: relative;
-  overflow-x: hidden;
-  padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+  border-bottom: 1px solid var(--border-light);
 }
-
-.drawer-menu {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+.home-navbar > .home-container {
+  height: 100%;
 }
-
-.drawer-item {
+.home-nav-content {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-medium);
+  justify-content: space-between;
+  gap: 16px;
+}
+.home-nav-brand,
+.home-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.home-brand-logo {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  object-fit: contain;
+}
+.home-brand-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.home-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-nav-actions :deep(.n-button) {
+  height: 40px;
+  font-size: 14px;
+}
+.home-mobile-menu-button {
+  display: none;
+}
+.home-main-content {
+  padding-top: var(--home-header-height);
+}
+.home-hero-section {
+  padding: 48px 0;
+}
+.home-hero-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+  align-items: center;
+}
+.home-hero-text,
+.home-hero-visual {
+  min-width: 0;
+}
+.home-hero-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+.home-hero-subtitle {
+  margin: 0 0 24px;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+.home-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.home-hero-button {
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+.home-feature-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.home-feature-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-light);
+}
+.home-card-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--primary-color);
+}
+.home-card-icon :deep(svg),
+.home-feature-icon :deep(svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.home-card-content {
+  min-width: 0;
+}
+.home-card-content h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.home-card-content p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.home-features-section {
+  padding: 40px 0;
+  background: var(--bg-primary);
+  scroll-margin-top: calc(var(--home-header-height) + 24px);
+}
+.home-section-header {
+  text-align: left;
+  margin-bottom: 24px;
+}
+.home-section-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.home-section-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.home-features-grid,
+.home-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+.home-feature-item {
+  min-width: 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+}
+.home-feature-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 16px;
+  color: var(--primary-color);
+}
+.home-feature-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.home-feature-description {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.home-stats-section {
+  padding: 32px 0;
+}
+.home-stat-item {
+  min-width: 0;
+}
+.home-stat-number {
+  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.home-stat-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.home-footer {
+  padding: 24px 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-top: 1px solid var(--border-light);
+}
+.home-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: 16px;
+}
+.home-footer-logo {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  object-fit: contain;
+}
+.home-footer-text {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.home-footer-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.home-footer-link {
+  font-size: 14px;
   color: var(--text-secondary);
   text-decoration: none;
+  transition: color 300ms ease;
 }
-
-.drawer-item.router-link-active {
+.home-footer-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.home-footer-bottom {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.home-footer-bottom p {
+  margin: 0;
+}
+.home-drawer-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+.home-drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.home-drawer-item.router-link-exact-active {
   background: var(--primary-color-light);
   color: var(--primary-color);
 }
-
-.drawer-actions {
+.home-drawer-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
+  gap: 8px;
+  margin-top: 16px;
 }
-
-// 导航栏
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: var(--z-fixed);
-  padding: var(--spacing-md) 0;
-  backdrop-filter: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.nav-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.mobile-menu-button {
-  display: none;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.brand-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--border-radius-small);
-}
-
-.brand-text {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-
-.nav-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-// 主要内容
-.main-content {
-  padding-top: 80px;
-}
-
-// 英雄区域
-.hero-section {
-  padding: var(--spacing-2xl) 0;
-  min-height: 80vh;
-  display: flex;
-  align-items: center;
-}
-
-.hero-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-2xl);
-  align-items: center;
-}
-
-.hero-text {
-  color: var(--text-primary);
-}
-
-.hero-title {
-  font-size: 3.5rem;
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
-  margin-bottom: var(--spacing-md);
-  background: var(--bg-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: currentColor;
-  background-clip: text;
-}
-
-.hero-subtitle {
-  font-size: var(--font-size-xl);
-  opacity: 0.9;
-  margin-bottom: var(--spacing-xl);
-  line-height: var(--line-height-relaxed);
-}
-
-.hero-actions {
-  display: flex;
-  gap: var(--spacing-md);
-}
-
-.hero-button {
-  padding: var(--spacing-md) var(--spacing-xl);
-  font-size: var(--font-size-lg);
-}
-
-// 功能卡片
-.feature-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.feature-card {
-  background: var(--bg-primary);
-  backdrop-filter: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--border-radius-large);
-  padding: var(--spacing-lg);
-  transition: all var(--transition-normal);
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-light);
+@media (max-width: 1023px) {
+  .home-hero-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .home-features-grid,
+  .home-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
-.card-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-md);
-
-  :deep(svg) {
-    width: 100%;
-    height: 100%;
+@media (max-width: 639px) {
+  .home-page {
+    --home-header-height: 52px;
   }
-}
-
-.card-content h3 {
-  color: var(--text-primary);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-sm);
-}
-
-.card-content p {
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-}
-
-// 功能特性区域
-.features-section {
-  padding: var(--spacing-2xl) 0;
-  background: var(--bg-primary);
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: var(--spacing-2xl);
-}
-
-.section-title {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-md);
-}
-
-.section-subtitle {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: var(--line-height-relaxed);
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-xl);
-}
-
-.feature-item {
-  text-align: center;
-  padding: var(--spacing-xl);
-  border-radius: var(--border-radius-large);
-  transition: all var(--transition-normal);
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-heavy);
+  .home-container {
+    padding: 0 16px;
   }
-}
-
-.feature-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto var(--spacing-lg);
-  color: var(--primary-color);
-
-  :deep(svg) {
-    width: 100%;
-    height: 100%;
+  .home-brand-text {
+    font-size: 14px;
   }
-}
-
-.feature-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-md);
-}
-
-.feature-description {
-  color: var(--text-secondary);
-  line-height: var(--line-height-relaxed);
-}
-
-// 统计区域
-.stats-section {
-  padding: var(--spacing-2xl) 0;
-  background: var(--bg-primary);
-}
-
-/* 深色主题下统计区背景 */
-[data-theme="dark"] .stats-section {
-  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-xl);
-}
-
-.stat-item {
-  text-align: center;
-  color: var(--text-primary);
-}
-
-.stat-number {
-  font-size: 3rem;
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--spacing-sm);
-}
-
-.stat-label {
-  font-size: var(--font-size-lg);
-  opacity: 0.9;
-}
-
-// 页脚
-.footer {
-  background: rgba(0, 0, 0, 0.8);
-  color: var(--text-primary);
-  padding: var(--spacing-xl) 0;
-}
-
-.footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-lg);
-}
-
-.footer-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.footer-logo {
-  width: 24px;
-  height: 24px;
-}
-
-.footer-text {
-  font-weight: var(--font-weight-medium);
-}
-
-.footer-links {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.footer-link {
-  color: var(--text-primary);
-  transition: color var(--transition-fast);
-
-  &:hover {
-    color: var(--text-primary);
-  }
-}
-
-.footer-bottom {
-  text-align: center;
-  padding-top: var(--spacing-lg);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-}
-
-// 响应式设计
-@media (max-width: 768px) {
-  .hero-content {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-
-  .mobile-menu-button {
-    display: inline-flex;
-    margin-left: auto;
-  }
-
-  .nav-actions {
+  .home-nav-actions {
     display: none;
   }
-
-  .hero-title {
-    font-size: 2.5rem;
+  .home-mobile-menu-button {
+    display: inline-flex;
+    flex: 0 0 44px;
   }
-
-  .hero-actions {
-    justify-content: center;
+  .home-mobile-menu-button :deep(.n-button) {
+    width: 44px;
+    height: 44px;
   }
-
-  .footer-content {
-    flex-direction: column;
-    gap: var(--spacing-lg);
+  .home-hero-section {
+    padding: 32px 0;
   }
-
-  .nav-actions {
-    flex-direction: column;
-    gap: var(--spacing-xs);
+  .home-features-section {
+    padding: 32px 0;
   }
-
-  .footer-links {
-    flex-direction: column;
-    gap: var(--spacing-md);
+  .home-features-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
+  .home-stats-grid {
+    gap: 16px;
+  }
+  .home-stats-section {
+    padding: 24px 0;
+  }
+  .home-footer-content {
+    align-items: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-footer-link {
+    transition: none;
+  }
+}
+.reduce-motion .home-footer-link {
+  transition: none;
 }
 </style>
