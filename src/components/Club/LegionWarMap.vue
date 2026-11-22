@@ -200,6 +200,7 @@ import { HexGraph, roadPointList } from "@/utils/legionWar";
 const message = useMessage();
 useTokenStore();
 const legionWarStore = useLegionWarStore();
+const battlefieldSubscriber = Symbol("盐场地图");
 
 const isAccessible = ref(isLegionWarAccessible());
 
@@ -712,10 +713,10 @@ const resizeAndRedraw = () => {
 
 const toggleBattlefieldEntry = async () => {
   if (isEntireBattlefield.value) {
-    legionWarStore.disconnect(true); // 强制断开
+    legionWarStore.disconnect(battlefieldSubscriber, true); // 强制断开
   } else {
     try {
-      await legionWarStore.connect();
+      await legionWarStore.connect(battlefieldSubscriber);
     } catch (error) {
       message.error(error.message);
     }
@@ -758,7 +759,7 @@ onMounted(async () => {
   await initializeCanvas();
 
   try {
-    legionWarStore.connect().catch((e) => {
+    legionWarStore.connect(battlefieldSubscriber).catch((e) => {
       console.error("Auto connect failed", e);
     });
   } catch (e) {}
@@ -776,7 +777,7 @@ onUnmounted(() => {
     window.removeEventListener("resize", resizeHandler);
     resizeHandler = null;
   }
-  legionWarStore.disconnect();
+  legionWarStore.disconnect(battlefieldSubscriber);
 });
 </script>
 

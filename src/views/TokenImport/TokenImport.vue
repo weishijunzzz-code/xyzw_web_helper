@@ -322,6 +322,7 @@
                 <a-badge
                   :status="getTokenStyle(token.id)"
                   :text="getConnectionStatusText(token.id)"
+                  :title="tokenStore.getWebSocketError(token.id)"
                 />
                 <!-- 连接状态文字 -->
                 <!-- <a-tag color="green">
@@ -527,6 +528,7 @@
                   <a-badge
                     :status="getTokenStyle(token.id)"
                     :text="getConnectionStatusText(token.id)"
+                    :title="tokenStore.getWebSocketError(token.id)"
                   />
                 </div>
                 <!-- Avatar -->
@@ -1270,6 +1272,28 @@ const upgradeTokenToPermanent = (token) => {
   });
 };
 
+const pendingTokenLogins = reactive(new Map());
+watch(
+  () => [...pendingTokenLogins.keys()].map((id) => ({
+    id,
+    status: tokenStore.getWebSocketStatus(id),
+    error: tokenStore.wsConnections[id]?.lastError,
+  })),
+  (connections) => {
+    for (const { id, status, error } of connections) {
+      const attempt = pendingTokenLogins.get(id);
+      if (!attempt) continue;
+      if (status === "connected") {
+        message.success(`已连接 ${attempt.name}`);
+        pendingTokenLogins.delete(id);
+      } else if (status === "error" && error && error !== attempt.previousError) {
+        message.error(`${attempt.name}：${error.error}`);
+        pendingTokenLogins.delete(id);
+      }
+    }
+  },
+);
+
 const selectToken = (token, forceReconnect = false) => {
   // 如果有备注正在编辑，保存备注并取消编辑
   if (editingRemark.value) {
@@ -1317,16 +1341,12 @@ const selectToken = (token, forceReconnect = false) => {
   }
 
   // 选择token（带智能连接判断）
+  const previousError = tokenStore.wsConnections[token.id]?.lastError;
   const result = tokenStore.selectToken(token.id, forceReconnect);
 
   if (result) {
-    if (forceReconnect) {
-      message.success(`强制重连：${token.name}`);
-    } else if (isAlreadySelected) {
-      message.success(`重新连接：${token.name}`);
-    } else {
-      message.success(`已选择：${token.name}`);
-    }
+    pendingTokenLogins.set(token.id, { name: token.name, previousError });
+    message.info(`正在连接 ${token.name}…`);
   } else {
     message.error(`选择Token失败：${token.name}`);
   }

@@ -1,19 +1,37 @@
 export class PushService {
-  constructor(wss) {
+  constructor(wss, { verifyToken, ownsAccount }) {
     this.wss = wss;
-    this.clients = new Set();
+    this.clients = new Map();
+    this.ownsAccount = ownsAccount;
 
     wss.on('connection', (ws) => {
-      this.clients.add(ws);
-      ws.on('close', () => this.clients.delete(ws));
-      ws.on('error', () => this.clients.delete(ws));
+      const authTimeout = setTimeout(() => ws.close(1008, "Authentication required"), 5000);
+      const cleanup = () => {
+        clearTimeout(authTimeout);
+        this.clients.delete(ws);
+      };
+      ws.once("message", (data) => {
+        try {
+          const { token } = JSON.parse(String(data));
+          const auth = verifyToken(token);
+          if (!auth?.userId) return ws.close(1008, "Authentication required");
+          clearTimeout(authTimeout);
+          this.clients.set(ws, auth);
+        } catch {
+          ws.close(1008, "Authentication required");
+        }
+      });
+      ws.on("close", cleanup);
+      ws.on("error", cleanup);
     });
   }
 
   broadcast(type, data) {
     const msg = JSON.stringify({ type, data, ts: Date.now() });
-    for (const ws of this.clients) {
-      if (ws.readyState === 1) {
+    for (const [ws, auth] of this.clients) {
+      if (auth.exp <= Date.now()) {
+        ws.close(1008, "Session expired");
+      } else if (ws.readyState === 1 && this.ownsAccount(data?.tokenId, auth.userId)) {
         ws.send(msg);
       }
     }

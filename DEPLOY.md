@@ -32,6 +32,8 @@ cd D:\xyzw_web_helper
 # 产出：D:\xyzw-web-helper-src.zip
 ```
 
+ZIP 输出到项目的上一级目录，打包结束时会显示绝对路径。它包含部署源码和配置示例，排除本机环境变量、运行数据、依赖目录、移动端构建缓存和桌面安装包产物。
+
 ### 2. 拷贝到目标机
 
 远程桌面直接复制 zip 过去，解压到目标目录（示例）：
@@ -71,11 +73,13 @@ Invoke-RestMethod http://localhost:3001/api/health
 
 ## 三、日常更新（发新版）
 
+将 ZIP 内 `xyzw-web-helper` 的内容覆盖到现有服务对应的项目目录。更新前可在服务停止时备份整个 `server/data/` 目录。沿用原来的服务端口。脚本会先构建前端、准备后端依赖，再暂停服务切换依赖，最后检查服务是否就绪。
+
 ```powershell
 # 本地：改完代码后
 .\deploy.ps1 -Pack
 # 拷 zip 到目标机解压覆盖，然后目标机管理员 PowerShell：
-.\deploy.ps1          # 智能发布：服务已注册 → 只重新构建 + 重启
+.\deploy.ps1          # 更新已注册的服务（默认 3001，自定义端口沿用 -Port）
 ```
 
 前端小改动也可以只覆盖 `dist\` 目录后执行 `nssm restart xyzw-web-helper`。

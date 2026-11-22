@@ -37,6 +37,7 @@ declare module 'vue-router/auto-routes' {
     '/mobile/features/MobilePushingLevels': RouteRecordInfo<'/mobile/features/MobilePushingLevels', '/mobile/features/MobilePushingLevels', Record<never, never>, Record<never, never>>,
     '/mobile/MobileGameFeatures': RouteRecordInfo<'/mobile/MobileGameFeatures', '/mobile/MobileGameFeatures', Record<never, never>, Record<never, never>>,
     '/mobile/MobileTokens': RouteRecordInfo<'/mobile/MobileTokens', '/mobile/MobileTokens', Record<never, never>, Record<never, never>>,
+    '/NightmareTeamLab': RouteRecordInfo<'/NightmareTeamLab', '/NightmareTeamLab', Record<never, never>, Record<never, never>>,
     '/NotFound': RouteRecordInfo<'/NotFound', '/NotFound', Record<never, never>, Record<never, never>>,
     '/Profile': RouteRecordInfo<'/Profile', '/Profile', Record<never, never>, Record<never, never>>,
     '/PushingLevels': RouteRecordInfo<'/PushingLevels', '/PushingLevels', Record<never, never>, Record<never, never>>,

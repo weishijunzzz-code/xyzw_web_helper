@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import * as arenaHelpers from "../src/utils/dailyArena.js";
 import * as stateHelpers from "../src/utils/dailyTaskState.js";
 import { loadModule } from "./helpers/loadModule.js";
 
 const { DailyTaskRunner } = await loadModule(
   new URL("../src/utils/dailyTaskRunner.js", import.meta.url),
-  { "@/utils/dailyTaskState": stateHelpers },
+  { "@/utils/dailyTaskState": stateHelpers, "./dailyArena.js": arenaHelpers },
 );
 const definitions = [
   [1, 1, 1],

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { enc, lib, MD5 } from "crypto-js";
 import { g_utils } from "@/utils/bonProtocol";
+import { getAuthUserData } from "@/utils/tokenLogin.js";
 import { nativeHttp, isNativePlatform } from "./capacitor";
 import BinaryHttp from "./binaryHttp";
 
@@ -113,10 +114,16 @@ export const scheduleAuthUserRequest = <T>(
 /**
  * Exchange credential bytes through the shared login limiter and create session metadata.
  * @param {ArrayBuffer} arrayBuffer Imported credential bytes.
+ * @param {object} options Optional cancellation of the authentication request.
+ * @param {AbortSignal} [options.signal] Cancels file authentication.
  * @returns {Promise<string>} Serialized role token for the WebSocket connection.
  */
-export const transformToken = async (arrayBuffer: ArrayBuffer) => {
+export const transformToken = async (
+  arrayBuffer: ArrayBuffer,
+  { signal }: { signal?: AbortSignal } = {},
+) => {
   return authUserRateLimiter.schedule(async () => {
+    signal?.throwIfAborted();
     const url = "https://xxz-xyzw.hortorgames.com/login/authuser?_seq=1";
     const headers = {
       "Content-Type": "application/octet-stream",
@@ -160,12 +167,14 @@ export const transformToken = async (arrayBuffer: ArrayBuffer) => {
         headers,
         responseType: "arraybuffer",
         timeout: 30000,
+        signal,
       });
       responseData = res.data;
     }
 
+    signal?.throwIfAborted();
     const msg = g_utils.parse(responseData);
-    const data = msg.getData();
+    const data = getAuthUserData(msg);
     const currentTime = Date.now();
     const sessId = currentTime * 100 + Math.floor(Math.random() * 100);
     const connId = currentTime + Math.floor(Math.random() * 10);

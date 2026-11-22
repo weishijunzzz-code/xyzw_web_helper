@@ -42,7 +42,7 @@ const my_routes = [
   {
     path: "/multi-game",
     name: "GameMultiPlayer",
-    component: () => import("@/views/GameMultiPlayer.vue"),
+    component: { render: () => null },
     meta: {
       title: "批量游戏",
       requiresToken: true,
@@ -88,6 +88,12 @@ const my_routes = [
           title: "游戏功能",
           requiresToken: true,
         },
+      },
+      {
+        path: 'nightmare-team',
+        name: 'NightmareTeamLab',
+        component: safeImport(() => import('@/views/NightmareTeamLab.vue')),
+        meta: { title: '十殿组队', requiresToken: true },
       },
       {
         path: 'message-test',

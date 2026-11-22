@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '..', 'data', 'xyzw.db');
+const DB_PATH = process.env.XYZW_DB_PATH || path.join(__dirname, '..', 'data', 'xyzw.db');
 
 import fs from 'fs';
 const dataDir = path.dirname(DB_PATH);
@@ -287,6 +287,7 @@ export const db = {
       if (lastResultStr && lastResultStr.length > 1024 * 1024) {
         const lr = updates.lastResult || {};
         lastResultStr = JSON.stringify({
+          version: lr.version, status: lr.status, runId: lr.runId,
           success: lr.success,
           error: lr.error,
           summary: lr.summary ? { results: lr.summary.results, totalLogs: lr.summary.totalLogs } : undefined,

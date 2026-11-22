@@ -101,12 +101,22 @@ export const statusApi = {
 };
 
 export const scheduledTasksApi = {
+  runs: (id, offset = 0) => api.get(`/scheduled-tasks/${id}/runs`, { params: { offset } }).then(r => r.data),
+  getRun: (id, runId) => api.get(`/scheduled-tasks/${id}/runs/${runId}`).then(r => r.data),
+  retry: (id, runId, selection) => api.post(`/scheduled-tasks/${id}/retry`, { runId, selection }).then(r => r.data),
   getAll: () => api.get("/scheduled-tasks").then((r) => r.data),
   create: (data) => api.post("/scheduled-tasks", data).then((r) => r.data),
   update: (id, data) =>
     api.put(`/scheduled-tasks/${id}`, data).then((r) => r.data),
   remove: (id) => api.delete(`/scheduled-tasks/${id}`).then((r) => r.data),
   run: (id) => api.post(`/scheduled-tasks/${id}/run`).then((r) => r.data),
+};
+
+export const pushLevelApi = {
+  getAccounts: () => api.get("/push-level/accounts").then((r) => r.data),
+  getStatus: () => api.get("/push-level/status").then((r) => r.data),
+  start: (tokenId, maxFail) => api.post("/push-level/start", { tokenId, maxFail }).then((r) => r.data),
+  stop: (tokenId) => api.post("/push-level/stop", { tokenId }).then((r) => r.data),
 };
 
 export const settingsApi = {
@@ -134,7 +144,7 @@ export class ServerPushClient {
 
     let wsUrl;
     if (API_BASE) {
-      wsUrl = API_BASE.replace(/^http/, "ws") + "/ws";
+      wsUrl = `${API_BASE.replace(/^http/, "ws")  }/ws`;
     } else {
       const proto = location.protocol === "https:" ? "wss:" : "ws:";
       wsUrl = `${proto}//${location.host}/ws`;
@@ -153,10 +163,13 @@ export class ServerPushClient {
 
     this.ws.onopen = () => {
       this.reconnectDelay = 3000;
+      const token = localStorage.getItem("auth_token");
+      if (token) this.ws.send(JSON.stringify({ token }));
+      else this.disconnect();
     };
 
-    this.ws.onclose = () => {
-      if (this.intentionalClose) return;
+    this.ws.onclose = (event) => {
+      if (this.intentionalClose || event.code === 1008) return;
       this.reconnectTimer = setTimeout(() => this.connect(), this.reconnectDelay);
       this.reconnectDelay = Math.min(
         (this.reconnectDelay * 1.5) | 0,

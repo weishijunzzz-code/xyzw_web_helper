@@ -1,3 +1,5 @@
+import { claimApexEventTasks, voteInApexEvent } from "../../../src/utils/batch/apexEventTasks.js";
+import { runAccountBatch } from "../../../src/utils/batch/runAccountBatch.js";
 /**
  * 逐鹿盐山竞猜任务
  * 包含: 一键批量竞猜（自动选助威最高队伍）
@@ -328,5 +330,7 @@ export function createTasksApex(deps) {
 
   return {
     batchApexGuess,
+    batchApexClaimTasks: () => runAccountBatch(deps, "赛事每日领奖", claimApexEventTasks),
+    batchApexVote: () => runAccountBatch(deps, "赛事批量助威", voteInApexEvent),
   };
 }

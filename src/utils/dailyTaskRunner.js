@@ -5,6 +5,7 @@ import {
   loadDailyTaskConfig,
   runWithDailyTaskLock,
 } from "@/utils/dailyTaskState";
+import { runDailyFreeArena } from "./dailyArena.js";
 
 const taskLabels = {
   1: "登录游戏",
@@ -18,32 +19,6 @@ const taskLabels = {
   13: "竞技场战斗",
   14: "收获盐罐",
 };
-// 辅助函数
-const pickArenaTargetId = (targets) => {
-  if (!targets) return null;
-
-  // Handle if targets is an array directly
-  if (Array.isArray(targets)) {
-    const candidate = targets[0];
-    return candidate?.roleId || candidate?.id || candidate?.targetId;
-  }
-
-  const candidate =
-    targets?.rankList?.[0] ||
-    targets?.roleList?.[0] ||
-    targets?.targets?.[0] ||
-    targets?.targetList?.[0] ||
-    targets?.list?.[0];
-
-  if (candidate) {
-    if (candidate.roleId) return candidate.roleId;
-    if (candidate.id) return candidate.id;
-    if (candidate.targetId) return candidate.targetId;
-  }
-
-  return targets?.roleId || targets?.id || targets?.targetId;
-};
-
 const getTodayBossId = (dailyTime) => {
   const DAY_BOSS_MAP = [9904, 9905, 9901, 9902, 9903, 9904, 9905]; // 周日~周六
   const dayOfWeek = new Date((dailyTime + 8 * 60 * 60) * 1000).getUTCDay();
@@ -304,15 +279,7 @@ export class DailyTaskRunner {
     const settings = customSettings || this.loadSettings(tokenId);
     if (!settings) throw new Error("每日任务设置无法读取");
     this.log("读取服务器任务配置与当前任务列表...");
-    this.taskConfig = await this.loadConfig(
-      {
-        sendMessageWithPromise: (id, cmd, params, timeout) =>
-          this.sendRequest(id, () =>
-            this.tokenStore.sendMessageWithPromise(id, cmd, params, timeout),
-          ),
-      },
-      tokenId,
-    );
+    this.taskConfig = await this.loadConfig();
     const roleData = await this.refreshServerRole(tokenId);
     this.taskDay = roleData.dailyTask.dailyTime;
 
@@ -518,63 +485,26 @@ export class DailyTaskRunner {
       });
     }
 
-    // 2. 竞技场
-    if (!isTaskCompleted(13) && settings.arenaEnable) {
+    // 竞技场免费场次独立于日常任务领奖状态。
+    if (settings.arenaEnable) {
       taskList.push({
-        name: "竞技场战斗",
-        condition: 13,
+        name: "竞技场免费战斗",
         execute: async () => {
-          this.log("开始竞技场战斗流程");
-          const hour = new Date().getHours();
-          if (hour < 6) {
-            this.log("当前时间未到6点，跳过竞技场战斗", "warning");
-            return false;
+          const hour = new Date(Date.now() + 8 * 3600000).getUTCHours();
+          if (!settings.ignoreTimeCheck && (hour < 6 || hour >= 22)) {
+            this.log("竞技场未开放，跳过免费战斗", "info");
+            return true;
           }
-          if (hour > 22) {
-            this.log("当前时间已过22点，跳过竞技场战斗", "warning");
-            return false;
-          }
-
-          await this.switchToFormationIfNeeded(
-            tokenId,
-            settings.arenaFormation,
-            "竞技场阵容",
-          );
-          await this.executeGameCommand(
-            tokenId,
-            "arena_startarea",
-            {},
-            "开始竞技场",
-          );
-
-          const arenaAttempts = Math.min(3, this.getTaskState(13).remaining);
-          for (let i = 1; i <= arenaAttempts; i++) {
-            this.log(`竞技场战斗 ${i}/${arenaAttempts}`);
-            const targets = await this.executeGameCommand(
+          return runDailyFreeArena({
+            readRole: () => this.refreshServerRole(tokenId),
+            command: (...args) => this.executeGameCommand(tokenId, ...args),
+            prepare: () => this.switchToFormationIfNeeded(
               tokenId,
-              "arena_getareatarget",
-              {},
-              `获取竞技场目标${i}`,
-            );
-
-            const targetId = pickArenaTargetId(targets);
-            if (targetId) {
-              await this.executeGameCommand(
-                tokenId,
-                "fight_startareaarena",
-                { targetId },
-                `竞技场战斗${i}`,
-                10000,
-              );
-            } else {
-              this.log(
-                `竞技场战斗${i} - 未找到目标: ${JSON.stringify(targets)}`,
-                "warning",
-              );
-              return false;
-            }
-            await this.sleep(1000);
-          }
+              settings.arenaFormation,
+              "竞技场阵容",
+            ),
+            pause: this.sleep,
+          });
         },
       });
     }

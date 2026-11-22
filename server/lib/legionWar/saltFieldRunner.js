@@ -1,3 +1,4 @@
+import { buildBattlefieldUrl, openBattlefieldSocket } from "../../../src/utils/battlefieldConnection.js";
 import { LegionWarWebSocketClient } from '../legionWarWebSocket.js';
 import { pickRandomNeighbor } from './hexUtils.js';
 import { gameLogger } from '../logger.js';
@@ -73,6 +74,8 @@ export class SaltFieldRunner {
     if (this.running) return;
     this.running = true;
     this.stopFlag = false;
+    const controller = new AbortController();
+    this.connectionAbort = controller;
     this.status = 'running';
     try {
       this.log('获取盐场入口...');
@@ -103,29 +106,24 @@ export class SaltFieldRunner {
       const token = this.gm.getActualToken(this.tokenId);
       if (!token) { this.log('拿不到登录token，跳过', 'error'); this.status = 'failed'; this.running = false; return; }
 
-      const url = 'wss://xxz-xyzw-new.hortorgames.com/agent'
-        + `?p=${encodeURIComponent(token)}`
-        + `&e=x&sid2=${info.sid}&lang=chinese&sid2=${info.sid}`;
-
-      this.ws = new LegionWarWebSocketClient({
-        url,
+      const socket = new LegionWarWebSocketClient({
+        url: buildBattlefieldUrl(info, token),
         utils: this.gm.getGUtils(),
         hint: this.battlefieldId,
         heartbeatMs: 5000,
       });
-      this.ws.setMessageListener((packet) => this._onMessage(packet));
-
-      const connected = await new Promise((resolve) => {
-        let done = false;
-        this.ws.onConnect = () => { if (!done) { done = true; resolve(true); } };
-        this.ws.onError = () => { if (!done) { done = true; resolve(false); } };
-        this.ws.onDisconnect = () => { if (!done) { done = true; resolve(false); } };
-        this.ws.init();
-        setTimeout(() => { if (!done) { done = true; resolve(this.ws.connected); } }, 10000);
+      this.ws = socket;
+      socket.setMessageListener((packet) => this._onMessage(packet));
+      await openBattlefieldSocket(socket, {
+        signal: controller.signal,
+        onLost: (error) => {
+          if (this.ws !== socket || this.stopFlag) return;
+          this.log(error.message, 'error');
+          this.status = 'failed';
+          this.stop();
+        },
       });
-      if (!connected) { this.log('盐场连接失败', 'error'); this.status = 'failed'; this.running = false; return; }
-
-      await sleep(5000);
+      if (this.stopFlag) return;
       this.log('进入战场...');
       const enterResp = await this.ws.sendWithPromise('war_enterbattlefield', { battlefieldId: this.battlefieldId, useGzip: true }, 10000);
       this.myCodeId = String(pick(enterResp, 'roleCodeId') ?? '');
@@ -137,6 +135,7 @@ export class SaltFieldRunner {
       await this._setTeam();
       await this._digLoop();
     } catch (e) {
+      if (this.stopFlag) return;
       this.log(`盐场流程异常: ${e.message}`, 'error');
       this.status = 'failed';
     } finally {
@@ -224,6 +223,8 @@ export class SaltFieldRunner {
 
   stop() {
     this.stopFlag = true;
+    this.connectionAbort?.abort();
+    this.connectionAbort = null;
     if (this.ws) { try { this.ws.disconnect(); } catch {} }
     this.running = false;
     if (this.status === 'running') this.status = 'stopped';

@@ -494,36 +494,32 @@
                 >
                   逐鹿盐山竞猜
                 </n-button>
-              </n-space>
-            </n-tab-pane>
-            <n-tab-pane name="baoku" tab="宝库">
-              <n-space>
                 <n-button
                   size="small"
-                  @click="batchbaoku13"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isbaokuActivityOpen
-                  "
+                  :disabled="isRunning || selectedTokens.length === 0"
+                  @click="batchApexClaimTasks"
                 >
-                  一键宝库前3层
+                  赛事每日领奖
                 </n-button>
+                <n-input-number v-model:value="apexVoteRank" :min="1" :max="20" :precision="0" size="small" aria-label="助威目标排名" style="width: 110px" />
                 <n-button
                   size="small"
-                  @click="batchbaoku45"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isbaokuActivityOpen
-                  "
+                  :disabled="isRunning || selectedTokens.length === 0 || !apexVoteRank"
+                  @click="batchApexVote(apexVoteRank)"
                 >
-                  一键宝库4,5层
+                  助威第 {{ apexVoteRank || "—" }} 名（使用全部余票）
                 </n-button>
               </n-space>
             </n-tab-pane>
             <n-tab-pane name="weirdTower" tab="怪异塔">
               <n-space>
+                <n-button
+                  size="small"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                  @click="batchUseAndMergeItems"
+                >
+                  一键领取、使用并合成
+                </n-button>
                 <n-input-number
                   v-model:value="weirdTowerMaxClimb"
                   class="weird-tower-count-input"
@@ -3347,10 +3343,9 @@ import {
   defaultBlackMarketPurchaseList,
   normalizeBlackMarketPurchaseList,
 } from "@/utils/batch/blackMarketConfig";
+import { isRetiredTreasureTask } from "@/utils/batch/constants.js";
 import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { goldItemsConfig, merchantConfig } from "@/utils/dreamConstants";
-
-import { isSameGameValue } from "@/utils/gameValue.js";
 
 import { DEFAULT_WEIRD_TOWER_MAX_CLIMB } from "@/utils/towerClimbLimit.js";
 
@@ -3438,10 +3433,6 @@ const tokens = computed(() => tokenStore.gameTokens);
 const ismengjingActivityOpen = computed(() => {
   const day = new Date().getDay();
   return day === 0 || day === 1 || day === 3 || day === 4;
-});
-const isbaokuActivityOpen = computed(() => {
-  const day = new Date().getDay();
-  return !isSameGameValue(day, 1) && !isSameGameValue(day, 2);
 });
 const isarenaActivityOpen = computed(() => {
   const hour = new Date().getHours();
@@ -3946,7 +3937,7 @@ const batchSettings = reactive({
   commandDelay: 500, // 命令间延迟
   taskDelay: 500, // 任务间延迟
   actionDelay: 300, // 一般操作延迟（开箱、钓鱼、招募等）
-  battleDelay: 500, // 战斗延迟（宝库、竞技场等）
+  battleDelay: 500, // 战斗延迟（竞技场等）
   refreshDelay: 1000, // 刷新延迟
   longDelay: 3000, // 长延迟（功法赠送等）
   // 其他配置
@@ -4391,9 +4382,10 @@ const taskGroupDefinitions = [
       "skinChallenge",
       "batchClaimPeachTasks",
       "batchBuyDreamItems",
+      "batchApexClaimTasks",
+      "batchApexVote",
     ],
   },
-  { name: "baoku", label: "宝库", tasks: ["batchbaoku13", "batchbaoku45"] },
   {
     name: "weirdTower",
     label: "怪异塔",
@@ -4401,6 +4393,7 @@ const taskGroupDefinitions = [
       "climbWeirdTower",
       "batchUseItems",
       "batchMergeItems",
+      "batchUseAndMergeItems",
       "batchClaimFreeEnergy",
     ],
   },
@@ -5316,6 +5309,7 @@ const verifyTaskDependencies = async (task) => {
 
   // Verify task functions exist
   for (const taskName of task.selectedTasks) {
+    if (isRetiredTreasureTask(taskName)) continue;
     const taskFunction = taskFunctionMap[taskName];
     if (typeof taskFunction !== "function") {
       addLog({
@@ -5418,17 +5412,13 @@ const executeScheduledTask = async (task) => {
     // Always use the latest selectedTokens from the task that exist in current tokens.value
     selectedTokens.value = [...availableTokens];
 
-    // Execute selected tasks in parallel
-    const taskPromises = task.selectedTasks.map(async (taskName) => {
+    const runTask = async (taskName) => {
       if (shouldStop.value) return;
 
-      if (
-        ["batchbaoku45", "batchbaoku13"].includes(taskName) &&
-        !isbaokuActivityOpen.value
-      ) {
+      if (isRetiredTreasureTask(taskName)) {
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在宝库开放时间)`,
+          message: "跳过任务：咸王宝库玩法已下线",
           type: "warning",
         });
         return;
@@ -5515,13 +5505,23 @@ const executeScheduledTask = async (task) => {
           type: "error",
         });
       }
-    });
+    };
+    const needsSerialExecution = task.selectedTasks.some((name) =>
+      ["batchUseAndMergeItems", "batchApexClaimTasks", "batchApexVote", "pkroomAppoint"].includes(name),
+    );
+    const executeTasks = async () => {
+      if (needsSerialExecution) {
+        for (const name of task.selectedTasks) await runTask(name);
+      } else {
+        await Promise.all(task.selectedTasks.map(runTask));
+      }
+    };
 
     // Wait for all tasks to complete（带超时控制）
     const SCHEDULED_TASK_TIMEOUT = 300000; // 定时任务最多执行5分钟
     try {
       await Promise.race([
-        Promise.all(taskPromises),
+        executeTasks(),
         new Promise((_, reject) => {
           setTimeout(() => {
             reject(new Error(`定时任务执行超时（${SCHEDULED_TASK_TIMEOUT / 1000}秒）`));
@@ -6614,7 +6614,7 @@ const releaseConnectionSlot = () => {
  * @param {string} tokenId - Token ID
  * @param {number} maxRetries - 最大重试次数
  */
-const ensureConnection = async (tokenId, maxRetries = 2) => {
+const ensureConnection = async (tokenId, maxRetries = 2, { roleOnly = false } = {}) => {
   const latestToken = tokens.value.find((t) => t.id === tokenId);
   if (!latestToken) {
     throw new Error(`Token not found: ${tokenId}`);
@@ -6721,6 +6721,15 @@ const ensureConnection = async (tokenId, maxRetries = 2) => {
 
   // 连接成功，槽位保持占用，直到任务完成后手动释放
 
+  if (roleOnly) {
+    return slotAcquired
+      ? () => {
+          tokenStore.closeWebSocketConnection(tokenId);
+          releaseConnectionSlot();
+        }
+      : undefined;
+  }
+
   // Initialize Game Data (Critical for Battle Version and Session)
   try {
     // Fetch Role Info first (Standard flow)
@@ -6823,6 +6832,7 @@ const {
   skinChallenge,
   batchUseItems,
   batchMergeItems,
+  batchUseAndMergeItems,
 } = tasksTower;
 
 const tasksItem = createTasksItem(createTaskDeps());
@@ -6846,7 +6856,7 @@ const {
 } = tasksItem;
 
 const tasksDungeon = createTasksDungeon(createTaskDeps());
-const { batchbaoku13, batchbaoku45, batchmengjing, batchBuyDreamItems } =
+const { batchmengjing, batchBuyDreamItems } =
   tasksDungeon;
 
 const tasksArena = createTasksArena(createTaskDeps());
@@ -6871,7 +6881,8 @@ const tasksFootball = createTasksFootball(createTaskDeps());
 const { batchFootballBet } = tasksFootball;
 
 const tasksApex = createTasksApex(createTaskDeps());
-const { batchApexGuess } = tasksApex;
+const apexVoteRank = ref(1);
+const { batchApexGuess, batchApexClaimTasks, batchApexVote } = tasksApex;
 
 const tasksCampChallenge = createTasksCampChallenge(createTaskDeps());
 const { batchCampChallenge, batchCampChallengePet, batchCampClaimTasks } =
@@ -6922,6 +6933,8 @@ const onFootballPickChange = async (val) => {
 
 // 任务函数映射表（替代 eval 的安全方案）
 const taskFunctionMap = {
+  batchApexClaimTasks,
+  batchApexVote,
   // HangUp tasks
   claimHangUpRewards,
   batchAddHangUpTime,
@@ -6939,6 +6952,7 @@ const taskFunctionMap = {
   skinChallenge,
   batchUseItems,
   batchMergeItems,
+  batchUseAndMergeItems,
   // Item tasks
   batchOpenBox,
   batchOpenBoxByPoints,
@@ -6952,8 +6966,6 @@ const taskFunctionMap = {
   pkroomAppoint,
   batchGachaDrawReward,
   // Dungeon tasks
-  batchbaoku13,
-  batchbaoku45,
   batchmengjing,
   batchBuyDreamItems,
   // Arena tasks
@@ -7426,10 +7438,9 @@ const stopBatch = () => {
 @media (max-width: 768px) {
   .batch-daily-tasks {
     padding: 12px;
-    min-height: 100vh;
+    min-height: 0;
     height: auto;
-    overflow-y: visible;
-    overflow-x: hidden;
+    overflow: visible;
   }
 
   .main-layout {

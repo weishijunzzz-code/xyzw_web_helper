@@ -228,7 +228,9 @@
       <div class="main" :class="{ 'has-bottom-nav': isMobile }">
         <router-view v-slot="{ Component, route }">
           <PageTransition :name="route.meta.transition || 'fade-slide'">
-            <component :is="Component" :key="route.path" />
+            <KeepAlive include="PushingLevels">
+              <component :is="Component" :key="route.path" />
+            </KeepAlive>
           </PageTransition>
         </router-view>
       </div>
@@ -371,6 +373,7 @@ const sidebarGroups = computed(() => [
     items: [
       { path: '/admin/game-features', label: '游戏功能', icon: Cube },
       { path: '/admin/PushingLevels', label: '主线推关', icon: ArrowUpCircle },
+      { path: '/multi-game', label: '游戏工作区', icon: ArrowUpCircle },
       ...(isNowInLegionWarTime()
         ? [{ path: '/admin/legion-war', label: '实时盐场', icon: LockOpen }]
         : []),

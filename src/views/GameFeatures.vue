@@ -18,6 +18,8 @@
               </n-icon>
               <span>{{ connectionStatusText }}</span>
             </div>
+            <n-button size="small" :loading="launchingGame" @click="openGame">进入游戏</n-button>
+            <n-button size="small" @click="router.push({ name: 'NightmareTeamLab' })">十殿组队</n-button>
           </div>
         </div>
       </div>
@@ -67,12 +69,28 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useMessage } from "naive-ui";
+import useIndexedDB from "@/hooks/useIndexedDB";
+import { prepareSingleGameLaunch } from "@/utils/gameLauncher.js";
 import { useTokenStore } from "@/stores/tokenStore";
 import { CloudDone } from "@vicons/ionicons5";
 
 const router = useRouter();
 const message = useMessage();
 const tokenStore = useTokenStore();
+const { getArrayBuffer } = useIndexedDB();
+const launchingGame = ref(false);
+async function openGame() {
+  if (launchingGame.value) return;
+  launchingGame.value = true;
+  try {
+    await prepareSingleGameLaunch({ token: tokenStore.selectedToken, getArrayBuffer, localStorage });
+    await router.push("/game");
+  } catch (error) {
+    message.error(error.message || "打开游戏失败");
+  } finally {
+    launchingGame.value = false;
+  }
+}
 
 // 响应式数据
 const showFeedback = ref(true);

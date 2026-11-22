@@ -1,3 +1,5 @@
+import { appointPkRoom } from "../../../src/utils/batch/apexEventTasks.js";
+import { runAccountBatch } from "../../../src/utils/batch/runAccountBatch.js";
 /**
  * 商店类任务
  * 包含: legion_storebuygoods, legionStoreBuySkinCoins, store_purchase, collection_claimfreereward,
@@ -469,12 +471,7 @@ export function createTasksStore(deps) {
   };
 
   // PK房间预约
-  const batchPkRoomAppoint = async () => {
-    await runBatch("PK房间预约", async (tokenId, token) => {
-      await tokenStore.sendMessageWithPromise(tokenId, "pkroom_appoint", {}, 8000);
-      addLog({ time: new Date().toLocaleTimeString(), message: `${token.name} PK房间预约成功`, type: "success" });
-    });
-  };
+  const batchPkRoomAppoint = () => runAccountBatch(deps, "赛事预约", appointPkRoom);
 
   // 黑市购买清单（仅黑市周执行，goodsIndex 清单可在每号设置 blackMarketPurchaseList 配置）
   const blackMarketPurchaseList = async () => {

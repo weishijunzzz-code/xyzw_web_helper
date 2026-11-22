@@ -4,7 +4,7 @@
  */
 
 export function createServerDeps(gameManager, db, userId, options = {}) {
-  const { pushService, tokenIds = [], maxActive = 3, commandDelay = 500, taskDelay = 1000 } = options;
+  const { pushService, tokenIds = [], maxActive = 3, commandDelay = 500, taskDelay = 1000, session } = options;
 
   // 从数据库读取所有 token
   const allTokens = db.getAllTokens(userId);
@@ -101,18 +101,20 @@ export function createServerDeps(gameManager, db, userId, options = {}) {
     gameData: gameManager.gameData,
 
     async sendMessageWithPromise(tokenId, cmd, params = {}, timeout = 8000) {
-      return gameManager.sendMessageWithPromise(tokenId, cmd, params, timeout);
+      return session ? session.send(cmd, params, timeout) : gameManager.sendMessageWithPromise(tokenId, cmd, params, timeout);
     },
 
     sendMessage(tokenId, cmd, params = {}) {
-      return gameManager.sendMessage(tokenId, cmd, params);
+      return session ? session.sendWithoutReply(cmd, params) : gameManager.sendMessage(tokenId, cmd, params);
     },
 
     async createWebSocketConnection(tokenId) {
+      if (session) { session.invalidate(); return session.ensure(); }
       return gameManager.connect(tokenId, userId);
     },
 
     closeWebSocketConnection(tokenId) {
+      if (session) return;
       gameManager.disconnect(tokenId);
     },
 
@@ -121,7 +123,7 @@ export function createServerDeps(gameManager, db, userId, options = {}) {
     },
 
     async sendGetRoleInfo(tokenId) {
-      return gameManager.sendGetRoleInfo(tokenId);
+      return session ? session.send('role_getroleinfo', {}, 10000) : gameManager.sendGetRoleInfo(tokenId);
     },
 
     setBattleVersion(tokenId, version) {
@@ -135,6 +137,7 @@ export function createServerDeps(gameManager, db, userId, options = {}) {
 
   // ensureConnection - 连接 + 等待 + 初始化
   const ensureConnection = async (tokenId) => {
+    if (session) return session.ensure();
     const status = gameManager.getWebSocketStatus(tokenId);
     if (status === 'connected') {
       // 验证连接是否真的活着
@@ -186,6 +189,7 @@ export function createServerDeps(gameManager, db, userId, options = {}) {
 
   // releaseConnectionSlot
   const releaseConnectionSlot = () => {
+    if (session) return;
     if (connectionQueue.active > 0) connectionQueue.active--;
   };
 

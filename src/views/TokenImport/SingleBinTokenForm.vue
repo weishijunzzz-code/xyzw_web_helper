@@ -17,7 +17,7 @@
     <NFormItem label="bin文件" :show-label="true">
       <a-upload
         multiple
-        accept="*.bin,*.dmp"
+        accept=".bin,.dmp"
         @before-upload="uploadBin"
         draggable
         dropzone
@@ -29,17 +29,17 @@
         </div> -->
       </a-upload>
     </NFormItem>
-    <a-list>
-      <a-list-item v-for="(role, roleIndex) in roleList" :key="roleIndex">
+    <a-list v-if="files.length">
+      <a-list-item v-for="item in files" :key="item.id">
         <div>
-          <strong>角色名称:</strong> {{ role.name || "未命名角色" }}<br />
-          <strong>Token:</strong>
-          <span style="word-break: break-all">{{ role.token }}</span
-          ><br />
-          <strong>服务器:</strong> {{ role.server || "未指定" }}
+          <strong>{{ item.role?.name || item.fileName }}</strong><br />
+          <span role="status">{{ item.status }}</span>
         </div>
       </a-list-item>
     </a-list>
+    <NButton v-if="isReading" size="small" @click="stopReading">
+      停止读取
+    </NButton>
 
     <!-- 角色详情 -->
     <NCollapse>
@@ -68,6 +68,7 @@
         size="large"
         block
         :loading="isImporting"
+        :disabled="isReading || !readyCount"
         @click="handleImport"
       >
         <template #icon>
@@ -78,7 +79,7 @@
         添加Token
       </NButton>
 
-      <NButton v-if="tokenStore.hasTokens" size="large" block @click="cancel">
+      <NButton v-if="tokenStore.hasTokens" size="large" block :disabled="isImporting" @click="cancel">
         取消
       </NButton>
     </div>
@@ -99,135 +100,106 @@ import {
 } from "naive-ui";
 import PQueue from "p-queue";
 
-import { reactive, ref } from "vue";
+import { computed, onBeforeUnmount, reactive, ref } from "vue";
 
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
+import { prepareBinToken, saveBinToken } from "@/utils/binTokenImport.js";
 import { getTokenId, transformToken } from "@/utils/token";
+import { getTokenErrorMessage } from "@/utils/tokenLogin.js";
 
-const $emit = defineEmits(["cancel", "ok"]);
-
+const emit = defineEmits(["cancel", "ok"]);
 const { storeArrayBuffer } = useIndexedDB();
-
-const cancel = () => {
-  roleList.value = [];
-  $emit("cancel");
-};
-
 const tokenStore = useTokenStore();
 const message = useMessage();
 const isImporting = ref(false);
-const importForm = reactive({
-  name: "",
-  server: "",
-  wsUrl: "",
-  importMethod: "",
-});
-const roleList = ref<
-  Array<{
-    id: string;
-    name: string;
-    token: string;
-    server: string;
-    wsUrl: string;
-    importMethod: string;
-  }>
->([]);
+const importForm = reactive({ name: "", server: "", wsUrl: "" });
+type BinRole = Awaited<ReturnType<typeof prepareBinToken>>;
+interface FileStatus {
+  id: number;
+  fileName: string;
+  status: string;
+  role: BinRole | null;
+}
+const files = ref<FileStatus[]>([]);
+const queue = new PQueue({ concurrency: 1 });
+const pendingIds = new Set<string>();
+let sequence = 0;
+let reading = new AbortController();
 
-const tQueue = new PQueue({ concurrency: 1, interval: 1000 });
+const isReading = computed(() =>
+  files.value.some(({ status }) => status === "等待读取" || status === "读取中" || status === "校验中"),
+);
+const readyCount = computed(() => files.value.filter(({ role }) => role).length);
 
-const initName = (fileName: string) => {
-  if (!fileName) return;
-  fileName = fileName.trim();
-  const binRes = fileName.match(/^bin-(.*?)服-([0-2])-(\d{6,12})-(.*)\.bin$/);
-  console.log(binRes);
-  if (binRes) {
-    importForm.name = `${binRes[1]}_${binRes[2]}_${binRes[4]}`;
-    return {
-      server: binRes[1],
-      roleIndex: binRes[2],
-      roleId: binRes[3],
-      roleName: binRes[4],
-    };
+const stopReading = () => {
+  reading.abort();
+  reading = new AbortController();
+  queue.clear();
+  for (const item of files.value) {
+    if (["等待读取", "读取中", "校验中"].includes(item.status)) item.status = "已停止";
   }
-  return {
-    server: "",
-    roleIndex: "",
-    roleId: "",
-    roleName: importForm.name || "",
-  };
 };
 
-const uploadBin = (binFile: File) => {
-  tQueue.add(async () => {
-    console.log("上传文件数据:", binFile);
-    const roleMeta = initName(binFile.name) as any;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const userToken = e.target?.result as ArrayBuffer;
-      // console.log('转换Token:', userToken);
-      const tokenId = getTokenId(userToken);
-      const roleToken = await transformToken(userToken);
-      const roleName = roleMeta.roleName || binFile.name.split(".")?.[0] || "";
-      // 刷新indexDB数据库token数据
-      const saved = await storeArrayBuffer(tokenId, userToken);
-      if (!saved) {
-        message.error("保存BIN数据到IndexedDB失败");
-        return;
-      }
+const cancel = () => {
+  stopReading();
+  emit("cancel");
+};
+onBeforeUnmount(stopReading);
 
-      // 上传列表中发现已存在的重复名称，提示消息
-      if (roleList.value.some((role) => role.id === tokenId)) {
-        message.error("上传列表中已存在同名角色! ");
-        return;
-      }
-      // 检查待上传的角色是否已在tokenStore中存在
-      const existingToken = tokenStore.gameTokens.find((t) => t.id === tokenId);
-      if (existingToken) {
-        message.warning(`角色"${roleName}"已存在，将更新该角色的Token`);
-      }
-      message.success("Token读取成功，请检查角色名称等信息后提交");
-      roleList.value.push({
-        id: tokenId,
-        token: roleToken,
-        name: roleName,
-        server: `${roleMeta.server}${roleMeta.roleIndex}` || "",
-        wsUrl: importForm.wsUrl || "",
-        importMethod: "bin",
-      });
-    };
-    reader.onerror = () => {
-      message.error("读取文件失败，请重试");
-    };
-    reader.readAsArrayBuffer(binFile);
+const uploadBin = (file: File) => {
+  if (isImporting.value) return false;
+  const item = reactive<FileStatus>({
+    id: ++sequence,
+    fileName: file.name,
+    status: "等待读取",
+    role: null,
   });
-  return false; // 阻止自动上传
+  files.value.push(item);
+  const signal = reading.signal;
+  const options = { ...importForm, pendingIds, signal };
+  void queue.add(async () => {
+    try {
+      item.status = "读取中";
+      const role = await prepareBinToken(file, options, {
+        getTokenId,
+        transformToken,
+        onAuthenticating: () => { item.status = "校验中"; },
+      });
+      signal.throwIfAborted();
+      pendingIds.add(role.id);
+      item.role = role;
+      item.status = tokenStore.gameTokens.some(({ id }) => id === role.id)
+        ? "已校验，提交后更新已有账号"
+        : "已校验，等待提交";
+    } catch (error) {
+      if (!signal.aborted) item.status = getTokenErrorMessage(error);
+    }
+  });
+  return false;
 };
 
 const handleImport = async () => {
-  if (roleList.value.length === 0) {
-    message.error("请先上传bin文件！");
-    return;
-  }
-  roleList.value.forEach((role) => {
-    // tokenStore.gameTokens中发现已存在的重复名称，则移出token后重新添加
-    const gameToken = tokenStore.gameTokens.find((t) => t.id === role.id);
-    if (gameToken) {
-      console.log("移除同名token:", gameToken);
-      // tokenStore.removeToken(gameToken.id);
-      tokenStore.updateToken(gameToken.id, {
-        ...role,
-      });
-    } else {
-      tokenStore.addToken({
-        ...role,
-      });
+  if (isImporting.value || isReading.value || !readyCount.value) return;
+  isImporting.value = true;
+  let saved = 0;
+  try {
+    for (const item of files.value) {
+      if (!item.role) continue;
+      try {
+        const result = await saveBinToken(item.role, tokenStore, storeArrayBuffer);
+        item.role = null;
+        item.status = result === "updated" ? "账号已更新" : "账号已添加";
+        saved++;
+      } catch (error) {
+        item.status = getTokenErrorMessage(error);
+      }
     }
-  });
-  console.log("当前Token列表:", tokenStore.gameTokens);
-  message.success("Token添加成功");
-  roleList.value = [];
-  $emit("ok");
+    if (saved) message.success(`已保存 ${saved} 个账号`);
+    if (saved === files.value.length) emit("ok");
+  } finally {
+    isImporting.value = false;
+  }
 };
 </script>
 

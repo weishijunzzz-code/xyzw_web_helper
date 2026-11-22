@@ -172,6 +172,30 @@ export function convertBinToLx(buffer, random = Math.random) {
   return bytes;
 }
 
+export async function prepareSingleGameLaunch({ token, getArrayBuffer, localStorage }) {
+  if (!token?.id) throw new Error("请先选择账号");
+  const bytes = await getArrayBuffer(token.id);
+  if (!bytes?.byteLength) throw new Error("未找到该账号的 BIN 数据");
+
+  const encoded = Array.from(convertBinToLx(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  let files = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem("bin_file_list") || "[]");
+    if (Array.isArray(stored)) files = stored;
+  } catch {
+    // Ignore a corrupt manifest. The credential is read from IndexedDB.
+  }
+  if (!files.some((entry) => entry?.id === token.id)) {
+    files.push({
+      id: token.id, name: token.name || "Token", byteLength: bytes.byteLength,
+      size: (bytes.byteLength / 1024).toFixed(1) + " KB", order: files.length,
+    });
+  }
+  localStorage.setItem("bin_data_" + token.id, encoded);
+  localStorage.setItem("bin_file_list", JSON.stringify(files));
+  localStorage.setItem("current_bin_id", token.id);
+}
+
 export function readActiveMultiGameLaunch(storage) {
   try {
     const parsed = JSON.parse(

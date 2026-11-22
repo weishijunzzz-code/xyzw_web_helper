@@ -2,33 +2,33 @@
   <div class="cloud-tasks">
     <!-- 未登录：登录/注册 -->
     <div v-if="!isLoggedIn" class="auth-wrap">
-      <n-card title="云端任务登录" class="auth-card">
-        <n-alert v-if="authError" type="error" style="margin-bottom: 12px">
+      <NCard title="云端任务登录" class="auth-card">
+        <NAlert v-if="authError" type="error" style="margin-bottom: 12px">
           {{ authError }}
-        </n-alert>
-        <n-form>
-          <n-form-item label="用户名">
-            <n-input v-model:value="authForm.username" placeholder="用户名" />
-          </n-form-item>
-          <n-form-item label="密码">
-            <n-input
+        </NAlert>
+        <NForm>
+          <NFormItem label="用户名">
+            <NInput v-model:value="authForm.username" placeholder="用户名" />
+          </NFormItem>
+          <NFormItem label="密码">
+            <NInput
               v-model:value="authForm.password"
               type="password"
               show-password-on="click"
               placeholder="密码（至少8位）"
               @keyup.enter="submitAuth"
             />
-          </n-form-item>
-          <n-space>
-            <n-button type="primary" :loading="authLoading" @click="submitAuth">
+          </NFormItem>
+          <NSpace>
+            <NButton type="primary" :loading="authLoading" @click="submitAuth">
               {{ authMode === "login" ? "登录" : "注册并登录" }}
-            </n-button>
-            <n-button quaternary @click="toggleAuthMode">
+            </NButton>
+            <NButton quaternary @click="toggleAuthMode">
               {{ authMode === "login" ? "没有账号？去注册" : "已有账号？去登录" }}
-            </n-button>
-          </n-space>
-        </n-form>
-      </n-card>
+            </NButton>
+          </NSpace>
+        </NForm>
+      </NCard>
     </div>
 
     <!-- 已登录：云端任务管理 -->
@@ -46,258 +46,174 @@
             <span class="push-dot" />
             {{ pushConnected ? "实时推送已连接" : "推送未连接" }}
           </span>
-          <n-button size="small" quaternary @click="logout">退出登录</n-button>
+          <NButton size="small" @click="showCloudLogs = true">执行日志</NButton>
+          <NButton size="small" quaternary :disabled="bulkBusy" @click="logout">退出登录</NButton>
         </div>
       </div>
 
-      <!-- 统计概览：对齐定时任务页 StatisticCards 的视觉（图标芯片 + 彩色描边） -->
-      <div class="stats-row">
-        <div class="stat-card stat-total">
-          <div class="stat-icon"><n-icon :component="CloudOutline" /></div>
-          <div class="stat-info">
-            <span class="stat-value">{{ cloudTokens.length }}</span>
-            <span class="stat-label">云端账号</span>
-          </div>
-        </div>
-        <div class="stat-card stat-conn">
-          <div class="stat-icon"><n-icon :component="CheckmarkCircleOutline" /></div>
-          <div class="stat-info">
-            <span class="stat-value stat-on">{{ connectedCount }}</span>
-            <span class="stat-label">已连接</span>
-          </div>
-        </div>
-        <div class="stat-card stat-sched">
-          <div class="stat-icon"><n-icon :component="TimeOutline" /></div>
-          <div class="stat-info">
-            <span class="stat-value">{{ scheduledTasks.length }}</span>
-            <span class="stat-label">定时任务</span>
-          </div>
-        </div>
-        <div class="stat-card stat-enabled">
-          <div class="stat-icon"><n-icon :component="PowerOutline" /></div>
-          <div class="stat-info">
-            <span class="stat-value">{{ enabledTaskCount }}</span>
-            <span class="stat-label">已启用</span>
-          </div>
-        </div>
+      <div class="cloud-summary" aria-label="云端统计">
+        <span>云端账号 <strong>{{ cloudTokens.length }}</strong></span>
+        <span>已连接 <strong>{{ connectedCount }}</strong></span>
+        <span>定时任务 <strong>{{ scheduledTasks.length }}</strong></span>
+        <span>已启用 <strong>{{ enabledTaskCount }}</strong></span>
       </div>
 
-      <!-- Token 同步 -->
-      <n-card class="section-card card-sync" :bordered="true">
-        <template #header>
-          <div class="card-head">
-            <span class="head-icon hi-blue"><n-icon :component="PeopleOutline" /></span>
-            <span class="card-head-title">账号同步</span>
-            <span class="card-head-sub">
-              本地 {{ localTokens.length }} 个 · 云端 {{ cloudTokens.length }} 个
-            </span>
-          </div>
-        </template>
-        <template #header-extra>
-          <div class="card-head-actions">
-            <n-input
-              v-model:value="accountSearch"
-              size="small"
-              placeholder="搜索账号 / 服"
-              clearable
-              class="account-search"
-            >
-              <template #prefix>
-                <n-icon size="14"><Search /></n-icon>
-              </template>
-            </n-input>
-            <n-button
-              size="small"
-              type="primary"
-              :loading="syncing"
-              :disabled="localTokens.length === 0"
-              @click="syncAllTokens"
-            >
-              全部同步（含 BIN）
-            </n-button>
-            <n-button size="small" :loading="loadingCloud" @click="refreshCloudTokens">
-              刷新
-            </n-button>
-          </div>
-        </template>
-
-        <n-alert
-          v-if="syncResult"
-          :type="syncResult.type"
-          size="small"
-          style="margin-bottom: 10px"
-          closable
-          @close="syncResult = null"
-        >
-          {{ syncResult.message }}
-        </n-alert>
-
-        <div v-if="filteredCloudTokens.length" class="account-list">
-          <div
-            v-for="t in filteredCloudTokens"
-            :key="t.id"
-            class="account-row"
-          >
-            <img
-              v-if="t.avatar"
-              class="account-avatar-img"
-              :src="t.avatar"
-              :alt="t.name"
-              referrerpolicy="no-referrer"
-            />
-            <span v-else class="account-avatar">{{ avatarChar(t.name) }}</span>
-            <div class="account-info">
-              <span class="account-name" :title="t.name">{{ t.name }}</span>
-              <span v-if="t.server" class="account-server">{{ t.server }}</span>
-            </div>
-            <span class="account-status" :class="`is-${connStatus[t.id] || 'disconnected'}`">
-              <span class="status-dot" />
-              {{ statusText(connStatus[t.id]) }}
-            </span>
-            <n-button
-              size="tiny"
-              quaternary
-              @click="openAccountSettings(t)"
-            >
-              设置
-            </n-button>
-            <n-button
-              size="tiny"
-              :type="connStatus[t.id] === 'connected' ? 'warning' : 'success'"
-              secondary
-              @click="toggleConnect(t)"
-            >
-              {{ connStatus[t.id] === "connected" ? "断开" : "连接" }}
-            </n-button>
-            <n-popconfirm @positive-click="removeCloudToken(t)">
-              <template #trigger>
-                <n-button size="tiny" type="error" quaternary>删除</n-button>
-              </template>
-              确定删除云端账号「{{ t.name }}」？（不影响本地）
-            </n-popconfirm>
-          </div>
+      <div class="cloud-sections">
+        <div class="cloud-tabs" role="tablist" aria-label="云端管理">
+          <button v-for="tab in cloudTabs" :id="`cloud-tab-${tab.key}`" :key="tab.key" type="button" role="tab" :aria-selected="activeCloudTab === tab.key" :aria-controls="`cloud-panel-${tab.key}`" :tabindex="activeCloudTab === tab.key ? 0 : -1" @click="activeCloudTab = tab.key" @keydown="cloudTabKeydown($event)">{{ tab.label }}</button>
         </div>
-        <n-empty
-          v-else
-          size="small"
-          :description="cloudTokens.length ? '没有匹配的账号' : '云端还没有账号，可从本地全部同步'"
-          style="padding: 24px 0"
-        />
-      </n-card>
-
-      <!-- 定时任务 -->
-      <n-card class="section-card card-sched" :bordered="true">
-        <template #header>
-          <div class="card-head">
-            <span class="head-icon hi-violet"><n-icon :component="TimeOutline" /></span>
-            <span class="card-head-title">定时任务</span>
-            <span class="card-head-sub">服务端 croner · 时区 Asia/Shanghai</span>
+        <section v-show="activeCloudTab === 'accounts'" id="cloud-panel-accounts" role="tabpanel" aria-labelledby="cloud-tab-accounts">
+          <div class="cloud-toolbar">
+            <NInput v-model:value="accountSearch" size="small" placeholder="搜索账号 / 服" clearable class="cloud-search">
+              <template #prefix><NIcon size="14"><Search /></NIcon></template>
+            </NInput>
+            <span class="cloud-muted">本地 {{ localTokens.length }} 个</span>
+            <div class="cloud-toolbar-actions">
+              <NButton size="small" type="primary" :loading="syncing" :disabled="localTokens.length === 0" @click="syncAllTokens">全部同步（含 BIN）</NButton>
+              <NButton size="small" :loading="loadingCloud" @click="refreshCloudTokens">刷新</NButton>
+            </div>
           </div>
-        </template>
-        <template #header-extra>
-          <div class="card-head-actions">
-            <n-button size="small" type="primary" @click="openCreate">
-              + 新建定时任务
-            </n-button>
-            <n-button size="small" @click="exportTasks">导出</n-button>
-            <n-button size="small" @click="fileInput?.click()">导入</n-button>
-            <input
-              ref="fileInput"
-              type="file"
-              accept=".json,application/json"
-              style="display: none"
-              @change="onImportFile"
-            />
-          </div>
-        </template>
-
-        <div v-if="scheduledTasks.length" class="task-list">
-          <div
-            v-for="t in scheduledTasks"
-            :key="t.id"
-            class="task-card"
-            :class="{ 'is-disabled': t.enabled === false }"
-          >
-            <div class="task-main">
-              <div class="task-title-row">
-                <span class="task-name">{{ t.name || t.id }}</span>
-                <n-tag size="tiny" :type="t.enabled ? 'success' : 'default'" :bordered="false">
-                  {{ t.enabled ? "已启用" : "已停用" }}
-                </n-tag>
+          <NAlert v-if="syncResult" :type="syncResult.type" class="cloud-notice" closable @close="syncResult = null">{{ syncResult.message }}</NAlert>
+          <div v-if="filteredCloudTokens.length" class="cloud-card-grid">
+            <article v-for="t in filteredCloudTokens" :key="t.id" class="cloud-account-card">
+              <div class="cloud-account-heading">
+                <img v-if="t.avatar" class="cloud-avatar" :src="t.avatar" :alt="t.name" referrerpolicy="no-referrer" />
+                <span v-else class="cloud-avatar cloud-avatar-fallback">{{ avatarChar(t.name) }}</span>
+                <div class="cloud-card-heading-text">
+                  <h3 class="cloud-card-title" :title="t.name">{{ t.name }}</h3>
+                  <span class="cloud-muted">{{ t.server || '未提供服务器' }}</span>
+                </div>
               </div>
-              <div class="task-meta">
-                <code class="task-cron">{{ t.cron }}</code>
-                <span class="meta-chip">账号 {{ (t.tokenIds || []).length }}</span>
-                <span class="meta-chip">任务 {{ (t.settings?.selectedTasks || []).length }} 项</span>
-                <template v-if="t.lastRun">
-                  <span class="meta-chip">{{ formatTime(t.lastRun) }}</span>
-                  <n-tag
-                    size="tiny"
-                    :type="t.lastResult?.success ? 'success' : 'error'"
-                    :bordered="false"
-                  >
-                    {{ t.lastResult?.success ? "成功" : "失败" }}
-                  </n-tag>
-                </template>
+              <div class="cloud-account-status" :class="{ 'cloud-connected': connStatus[t.id] === 'connected' }">{{ statusText(connStatus[t.id]) }}</div>
+              <div class="cloud-card-actions">
+                <NButton size="small" quaternary @click="openAccountSettings(t)">设置</NButton>
+                <NButton size="small" :type="connStatus[t.id] === 'connected' ? 'warning' : 'primary'" secondary @click="toggleConnect(t)">{{ connStatus[t.id] === 'connected' ? '断开' : '连接' }}</NButton>
+                <NPopconfirm @positive-click="removeCloudToken(t)">
+                  <template #trigger><NButton size="small" type="error" quaternary>删除</NButton></template>
+                  确定删除云端账号「{{ t.name }}」？（不影响本地）
+                </NPopconfirm>
               </div>
-            </div>
-            <div class="task-actions">
-              <n-button size="tiny" quaternary @click="startEditTask(t)">编辑</n-button>
-              <n-button size="tiny" quaternary type="primary" @click="runTaskNow(t)">
-                立即执行
-              </n-button>
-              <n-button size="tiny" quaternary @click="toggleTask(t)">
-                {{ t.enabled ? "停用" : "启用" }}
-              </n-button>
-              <n-popconfirm @positive-click="removeTask(t)">
-                <template #trigger>
-                  <n-button size="tiny" type="error" quaternary>删除</n-button>
-                </template>
-                确定删除该定时任务？
-              </n-popconfirm>
+            </article>
+          </div>
+          <NEmpty v-else :description="cloudTokens.length ? '没有匹配的账号' : '云端还没有账号，可从本地全部同步'" class="cloud-empty" />
+        </section>
+        <section v-show="activeCloudTab === 'schedules'" id="cloud-panel-schedules" role="tabpanel" aria-labelledby="cloud-tab-schedules">
+          <div class="cloud-toolbar">
+            <span class="cloud-muted">Asia/Shanghai · 停用后不再定时触发</span>
+            <div class="cloud-toolbar-actions">
+              <NDropdown trigger="click" :options="bulkOptions" :disabled="tasksLocked || !scheduledTasks.length" @select="requestBulkToggle">
+                <NButton size="small" :loading="bulkBusy" :disabled="tasksLocked || !scheduledTasks.length">批量开关</NButton>
+              </NDropdown>
+              <NButton size="small" type="primary" :disabled="tasksLocked" @click="openCreate">新建任务</NButton>
+              <NButton size="small" @click="exportTasks">导出</NButton>
+              <NButton size="small" :disabled="tasksLocked" @click="fileInput?.click()">导入</NButton>
+              <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onImportFile" />
             </div>
           </div>
-        </div>
-        <n-empty
-          v-else
-          size="small"
-          description="还没有定时任务，点击上方「新建定时任务」创建"
-          style="padding: 24px 0"
-        />
-      </n-card>
+          <NAlert v-if="bulkBusy || bulkReport" :type="bulkReport?.failed.length ? 'warning' : 'info'" class="cloud-notice" aria-live="polite">
+            <template v-if="bulkBusy">正在{{ bulkTarget ? '启用' : '停用' }}：{{ bulkProgress }} / {{ bulkTotal }}</template>
+            <template v-else>
+              {{ bulkReport.message }}
+              <div v-if="bulkReport.failed.length" class="cloud-failures">失败任务：{{ bulkReport.failed.map(t => t.name || t.id).join('、') }}</div>
+              <NButton v-if="bulkReport.failed.length" size="small" :disabled="tasksLocked" @click="retryBulkToggle">重试失败任务</NButton>
+            </template>
+          </NAlert>
+          <NAlert v-if="taskActionError" type="error" closable class="cloud-notice" @close="taskActionError = ''">{{ taskActionError }}</NAlert>
+          <div v-if="scheduledTasks.length" class="cloud-card-grid">
+            <article v-for="t in scheduledTasks" :key="t.id" class="cloud-schedule-card" :class="{ 'cloud-schedule-disabled': t.enabled === false }">
+              <div class="cloud-task-heading">
+                <h3 class="cloud-card-title" :title="t.name || t.id">{{ t.name || t.id }}</h3>
+                <div class="cloud-task-toggle">
+                  <span>{{ t.enabled !== false ? '已启用' : '已停用' }}</span>
+                  <NSwitch :value="t.enabled !== false" :loading="pendingTaskId === t.id" :disabled="tasksLocked" :aria-label="`${t.name || t.id}定时开关`" @update:value="value => toggleTask(t, value)" />
+                </div>
+              </div>
+              <p class="cloud-card-description" :title="taskAccountSummary(t)">{{ taskAccountSummary(t) }}</p>
+              <p class="cloud-card-description" :title="taskSelectionSummary(t)">{{ taskSelectionSummary(t) }}</p>
+              <code class="cloud-task-cron">{{ t.cron }}</code>
+              <div class="cloud-task-result">
+                <template v-if="t.lastRun"><span>上次 {{ formatTime(t.lastRun) }}</span><NTag size="tiny" :type="executionStatus(t.lastResult).type" :bordered="false">{{ executionStatus(t.lastResult).label }}</NTag></template>
+                <span v-else>尚未执行</span>
+              </div>
+              <div class="cloud-next-run">下次运行：{{ nextRunLabel(t) }}</div>
+              <div class="cloud-card-actions">
+                <NButton v-if="t.lastResult" size="small" quaternary @click="openExecutionDetail(t)">执行详情</NButton>
+                <NButton size="small" quaternary @click="openExecutionDetail(t, true)">执行记录</NButton>
+                <NButton size="small" type="primary" secondary :disabled="tasksLocked" @click="runTaskNow(t)">立即执行</NButton>
+                <NButton size="small" quaternary :disabled="tasksLocked" @click="startEditTask(t)">编辑</NButton>
+                <NPopconfirm :disabled="tasksLocked" @positive-click="removeTask(t)">
+                  <template #trigger><NButton size="small" type="error" quaternary :disabled="tasksLocked">删除</NButton></template>
+                  确定删除该定时任务？
+                </NPopconfirm>
+              </div>
+            </article>
+          </div>
+          <NEmpty v-else description="还没有定时任务，点击上方「新建任务」创建" class="cloud-empty" />
+        </section>
+      </div>
 
-      <!-- 执行日志 -->
-      <n-card class="section-card card-log" :bordered="true">
-        <template #header>
-          <div class="card-head">
-            <span class="head-icon hi-green"><n-icon :component="TerminalOutline" /></span>
-            <span class="card-head-title">实时执行日志</span>
-            <span class="push-pill mini" :class="{ on: pushConnected }">
-              <span class="push-dot" />
-            </span>
+      <NModal :show="!!executionDetail" preset="card" title="执行详情" class="cloud-execution-modal" :style="{ width: '92vw', maxWidth: '720px' }" @update:show="value => { if (!value) executionDetail = null; }">
+        <template v-if="executionDetail">
+          <p>{{ executionDetail.name }} · {{ currentRun?.state === 'running' ? '执行中／等待账号队列' : executionStatus(executionDetail.lastResult).label }}</p>
+          <NAlert v-if="runError" type="error" class="cloud-notice">{{ runError }}</NAlert>
+          <NSpace v-if="historyEnabled" vertical class="cloud-notice">
+            <NSelect :value="currentRun?.id" :options="runOptions" :loading="recordBusy" placeholder="选择执行记录" @update:value="selectRun" />
+            <NButton v-if="canLoadMoreRuns" size="small" :loading="recordBusy" @click="loadMoreRuns">加载更早记录</NButton>
+            <span v-if="currentRun?.parentRunId" class="cloud-muted">本次为补跑，原记录：{{ currentRun.parentRunId }}</span>
+          </NSpace>
+          <NAlert v-if="executionDetail.lastResult && executionDetail.lastResult.version !== 2" type="warning">旧版记录：使用旧成功判定，无法确认各账号实际完成情况。</NAlert>
+          <p v-if="historyEnabled && !recordBusy && !runRows.length" class="cloud-muted">暂无独立执行记录；旧记录不能按账号失败项补跑。</p>
+          <p class="cloud-muted">此处展示执行反馈，不代表已独立核验游戏中的最终状态。</p>
+          <p v-if="executionDetail.lastResult?.error">{{ executionDetail.lastResult?.error }}</p>
+          <p v-if="executionDetail.lastResult?.summary?.reason">{{ executionDetail.lastResult?.summary.reason }}</p>
+          <div v-if="retryCandidates.length && currentRun?.state === 'finished'" class="cloud-retry-options">
+            <h3>失败账号与子任务</h3>
+            <p class="cloud-muted">已成功项目不会补跑。已提交或结果不明确的项目默认不选中；补跑可能重复消耗资源。</p>
+            <NCheckboxGroup v-model:value="selectedRetryKeys">
+              <NSpace vertical><NCheckbox v-for="item in retryCandidates" :key="item.key" :value="item.key">{{ item.label }}</NCheckbox></NSpace>
+            </NCheckboxGroup>
+            <NButton size="small" :disabled="!selectedRetryKeys.length || retrySubmitting || currentRun?.state !== 'finished'" @click="showRetryConfirm = true">补跑失败项 ({{ selectedRetryKeys.length }})</NButton>
           </div>
+          <section v-for="(result, index) in executionDetail.lastResult?.summary?.results || []" :key="index" class="cloud-result-section">
+            <h3>{{ TASK_LABELS[result.task] || result.task }} · {{ outcomeLabels[result.status] || '未确认' }}</h3>
+            <p v-if="result.error || result.reason">{{ result.error || result.reason }}</p>
+            <div v-for="account in result.accounts?.details || []" :key="account.id" class="cloud-account-result">
+              <strong>{{ account.name }} · {{ outcomeLabels[account.status] || '未确认' }}</strong>
+              <p v-if="account.reason">{{ account.reason }}</p>
+              <div v-if="account.camp" class="cloud-camp-summary">
+                <p>营地次数：开始已用 {{ account.camp.initialUsed ?? '未知' }} · 结束已用 {{ account.camp.finalUsed ?? '未知' }} · 剩余 {{ account.camp.remaining ?? '未知' }}</p>
+                <p>本轮胜利 {{ account.camp.wins }} · 失败 {{ account.camp.losses }} · 结果不明 {{ account.camp.unknown }}</p>
+                <ul v-if="account.camp.battles?.length"><li v-for="(battle, battleIndex) in account.camp.battles" :key="battleIndex">区域{{ Math.ceil(battle.nodeId / 10) }} {{ battle.name }}：{{ outcomeLabels[battle.status] || '未确认' }}（模拟 {{ battle.simulatedWins }}/3 胜）</li></ul>
+              </div>
+              <p v-if="account.attempts?.length">连接尝试 {{ account.attempts.length }} 次 · {{ account.submitted ? '已提交过业务命令' : '未提交业务命令' }}</p>
+              <ul v-if="account.attempts?.length"><li v-for="attempt in account.attempts" :key="attempt.attempt">第 {{ attempt.attempt }} 次：{{ attempt.status === 'ok' ? '就绪' : attempt.reason }}</li></ul>
+              <ul v-if="account.steps?.length"><li v-for="(step, stepIndex) in account.steps" :key="stepIndex">{{ step.name }}：{{ outcomeLabels[step.status] || '未确认' }}<span v-if="step.reason"> · {{ step.reason }}</span></li></ul>
+            </div>
+          </section>
         </template>
-        <template #header-extra>
-          <n-button size="tiny" quaternary @click="logs = []">清空</n-button>
-        </template>
-        <div class="log-panel">
-          <div
-            v-for="(log, i) in logs"
-            :key="logs.length - i"
-            class="log-line"
-            :class="`log-${log.level || 'info'}`"
-          >
-            <span class="log-time">{{ log.time }}</span>
-            <span>{{ log.message }}</span>
+      </NModal>
+
+      <NModal v-model:show="showRetryConfirm" preset="dialog" title="确认补跑失败项" positive-text="确认补跑" negative-text="取消" :loading="retrySubmitting" @positive-click="submitFailedRetry">
+        将补跑以下 {{ selectedRetryKeys.length }} 个账号子任务。已提交或结果不明确的操作可能实际已成功，再次执行可能重复购买或消耗。
+        <ul><li v-for="item in retryCandidates.filter(item => selectedRetryKeys.includes(item.key))" :key="item.key">{{ item.label }}</li></ul>
+      </NModal>
+      <NModal v-model:show="showBulkConfirm" preset="dialog" :title="bulkTarget ? '全部启用定时任务' : '全部停用定时任务'" positive-text="确认" negative-text="取消" @positive-click="executeBulkToggle">
+        将{{ bulkTarget ? '启用' : '停用' }} {{ bulkCandidates.length }} 个任务。{{ bulkTarget ? '启用仅恢复定时触发，不会立即执行。' : '停用仅停止后续定时触发，不中断正在执行的任务。' }}
+      </NModal>
+      <NDrawer class="cloud-log-drawer" v-model:show="showCloudLogs" :width="isMobile ? '100%' : 480" placement="right">
+        <NDrawerContent title="实时执行日志" closable>
+          <template #footer><NButton size="small" quaternary @click="logs = []">清空日志</NButton></template>
+          <div class="cloud-log-panel">
+            <div v-for="(log, i) in logs" :key="logs.length - i" class="cloud-log-line" :class="`cloud-log-${log.level || 'info'}`">
+              <time>{{ log.time }}</time> {{ log.message }}
+            </div>
+            <p v-if="!logs.length">暂无日志。执行任务或连接账号后，这里会实时显示后端推送的进度。</p>
           </div>
-          <div v-if="!logs.length" class="log-empty">
-            暂无日志。执行任务或连接账号后，这里会实时显示后端推送的进度。
-          </div>
-        </div>
-      </n-card>
+        </NDrawerContent>
+      </NDrawer>
 
       <!-- 新建/编辑定时任务弹窗 -->
-      <n-modal
+      <NModal
         v-model:show="showTaskModal"
         preset="card"
         :title="editingTaskId ? `编辑定时任务${taskForm.name ? `：${taskForm.name}` : ''}` : '新建定时任务'"
@@ -306,26 +222,26 @@
         :bordered="false"
         @close="resetTaskForm"
       >
-        <n-alert v-if="formError" type="error" size="small" style="margin-bottom: 12px">
+        <NAlert v-if="formError" type="error" size="small" style="margin-bottom: 12px">
           {{ formError }}
-        </n-alert>
-        <n-form
+        </NAlert>
+        <NForm
           class="cloud-task-form"
           :label-placement="isMobile ? 'top' : 'left'"
           :label-width="isMobile ? undefined : 90"
         >
-          <n-form-item label="任务名称" :show-require-mark="true">
-            <n-input v-model:value="taskForm.name" placeholder="如：每天日常" maxlength="40" />
-          </n-form-item>
-          <n-form-item label="Cron 表达式" :show-require-mark="true">
-            <n-space vertical style="width: 100%" :size="6">
+          <NFormItem label="任务名称" :show-require-mark="true">
+            <NInput v-model:value="taskForm.name" placeholder="如：每天日常" maxlength="40" />
+          </NFormItem>
+          <NFormItem label="Cron 表达式" :show-require-mark="true">
+            <NSpace vertical style="width: 100%" :size="6">
               <div class="cron-row">
-                <n-input
+                <NInput
                   v-model:value="taskForm.cron"
                   placeholder="0 6 * * *（每天 6 点）"
                   class="cron-input"
                 />
-                <n-select
+                <NSelect
                   :value="null"
                   :options="cronPresetOptions"
                   placeholder="常用预设"
@@ -336,59 +252,65 @@
               <span v-if="cronError" class="cron-error">{{ cronError }}</span>
               <span v-else-if="nextRunText" class="cron-preview">下次执行：{{ nextRunText }}</span>
               <span v-else class="cron-preview">5 个字段：分 时 日 月 周（如 0 6 * * * 表示每天 6 点）</span>
-            </n-space>
-          </n-form-item>
-          <n-form-item label="执行账号" :show-require-mark="true">
-            <n-space vertical style="width: 100%" :size="4">
-              <n-select
+            </NSpace>
+          </NFormItem>
+          <NFormItem label="执行账号" :show-require-mark="true">
+            <NSpace vertical style="width: 100%" :size="4">
+              <NSelect
                 v-model:value="taskForm.tokenIds"
                 multiple
                 :options="cloudTokenOptions"
                 placeholder="选择要执行的账号（可多选）"
               />
-              <n-space size="small" align="center">
-                <n-button size="tiny" @click="taskForm.tokenIds = cloudTokenOptions.map((o) => o.value)">
+              <NSpace size="small" align="center">
+                <NButton size="tiny" @click="taskForm.tokenIds = cloudTokenOptions.map((o) => o.value)">
                   全选账号
-                </n-button>
-                <n-button size="tiny" @click="taskForm.tokenIds = []">清空</n-button>
+                </NButton>
+                <NButton size="tiny" @click="taskForm.tokenIds = []">清空</NButton>
                 <span v-if="!cloudTokenOptions.length" class="field-hint">
                   云端还没有账号，请先在上方「账号同步」
                 </span>
-              </n-space>
-            </n-space>
-          </n-form-item>
-          <n-form-item label="执行任务" :show-require-mark="true">
-            <n-space vertical style="width: 100%" :size="4">
-              <n-select
+              </NSpace>
+            </NSpace>
+          </NFormItem>
+          <NFormItem label="执行任务" :show-require-mark="true">
+            <NSpace vertical style="width: 100%" :size="4">
+              <NSelect
                 v-model:value="taskForm.selectedTasks"
                 multiple
                 :options="taskOptions"
                 placeholder="选择要执行的任务（可多选，按顺序执行）"
               />
-              <n-space size="small">
-                <n-button size="tiny" @click="taskForm.selectedTasks = taskOptions.map((o) => o.value)">
+              <NSpace size="small">
+                <NButton size="tiny" @click="taskForm.selectedTasks = taskOptions.map((o) => o.value)">
                   全选任务
-                </n-button>
-                <n-button size="tiny" @click="taskForm.selectedTasks = []">清空</n-button>
-              </n-space>
-            </n-space>
-          </n-form-item>
-          <n-form-item label="立即启用">
-            <n-switch v-model:value="taskForm.enabled" />
-          </n-form-item>
-        </n-form>
+                </NButton>
+                <NButton size="tiny" @click="taskForm.selectedTasks = []">清空</NButton>
+              </NSpace>
+            </NSpace>
+          </NFormItem>
+          <NFormItem label="执行模式">
+            <NSpace vertical style="width: 100%">
+              <NSelect v-model:value="taskForm.executionMode" :options="executionModeOptions" />
+              <span class="cloud-muted">按账号连续执行可复用连接；已有计划默认保留按任务批次执行。</span>
+            </NSpace>
+          </NFormItem>
+          <NFormItem label="立即启用">
+            <NSwitch v-model:value="taskForm.enabled" />
+          </NFormItem>
+        </NForm>
         <template #footer>
-          <n-space justify="end" :size="8">
-            <n-button :disabled="saving" @click="showTaskModal = false">取消</n-button>
-            <n-button type="primary" :loading="saving" @click="submitTask">
+          <NSpace justify="end" :size="8">
+            <NButton :disabled="saving" @click="showTaskModal = false">取消</NButton>
+            <NButton type="primary" :loading="saving" @click="submitTask">
               {{ editingTaskId ? "保存修改" : "创建定时任务" }}
-            </n-button>
-          </n-space>
+            </NButton>
+          </NSpace>
         </template>
-      </n-modal>
+      </NModal>
 
     <!-- 账号任务设置弹窗（云端 KV：daily-settings:${tokenId}） -->
-    <n-modal
+    <NModal
       v-model:show="showAccountSettings"
       preset="card"
       :title="`任务设置 - ${settingsToken?.name || ''}`"
@@ -398,7 +320,7 @@
         <div class="settings-grid">
           <div class="setting-item">
             <label class="setting-label">竞技场阵容</label>
-            <n-select
+            <NSelect
               v-model:value="accountSettings.arenaFormation"
               :options="formationOptions"
               size="small"
@@ -406,7 +328,7 @@
           </div>
           <div class="setting-item">
             <label class="setting-label">爬塔阵容</label>
-            <n-select
+            <NSelect
               v-model:value="accountSettings.towerFormation"
               :options="formationOptions"
               size="small"
@@ -414,7 +336,7 @@
           </div>
           <div class="setting-item">
             <label class="setting-label">BOSS阵容</label>
-            <n-select
+            <NSelect
               v-model:value="accountSettings.bossFormation"
               :options="formationOptions"
               size="small"
@@ -422,7 +344,7 @@
           </div>
           <div class="setting-item">
             <label class="setting-label">BOSS次数</label>
-            <n-select
+            <NSelect
               v-model:value="accountSettings.bossTimes"
               :options="bossTimesOptions"
               size="small"
@@ -431,51 +353,57 @@
           <div class="setting-switches">
             <div class="switch-row">
               <span class="switch-label">领罐子</span>
-              <n-switch v-model:value="accountSettings.claimBottle" />
+              <NSwitch v-model:value="accountSettings.claimBottle" />
             </div>
             <div class="switch-row">
               <span class="switch-label">领挂机</span>
-              <n-switch v-model:value="accountSettings.claimHangUp" />
+              <NSwitch v-model:value="accountSettings.claimHangUp" />
             </div>
             <div class="switch-row">
               <span class="switch-label">竞技场</span>
-              <n-switch v-model:value="accountSettings.arenaEnable" />
+              <NSwitch v-model:value="accountSettings.arenaEnable" />
             </div>
             <div class="switch-row">
               <span class="switch-label">开宝箱</span>
-              <n-switch v-model:value="accountSettings.openBox" />
+              <NSwitch v-model:value="accountSettings.openBox" />
             </div>
             <div class="switch-row">
               <span class="switch-label">领取邮件奖励</span>
-              <n-switch v-model:value="accountSettings.claimEmail" />
+              <NSwitch v-model:value="accountSettings.claimEmail" />
             </div>
             <div class="switch-row">
               <span class="switch-label">黑市购买物品</span>
-              <n-switch v-model:value="accountSettings.blackMarketPurchase" />
+              <NSwitch v-model:value="accountSettings.blackMarketPurchase" />
             </div>
             <div class="switch-row">
               <span class="switch-label">付费招募</span>
-              <n-switch v-model:value="accountSettings.payRecruit" />
+              <NSwitch v-model:value="accountSettings.payRecruit" />
             </div>
           </div>
         </div>
-        <n-space justify="end" style="margin-top: 20px" :size="8">
-          <n-button :disabled="savingAccountSettings" @click="showAccountSettings = false">取消</n-button>
-          <n-button type="primary" :loading="savingAccountSettings" @click="saveAccountSettings">
+        <NSpace justify="end" style="margin-top: 20px" :size="8">
+          <NButton :disabled="savingAccountSettings" @click="showAccountSettings = false">取消</NButton>
+          <NButton type="primary" :loading="savingAccountSettings" @click="saveAccountSettings">
             保存设置
-          </n-button>
-        </n-space>
+          </NButton>
+        </NSpace>
       </div>
-    </n-modal>
+    </NModal>
     </template>
   </div>
 </template>
 
 <script setup>
+import { Search } from "@vicons/ionicons5";
 import {
   NAlert,
   NButton,
   NCard,
+  NCheckbox,
+  NCheckboxGroup,
+  NDrawer,
+  NDrawerContent,
+  NDropdown,
   NEmpty,
   NForm,
   NFormItem,
@@ -488,12 +416,7 @@ import {
   NSwitch,
   NTag,
 } from "naive-ui";
-import { Search, CloudOutline, CheckmarkCircleOutline, TimeOutline, PowerOutline, PeopleOutline, TerminalOutline } from "@vicons/ionicons5";
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
-import useIndexedDB from "@/hooks/useIndexedDB";
-import { useTokenStore } from "@/stores/tokenStore";
-import { useCloudAuth } from "@/stores/cloudAuth";
-import { useMobile } from "@/composables/useMobile";
 import {
   scheduledTasksApi,
   ServerPushClient,
@@ -501,8 +424,12 @@ import {
   statusApi,
   tokenApi,
 } from "@/api/serverApi";
-import { bossTimesOptions, formationOptions } from "@/utils/batch/constants.js";
-import { validateCronExpression, calculateNextRuns } from "@/utils/batch/cronUtils.js";
+import { useMobile } from "@/composables/useMobile";
+import useIndexedDB from "@/hooks/useIndexedDB";
+import { useCloudAuth } from "@/stores/cloudAuth";
+import { useTokenStore } from "@/stores/tokenStore";
+import { bossTimesOptions, formationOptions, isRetiredTreasureTask } from "@/utils/batch/constants.js";
+import { calculateNextRuns, validateCronExpression } from "@/utils/batch/cronUtils.js";
 
 const { isMobile } = useMobile();
 
@@ -583,7 +510,7 @@ async function refreshCloudTokens() {
   try {
     cloudTokens.value = await tokenApi.getAll();
     const status = await statusApi.getAll().catch(() => ({}));
-    connStatus.value = status || {};
+    connStatus.value = Array.isArray(status) ? Object.fromEntries(status.filter(item => item?.id).map(item => [item.id, item.status || "disconnected"])) : status || {};
   } catch (e) {
     syncResult.value = {
       type: "error",
@@ -744,6 +671,7 @@ const scheduledTasks = ref([]);
 const taskForm = reactive({
   name: "",
   cron: "0 6 * * *",
+  executionMode: "account",
   tokenIds: [],
   selectedTasks: [],
   enabled: true,
@@ -762,12 +690,13 @@ const TASK_LABELS = {
   batchWarGuessCheer: "战争竞猜助威",
   resetBottles: "重置瓶子",
   batchlingguanzi: "领瓶子",
-  climbTower: "爬塔（宝库）",
+  climbTower: "爬咸将塔",
   climbWeirdTower: "爬怪塔（异变塔）",
-  batchClaimFreeEnergy: "领取免费体力",
+  batchClaimFreeEnergy: "怪异塔领取道具",
   skinChallenge: "皮肤挑战",
   batchUseItems: "使用道具",
   batchMergeItems: "合成道具",
+  batchUseAndMergeItems: "怪异塔领取、使用并合成",
   batchOpenBox: "开宝箱",
   batchOpenBoxByPoints: "按积分开箱",
   batchClaimBoxPointReward: "领宝箱积分奖励",
@@ -798,7 +727,7 @@ const TASK_LABELS = {
   weeklyFreeGift: "每周免费礼包",
   mondayFreeGift: "周一免费礼包",
   gachaFreeDrawWeekly: "每周免费抽卡",
-  batchPkRoomAppoint: "PK 房委任",
+  batchPkRoomAppoint: "赛事预约（PK 房间）",
   blackMarketPurchaseList: "黑市购买清单",
   charge_claimaddup_rewards: "累计充值奖励",
   claim_recruit_welfare: "招募福利",
@@ -813,18 +742,26 @@ const TASK_LABELS = {
   batchJoinClub: "一键加入俱乐部（需配置 joinClubId）",
   batchXuanwuBlessing: "一键玄武赐福",
   batchApexGuess: "逐鹿盐山竞猜",
+  batchApexClaimTasks: "赛事每日领奖",
+  batchApexVote: "赛事助威榜首（使用全部余票）",
   batchFootballBet: "一键竞猜（默认第3项）",
   batchCampChallenge: "营地挑战（普通）",
   batchCampChallengePet: "营地挑战（宠物）",
   batchCampClaimTasks: "营地任务领取",
 };
 
-const taskOptions = Object.entries(TASK_LABELS).map(([value, label]) => ({
+const taskOptions = Object.entries(TASK_LABELS).filter(([value]) => !isRetiredTreasureTask(value)).map(([value, label]) => ({
   value,
   label,
 }));
 
+let tasksRefreshPromise = null;
 async function refreshTasks() {
+  if (tasksRefreshPromise) return tasksRefreshPromise;
+  tasksRefreshPromise = loadScheduledTasks();
+  try { await tasksRefreshPromise; } finally { tasksRefreshPromise = null; }
+}
+async function loadScheduledTasks() {
   try {
     scheduledTasks.value = await scheduledTasksApi.getAll();
   } catch {
@@ -875,6 +812,7 @@ function resetTaskForm() {
   taskForm.tokenIds = [];
   taskForm.selectedTasks = [];
   taskForm.enabled = true;
+  taskForm.executionMode = "account";
 }
 
 function openCreate() {
@@ -890,6 +828,7 @@ function startEditTask(t) {
   taskForm.tokenIds = [...(t.tokenIds || [])];
   taskForm.selectedTasks = [...(t.settings?.selectedTasks || [])];
   taskForm.enabled = t.enabled !== false;
+  taskForm.executionMode = t.settings?.executionMode === "account" ? "account" : "task";
   showTaskModal.value = true;
 }
 
@@ -922,6 +861,8 @@ async function submitTask() {
     tokenIds: taskForm.tokenIds,
     enabled: taskForm.enabled,
     settings: {
+      ...(scheduledTasks.value.find(t => t.id === editingTaskId.value)?.settings || {}),
+      executionMode: taskForm.executionMode,
       selectedTasks: taskForm.selectedTasks,
       maxActive: 3,
       commandDelay: 500,
@@ -951,6 +892,7 @@ async function submitTask() {
 }
 
 async function runTaskNow(t) {
+  if (tasksLocked.value) return;
   pushLog("info", `手动执行「${t.name || t.id}」...`);
   try {
     const result = await scheduledTasksApi.run(t.id);
@@ -965,16 +907,115 @@ async function runTaskNow(t) {
   }
 }
 
-async function toggleTask(t) {
+const activeCloudTab = ref("accounts");
+const cloudTabs = computed(() => [
+  { key: "accounts", label: `云端账号 (${cloudTokens.value.length})` },
+  { key: "schedules", label: `定时任务 (${scheduledTasks.value.length})` },
+]);
+function cloudTabKeydown(event) {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  activeCloudTab.value = event.key === "Home" ? "accounts" : event.key === "End" ? "schedules" : activeCloudTab.value === "accounts" ? "schedules" : "accounts";
+  document.getElementById(`cloud-tab-${activeCloudTab.value}`)?.focus();
+}
+const showCloudLogs = ref(false);
+const pendingTaskId = ref(null);
+const taskActionError = ref("");
+const bulkBusy = ref(false);
+const bulkTarget = ref(false);
+const bulkProgress = ref(0);
+const bulkTotal = ref(0);
+const bulkReport = ref(null);
+const showBulkConfirm = ref(false);
+const bulkCandidates = ref([]);
+const importingTasks = ref(false);
+const tasksLocked = computed(() => bulkBusy.value || pendingTaskId.value !== null || importingTasks.value || saving.value);
+const bulkOptions = computed(() => [
+  { label: `全部启用 (${scheduledTasks.value.filter(t => t.enabled === false).length})`, key: "enable", disabled: !scheduledTasks.value.some(t => t.enabled === false) },
+  { label: `全部停用 (${enabledTaskCount.value})`, key: "disable", disabled: !enabledTaskCount.value },
+]);
+let cloudPageDisposed = false;
+
+function taskAccountSummary(task) {
+  const ids = task.tokenIds || [];
+  const names = ids.slice(0, 2).map(id => cloudTokens.value.find(t => t.id === id)?.name || id);
+  return ids.length ? `${names.join('、')}${ids.length > 2 ? '…' : ''} · ${ids.length} 个账号` : '未选择账号';
+}
+function taskSelectionSummary(task) {
+  const selected = task.settings?.selectedTasks || [];
+  return selected.length ? selected.map(key => TASK_LABELS[key] || key).join('、') : '未选择任务';
+}
+function requestBulkToggle(key) {
+  if (tasksLocked.value) return;
+  bulkTarget.value = key === "enable";
+  bulkCandidates.value = scheduledTasks.value.filter(t => (t.enabled !== false) !== bulkTarget.value);
+  if (bulkCandidates.value.length) showBulkConfirm.value = true;
+}
+function retryBulkToggle() {
+  if (tasksLocked.value || !bulkReport.value) return;
+  const failedIds = new Set(bulkReport.value.failed.map(t => t.id));
+  bulkTarget.value = bulkReport.value.target;
+  bulkCandidates.value = scheduledTasks.value.filter(t => failedIds.has(t.id) && (t.enabled !== false) !== bulkTarget.value);
+  if (bulkCandidates.value.length) showBulkConfirm.value = true;
+}
+async function executeBulkToggle() {
+  if (tasksLocked.value || !isLoggedIn.value || cloudPageDisposed) return;
+  showBulkConfirm.value = false;
+  const target = bulkTarget.value;
+  const candidates = [...bulkCandidates.value];
+  bulkBusy.value = true;
+  bulkProgress.value = 0;
+  bulkTotal.value = candidates.length;
+  bulkReport.value = null;
+  taskActionError.value = "";
+  let next = 0;
+  let expired = false;
+  let succeeded = 0;
+  const failed = [];
+  async function worker() {
+    while (next < candidates.length) {
+      if (expired || cloudPageDisposed || !isLoggedIn.value) break;
+      const task = candidates[next++];
+      try {
+        await scheduledTasksApi.update(task.id, { enabled: target });
+        task.enabled = target;
+        succeeded++;
+      } catch (error) {
+        failed.push(task);
+        if (error.response?.status === 401) expired = true;
+      } finally {
+        bulkProgress.value++;
+      }
+    }
+  }
   try {
-    await scheduledTasksApi.update(t.id, { enabled: !t.enabled });
+    await Promise.all(Array.from({ length: Math.min(3, candidates.length) }, worker));
+    failed.push(...candidates.slice(next));
+    if (!expired && !cloudPageDisposed && isLoggedIn.value) await refreshTasks();
+    bulkReport.value = { target, failed, message: `${target ? '启用' : '停用'}完成：成功 ${succeeded} 个，失败或未提交 ${failed.length} 个。` };
+    pushLog(failed.length ? 'warning' : 'success', bulkReport.value.message);
+  } finally {
+    bulkBusy.value = false;
+  }
+}
+async function toggleTask(t, enabled) {
+  if (tasksLocked.value) return;
+  pendingTaskId.value = t.id;
+  taskActionError.value = "";
+  try {
+    await scheduledTasksApi.update(t.id, { enabled });
+    t.enabled = enabled;
     await refreshTasks();
   } catch (e) {
-    pushLog("error", `操作失败: ${e.response?.data?.error || e.message}`);
+    taskActionError.value = `操作失败: ${e.response?.data?.error || e.message}`;
+    pushLog("error", taskActionError.value);
+  } finally {
+    pendingTaskId.value = null;
   }
 }
 
 async function removeTask(t) {
+  if (tasksLocked.value) return;
   try {
     await scheduledTasksApi.remove(t.id);
     await refreshTasks();
@@ -997,7 +1038,7 @@ async function exportTasks() {
         name: t.name,
         cron: t.cron,
         taskType: t.taskType,
-        settings: t.settings || {},
+        settings: { ...t.settings, executionMode: t.settings?.executionMode === "account" ? "account" : "task" },
         enabled: t.enabled !== false,
       })),
     };
@@ -1019,6 +1060,9 @@ async function exportTasks() {
 }
 
 async function onImportFile(ev) {
+  if (tasksLocked.value) { ev.target.value = ""; return; }
+  importingTasks.value = true;
+  try {
   const file = ev.target?.files?.[0];
   ev.target.value = ""; // 允许重复选择同一文件
   if (!file) return;
@@ -1049,7 +1093,7 @@ async function onImportFile(ev) {
         cron: t.cron,
         taskType: t.taskType || "batch_daily",
         tokenIds: [],
-        settings: t.settings || {},
+        settings: { ...t.settings, executionMode: t.settings?.executionMode === "account" ? "account" : "task" },
         enabled: t.enabled !== false,
       });
       ok++;
@@ -1070,6 +1114,7 @@ async function onImportFile(ev) {
   } else if (fail > 0) {
     pushLog("error", `导入失败：${fail} 条任务全部未成功`);
   }
+  } finally { importingTasks.value = false; }
 }
 
 /* ---------- 实时推送 ---------- */
@@ -1104,7 +1149,8 @@ function handlePush(raw) {
   } else if (msg.type === "taskProgress") {
     pushLog("info", `[进度] ${msg.message || JSON.stringify(msg).slice(0, 120)}`);
   } else if (msg.type === "taskComplete") {
-    pushLog("success", `[完成] ${msg.taskName || msg.message || ""}`);
+    if (msg.result?.persisted) { refreshTasks(); refreshExecutionHistory(); }
+    pushLog(msg.result?.status === "ok" ? "success" : "info", `[结束] ${msg.taskName || msg.message || ""}${msg.result?.status ? `：${outcomeLabels[msg.result.status] || "未确认"}` : ""}`);
   } else if (msg.type === "log") {
     pushLog(msg.level || "info", msg.message || "");
   } else if (msg.type === "connected") {
@@ -1121,12 +1167,94 @@ function statusText(s) {
   }[s || "disconnected"];
 }
 
-function formatTime(iso) {
+const executionModeOptions = [{ label: '按账号连续执行', value: 'account' }, { label: '按任务批次执行', value: 'task' }];
+const executionDetail = ref(null);
+const currentRun = ref(null);
+const runRows = ref([]);
+const historyEnabled = ref(false);
+const recordBusy = ref(false);
+const runError = ref("");
+const canLoadMoreRuns = ref(false);
+const selectedRetryKeys = ref([]);
+const retrySubmitting = ref(false);
+const showRetryConfirm = ref(false);
+let recordRequest = 0;
+const runOptions = computed(() => runRows.value.map(run => ({ value: run.id, label: `${formatTime(run.startedAt)} · ${run.parentRunId ? '补跑' : '执行'} · ${run.state === 'running' ? '执行中' : outcomeLabels[run.status] || '未确认'}` })));
+const retryCandidates = computed(() => (currentRun.value?.result?.summary?.results || []).flatMap(result => (result.accounts?.details || []).filter(account => ['error', 'partial', 'unverified', 'incomplete'].includes(account.status)).map(account => ({ key: JSON.stringify([account.id, result.task]), tokenId: account.id, task: result.task, label: `${account.name} · ${TASK_LABELS[result.task] || result.task} · ${account.reason || outcomeLabels[account.status]}`, safeDefault: account.status === 'error' && account.stage === 'preflight' && !account.submitted }))));
+async function openExecutionDetail(task, forceHistory = false) {
+  recordRequest++;
+  executionDetail.value = task;
+  currentRun.value = null; runRows.value = []; runError.value = ''; selectedRetryKeys.value = [];
+  historyEnabled.value = forceHistory || !!task.lastResult?.runId;
+  if (historyEnabled.value) await refreshExecutionHistory(forceHistory ? undefined : task.lastResult?.runId, true);
+}
+async function refreshExecutionHistory(preferredId, force = false) {
+  if (!executionDetail.value || !historyEnabled.value || (recordBusy.value && !force)) return;
+  const id = executionDetail.value.id; const request = ++recordRequest;
+  recordBusy.value = true;
   try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+    const rows = await scheduledTasksApi.runs(id);
+    if (request !== recordRequest || executionDetail.value?.id !== id) return;
+    runRows.value = rows; canLoadMoreRuns.value = rows.length === 20;
+    const runId = preferredId || currentRun.value?.id || rows[0]?.id;
+    if (runId) await selectRun(runId, request);
+  } catch (error) { runError.value = `读取执行记录失败：${error.response?.data?.error || error.message}`; }
+  finally { recordBusy.value = false; }
+}
+async function selectRun(runId, inheritedRequest) {
+  if (!executionDetail.value) return;
+  const request = typeof inheritedRequest === 'number' ? inheritedRequest : ++recordRequest;
+  const id = executionDetail.value.id;
+  try {
+    const run = await scheduledTasksApi.getRun(id, runId);
+    if (request !== recordRequest || executionDetail.value?.id !== id) return;
+    const changed = currentRun.value?.id !== run.id;
+    currentRun.value = run;
+    executionDetail.value = { ...executionDetail.value, lastResult: run.result || { version: 2, status: 'unverified' } };
+    if (changed) selectedRetryKeys.value = retryCandidates.value.filter(item => item.safeDefault).map(item => item.key);
+  } catch (error) { runError.value = `读取执行详情失败：${error.response?.data?.error || error.message}`; }
+}
+async function loadMoreRuns() {
+  if (recordBusy.value || !executionDetail.value) return;
+  recordBusy.value = true;
+  try {
+    const rows = await scheduledTasksApi.runs(executionDetail.value.id, runRows.value.length);
+    runRows.value.push(...rows); canLoadMoreRuns.value = rows.length === 20;
+  } catch (error) { runError.value = error.message; }
+  finally { recordBusy.value = false; }
+}
+async function submitFailedRetry() {
+  if (!executionDetail.value || !currentRun.value || retrySubmitting.value || !selectedRetryKeys.value.length) return false;
+  retrySubmitting.value = true; runError.value = '';
+  try {
+    const selection = retryCandidates.value.filter(item => selectedRetryKeys.value.includes(item.key)).map(({ tokenId, task }) => ({ tokenId, task }));
+    const result = await scheduledTasksApi.retry(executionDetail.value.id, currentRun.value.id, selection);
+    showRetryConfirm.value = false;
+    await refreshExecutionHistory(result.runId);
+  } catch (error) { runError.value = `补跑提交失败：${error.response?.data?.error || error.message}`; }
+  finally { retrySubmitting.value = false; }
+  return false;
+}
+const outcomeLabels = { ok: '成功', partial: '部分失败', error: '失败', skip: '跳过', unverified: '未确认', incomplete: '未完成' };
+function executionStatus(result) {
+  if (result?.version !== 2) return { label: '旧版记录', type: 'default' };
+  return { label: outcomeLabels[result.status] || '未确认', type: ({ ok: 'success', partial: 'warning', error: 'error', skip: 'default', unverified: 'warning', incomplete: 'warning' })[result.status] || 'warning' };
+}
+function formatTime(iso) {
+  if (!iso || Number.isNaN(new Date(iso).getTime())) return '时间不可用';
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(iso));
+}
+function nextRunLabel(task) {
+  if (task.enabled === false) return '已停用';
+  return task.nextRunAt ? formatTime(task.nextRunAt) : task.nextRunReason || '服务端未提供调度时间';
+}
+let tasksRefreshTimer = null;
+function syncTaskRefresh() {
+  clearInterval(tasksRefreshTimer);
+  tasksRefreshTimer = null;
+  if (document.hidden || cloudPageDisposed) return;
+  if (isLoggedIn.value) refreshTasks();
+  tasksRefreshTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden) { refreshTasks(); refreshExecutionHistory(); } }, 30000);
 }
 
 /* ---------- 生命周期 ---------- */
@@ -1152,10 +1280,15 @@ function onAuthReady() {
 }
 
 onMounted(() => {
+  document.addEventListener("visibilitychange", syncTaskRefresh);
+  syncTaskRefresh();
   if (isLoggedIn.value) onAuthReady();
 });
 
 onUnmounted(() => {
+  cloudPageDisposed = true;
+  clearInterval(tasksRefreshTimer);
+  document.removeEventListener("visibilitychange", syncTaskRefresh);
   if (pushClient) {
     pushClient.disconnect();
     pushClient = null;
@@ -1164,345 +1297,74 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.cloud-tasks {
-  max-width: 1280px;
-  padding: var(--spacing-md);
-  margin: 0 auto;
+.cloud-tasks { width: 100%; min-width: 0; padding: 16px; box-sizing: border-box; }
+.cloud-header, .cloud-header-actions, .cloud-toolbar, .cloud-toolbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cloud-header { justify-content: space-between; margin-bottom: 16px; }
+.cloud-header-text { min-width: 0; }
+.cloud-title { margin: 0 0 4px; font-size: 20px; color: var(--text-primary); }
+.cloud-sub, .cloud-muted { color: var(--text-secondary); font-size: 12px; }
+.push-pill { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
+.push-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-tertiary); }
+.push-pill.on .push-dot { background: var(--success-color); }
+.cloud-summary { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 12px; color: var(--text-secondary); font-size: 12px; }
+.cloud-summary strong { margin-left: 6px; color: var(--text-primary); font-size: 14px; font-weight: 600; }
+.cloud-toolbar { margin: 8px 0 16px; }
+.cloud-toolbar-actions { margin-left: auto; gap: 8px; }
+.cloud-search { width: 220px; max-width: 100%; }
+.cloud-notice { margin-bottom: 12px; }
+.cloud-failures { overflow-wrap: anywhere; margin: 4px 0; }
+.cloud-sections { container-type: inline-size; }
+.cloud-tabs { display: flex; gap: 24px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); }
+.cloud-tabs button { appearance: none; padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-secondary); font: inherit; font-size: 14px; cursor: pointer; }
+.cloud-tabs button[aria-selected="true"] { border-bottom-color: var(--primary-color); color: var(--primary-color); font-weight: 600; }
+.cloud-tabs button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 3px; border-radius: 4px; }
+.cloud-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@container (min-width: 600px) { .cloud-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 960px) { .cloud-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 1280px) { .cloud-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.cloud-account-card, .cloud-schedule-card { min-width: 0; padding: 16px; border-radius: 12px; background: var(--bg-primary); box-shadow: 0 4px 16px rgba(0,0,0,.06); display: flex; flex-direction: column; gap: 10px; }
+.cloud-account-heading, .cloud-task-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cloud-card-heading-text { flex: 1; min-width: 0; }
+.cloud-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cloud-avatar-fallback { display: grid; place-items: center; color: var(--primary-color); background: var(--primary-color-light); }
+.cloud-card-title { margin: 0; color: var(--text-primary); font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-task-heading .cloud-card-title { flex: 1; min-width: 0; }
+.cloud-task-toggle { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); }
+.cloud-task-heading :deep(.n-switch) { flex-shrink: 0; }
+.cloud-account-status { color: var(--text-secondary); font-size: 12px; }
+.cloud-connected { color: var(--success-color); }
+.cloud-card-description { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.cloud-task-cron { color: var(--text-secondary); background: var(--bg-secondary); padding: 4px 8px; border-radius: 6px; font-size: 12px; overflow-wrap: anywhere; }
+.cloud-next-run { font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.cloud-retry-options { padding: 12px; background: var(--bg-secondary); border-radius: 12px; margin-bottom: 16px; }
+.cloud-retry-options h3 { font-size: 14px; }
+.cloud-retry-options :deep(.n-checkbox) { white-space: normal; }
+.cloud-result-section { margin-top: 16px; overflow-wrap: anywhere; }
+.cloud-result-section h3 { font-size: 14px; }
+.cloud-account-result { padding: 10px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+.cloud-account-result p { margin: 4px 0; }
+.cloud-account-result ul { padding-left: 20px; }
+.cloud-task-result { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-top: auto; }
+.cloud-card-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; padding-top: 8px; margin-top: auto; border-top: 1px solid var(--border-light); }
+.cloud-schedule-disabled .cloud-card-title { color: var(--text-secondary); }
+.cloud-empty { padding: 40px 0; }
+.cloud-log-panel { padding: 12px; border-radius: 12px; background: var(--bg-secondary); color: var(--text-secondary); font-family: ui-monospace, monospace; font-size: 12px; }
+.cloud-log-line { padding: 4px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cloud-log-line time { color: var(--text-tertiary); margin-right: 6px; }
+.cloud-log-error { color: var(--error-color); }
+.cloud-log-success { color: var(--success-color); }
+.cloud-log-warning { color: var(--warning-color); }
+.auth-wrap { display: grid; place-items: center; min-height: 60vh; }
+.auth-card { width: 100%; max-width: 380px; }
+@media (max-width: 768px) {
+  :global(.cloud-log-drawer.n-drawer) { width: 100vw !important; max-width: 100vw !important; }
+  .cloud-tasks { padding: 12px; }
+  .cloud-toolbar-actions { margin-left: 0; width: 100%; }
+  .cloud-search { width: 100%; }
+  .cloud-header-actions { gap: 8px; }
+  .cloud-tasks :deep(.n-button) { min-height: 44px; }
+  .cloud-task-heading :deep(.n-switch) { min-height: 44px; }
 }
-
-/* 被定时任务页嵌入时，留白与宽度由父级 page-content 提供 */
-.cloud-tasks.embedded {
-  max-width: none;
-  padding: 0;
-}
-
-/* ============ 页头 ============ */
-.cloud-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
-
-.cloud-title {
-  margin: 0;
-  font-size: 20px;
-}
-
-.cloud-sub {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.cloud-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  flex-shrink: 0;
-}
-
-/* 推送状态胶囊 */
-.push-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--error-color);
-  background: var(--error-soft);
-  border-radius: var(--border-radius-full);
-}
-
-.push-pill.on {
-  color: var(--success-color);
-  background: var(--success-soft);
-}
-
-.push-pill .push-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.push-pill.mini {
-  padding: 0;
-  background: transparent;
-}
-
-/* ============ 统计概览（对齐定时任务页 StatisticCards） ============ */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  padding: 16px 18px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-left: 4px solid transparent;
-  border-radius: 12px;
-  box-shadow: var(--shadow-light);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-light);
-}
-
-.stat-total {
-  border-left-color: var(--primary-color);
-}
-
-.stat-conn {
-  border-left-color: #10b981;
-}
-
-.stat-sched {
-  border-left-color: var(--primary-color);
-}
-
-.stat-enabled {
-  border-left-color: #f59e0b;
-}
-
-.stat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-right: 14px;
-  font-size: 20px;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.stat-total .stat-icon {
-  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
-  color: var(--primary-color);
-}
-
-.stat-conn .stat-icon {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.stat-sched .stat-icon {
-  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
-  color: var(--primary-color);
-}
-
-.stat-enabled .stat-icon {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.stat-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--text-primary);
-}
-
-.stat-value.stat-on {
-  color: var(--success-color);
-}
-
-.stat-label {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* ============ 卡片头部 ============ */
-.card-head {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  min-width: 0;
-}
-
-/* 区块标题图标芯片 */
-.head-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.hi-blue {
-  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
-  color: var(--primary-color);
-}
-
-.hi-violet {
-  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
-  color: var(--primary-color);
-}
-
-.hi-green {
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-}
-
-.card-head-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.card-head-sub {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
-.card-head-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  flex-wrap: wrap;
-}
-
-.account-search {
-  width: 170px;
-}
-
-/* ============ 账号列表 ============ */
-.account-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.account-row {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
-  padding: 9px 10px;
-  border-radius: 10px;
-  border-bottom: 1px solid var(--border-light);
-  transition: background 0.15s ease;
-}
-
-.account-row:last-child {
-  border-bottom: none;
-}
-
-.account-row:hover {
-  background: var(--bg-secondary);
-}
-
-.account-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  border-radius: 50%;
-}
-
-.account-avatar-img {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.account-info {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  flex: 1;
-  min-width: 0;
-}
-
-.account-name {
-  overflow: hidden;
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--text-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.account-server {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  border-radius: var(--border-radius-full);
-}
-
-.account-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.account-status .status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-disabled);
-}
-
-.account-status.is-connected {
-  color: var(--success-color);
-}
-
-.account-status.is-connected .status-dot {
-  background: var(--success-color);
-}
-
-.account-status.is-connecting {
-  color: var(--warning-color);
-}
-
-.account-status.is-connecting .status-dot {
-  background: var(--warning-color);
-}
-
-.account-status.is-error {
-  color: var(--error-color);
-}
-
-.account-status.is-error .status-dot {
-  background: var(--error-color);
-}
-
-/* ============ 新建/编辑弹窗 ============ */
 .cron-row {
   display: flex;
   gap: 6px;
@@ -1561,262 +1423,6 @@ onUnmounted(() => {
 .field-hint {
   font-size: 12px;
   color: var(--warning-color);
-}
-
-/* ============ 定时任务列表 ============ */
-.task-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.task-card {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border: 1px solid var(--border-light);
-  border-left: 3px solid var(--success-color);
-  border-radius: 10px;
-  background: var(--bg-primary);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.task-card:hover {
-  border-color: var(--primary-color-light);
-  box-shadow: var(--shadow-light);
-}
-
-.task-card.is-disabled {
-  border-left-color: var(--text-disabled);
-  opacity: 0.75;
-}
-
-.task-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.task-title-row {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.task-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
-.task-meta {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.task-cron {
-  padding: 1px 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  border-radius: var(--border-radius-small);
-}
-
-.meta-chip {
-  white-space: nowrap;
-}
-
-.task-actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-/* ============ 日志面板 ============ */
-.log-panel {
-  max-height: 320px;
-  padding: var(--spacing-sm);
-  overflow-y: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  background: var(--log-bg);
-  border-radius: var(--border-radius-md);
-}
-
-.log-line {
-  padding: 2px 0;
-  color: #c9d1d9;
-  word-break: break-all;
-}
-
-.log-time {
-  margin-right: var(--spacing-sm);
-  color: #7d8590;
-}
-
-.log-success {
-  color: #7ee787;
-}
-
-.log-error {
-  color: #ffa198;
-}
-
-.log-warning {
-  color: #f2cc60;
-}
-
-.log-empty {
-  padding: var(--spacing-md);
-  color: #7d8590;
-  text-align: center;
-}
-
-/* ============ 未登录 ============ */
-.auth-wrap {
-  display: grid;
-  place-items: center;
-  min-height: 60vh;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 380px;
-}
-
-.section-card {
-  margin-bottom: var(--spacing-md);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: var(--shadow-light);
-}
-
-/* 彩色描边用 inset 阴影实现，避免覆盖 n-card 自身边框 */
-.card-sync {
-  box-shadow: inset 4px 0 0 var(--primary-color), var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
-}
-
-.card-sched {
-  box-shadow: inset 4px 0 0 var(--primary-color), var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
-}
-
-.card-log {
-  box-shadow: inset 4px 0 0 #10b981, var(--shadow-light, 0 2px 8px rgba(0, 0, 0, 0.06));
-}
-
-/* ============ 桌面端双栏：左配置 + 右常驻日志 ============ */
-@media (min-width: 769px) {
-  .cloud-tasks {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
-    grid-template-areas:
-      "header header"
-      "stats stats"
-      "sync log"
-      "sched log";
-    gap: var(--spacing-md);
-    align-items: start;
-  }
-
-  .section-card {
-    margin-bottom: 0;
-  }
-
-  .cloud-header {
-    grid-area: header;
-  }
-
-  .stats-row {
-    grid-area: stats;
-  }
-
-  .card-sync {
-    grid-area: sync;
-  }
-
-  .card-sched {
-    grid-area: sched;
-  }
-
-  /* 日志面板常驻右侧，滚动时吸顶，随视口高度撑满 */
-  .card-log {
-    grid-area: log;
-    position: sticky;
-    top: 76px;
-  }
-
-  .card-log .log-panel {
-    max-height: calc(100vh - 250px);
-    min-height: 200px;
-  }
-}
-
-/* ============ 移动端 ============ */
-@media (max-width: 768px) {
-  .cloud-tasks {
-    padding: var(--spacing-sm);
-  }
-
-  .cloud-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .stats-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
-  }
-
-  .stat-card {
-    padding: 12px 14px;
-  }
-
-  .stat-icon {
-    width: 36px;
-    height: 36px;
-    margin-right: 10px;
-    font-size: 16px;
-  }
-
-  .stat-value {
-    font-size: 20px;
-  }
-
-  .account-search {
-    flex: 1;
-    width: auto;
-  }
-
-  .card-head-actions {
-    width: 100%;
-  }
-
-  /* 窄屏下卡片头部（标题 + 操作区）允许换行，避免标题被挤成竖排 */
-  .section-card :deep(.n-card-header) {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .task-card {
-    flex-wrap: wrap;
-    row-gap: 8px;
-  }
-
-  .task-main {
-    flex: 1 1 100%;
-  }
-
-  .task-actions {
-    margin-left: auto;
-  }
 }
 
 /* 账号任务设置弹窗 */

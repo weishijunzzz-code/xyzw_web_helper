@@ -5,6 +5,8 @@ import { getTowerActId } from "../towerActId.js";
  * 包含: climbTower, climbWeirdTower, batchClaimFreeEnergy
  */
 import { normalizeWeirdTowerMaxClimb } from "../towerClimbLimit.js";
+import { runAccountBatch } from "./runAccountBatch.js";
+import { getMergeBoxOpenPosition, runWeirdTowerItems } from "./weirdTowerItems.js";
 
 /**
  * 补领怪异塔未领取的章节通关奖励
@@ -1085,14 +1087,7 @@ export function createTasksTower(deps) {
         let processedCount = 0;
 
         while (lotteryLeftCnt > 0 && !shouldStop.value) {
-          let pos = {};
-          if (costTotalCnt < 2) {
-            pos = { gridX: 4, gridY: 5 };
-          } else if (costTotalCnt < 102) {
-            pos = { gridX: 7, gridY: 3 };
-          } else {
-            pos = { gridX: 6, gridY: 3 };
-          }
+          const pos = getMergeBoxOpenPosition(costTotalCnt);
 
           // 2. 使用道具
           await tokenStore.sendMessageWithPromise(
@@ -1379,6 +1374,7 @@ export function createTasksTower(deps) {
     skinChallenge,
     batchUseItems,
     batchMergeItems,
+    batchUseAndMergeItems: () => runAccountBatch(deps, "怪异塔领取、使用并合成", runWeirdTowerItems),
   };
 }
 

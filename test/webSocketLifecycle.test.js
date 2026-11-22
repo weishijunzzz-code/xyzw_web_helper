@@ -2,6 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { loadModule } from "./helpers/loadModule.js";
 
+test("battlefield push waits settle only on a matching command and clean up on close", async () => {
+  const { client, timers } = await createClient("xyzwLegionWarWebSocket.js", "XyzwLegionWarWebSocketClient");
+  const first = client.waitForPush(["war_enterbattlefieldresp", "war_getbattlefieldinfo"]);
+  client._dispatchPush({ cmd: "other", code: 0 });
+  assert.equal(timers.size, 1);
+  const snapshot = { cmd: "WAR_GETBATTLEFIELDINFO", code: 0 };
+  client._dispatchPush(snapshot);
+  assert.equal(await first, snapshot);
+  assert.equal(timers.size, 0);
+
+  const pending = client.waitForPush("war_enterbattlefieldresp");
+  client._clearTimers();
+  await assert.rejects(pending, /已关闭/);
+  assert.equal(timers.size, 0);
+  assert.equal(client.pushWaiters.size, 0);
+});
+
 /** Load either real client with deterministic timers and no network access. */
 async function createClient(file, exportName) {
   let nextId = 0;

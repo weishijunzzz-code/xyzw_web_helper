@@ -265,6 +265,7 @@ import { formatPower } from "@/utils/legionWar";
 const message = useMessage();
 const tokenStore = useTokenStore();
 const legionWarStore = useLegionWarStore();
+const battlefieldSubscriber = Symbol("盐场战况");
 
 const isAccessible = ref(isLegionWarAccessible());
 
@@ -638,10 +639,10 @@ const rowClassName = (row) => {
 
 const toggleBattlefieldEntry = async () => {
   if (isEntireBattlefield.value) {
-    legionWarStore.disconnect(true); // 强制断开
+    legionWarStore.disconnect(battlefieldSubscriber, true); // 强制断开
   } else {
     try {
-      await legionWarStore.connect();
+      await legionWarStore.connect(battlefieldSubscriber);
     } catch (error) {
       message.error(error.message);
     }
@@ -661,7 +662,7 @@ const refreshData = () => {
 onMounted(() => {
   // 组件加载时尝试连接
   try {
-    legionWarStore.connect().catch((e) => {
+    legionWarStore.connect(battlefieldSubscriber).catch((e) => {
       console.error("Auto connect failed", e);
     });
   } catch (e) {
@@ -671,7 +672,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   // 组件卸载时断开连接（减少引用计数）
-  legionWarStore.disconnect();
+  legionWarStore.disconnect(battlefieldSubscriber);
 });
 </script>
 

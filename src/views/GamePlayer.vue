@@ -3,7 +3,7 @@
     <button class="back-btn" @click="goBack">← 返回</button>
 
     <div class="iframe-wrapper">
-      <iframe :src="gameSrc" class="game-iframe" allow="fullscreen; autoplay" />
+      <iframe :src="gameSrc" title="游戏窗口" class="game-iframe" allow="fullscreen; autoplay" />
     </div>
   </div>
 </template>
@@ -34,11 +34,14 @@ function goBack() {
   left: 0;
   right: 0;
   bottom: 0;
+  display: grid;
+  place-items: center;
 }
 
 .game-iframe {
-  width: 100%;
-  height: 100%;
+  width: min(100vw, calc(100dvh * 9 / 16));
+  aspect-ratio: 9 / 16;
+  max-height: 100dvh;
   border: none;
   display: block;
 }

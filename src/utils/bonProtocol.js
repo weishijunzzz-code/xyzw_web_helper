@@ -652,6 +652,9 @@ export class ProtoMsg {
   get error() {
     return this._raw.error;
   }
+  get hint() {
+    return this._raw.hint;
+  }
   get time() {
     return this._raw.time;
   }

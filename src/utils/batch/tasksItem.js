@@ -1,5 +1,7 @@
 import { HERO_DICT } from "@/utils/HeroList";
 import { PEACH_TASKS } from "@/utils/PeachTaskIds";
+import { appointPkRoom } from "./apexEventTasks.js";
+import { runAccountBatch } from "./runAccountBatch.js";
 
 /**
  * 开箱、钓鱼、招募类任务
@@ -791,10 +793,7 @@ export function createTasksItem(deps) {
                 progressMap[2] || progressMap["2"] || 0;
 
               // Club Rewards - Claim all if progress is greater than claimed progress
-              if (
-                legionPoint > taskGroupprogressMap &&
-                taskGroupprogressMap < 25
-              ) {
+              if (legionPoint > taskGroupprogressMap) {
                 try {
                   await tokenStore.sendMessageWithPromise(
                     tokenId,
@@ -818,10 +817,7 @@ export function createTasksItem(deps) {
               }
 
               // Personal Rewards - Claim all if progress is greater than claimed progress
-              if (
-                selfPoint > selfPointprogressMap &&
-                selfPointprogressMap < 25
-              ) {
+              if (selfPoint > selfPointprogressMap) {
                 try {
                   await tokenStore.sendMessageWithPromise(
                     tokenId,
@@ -2158,96 +2154,7 @@ export function createTasksItem(deps) {
     message.success("批量领取十殿精选礼包结束");
   };
 
-  const pkroomAppoint = async () => {
-    if (selectedTokens.value.length === 0)
-      return;
-    isRunning.value = true;
-    shouldStop.value = false;
-
-    selectedTokens.value.forEach((id) => {
-      tokenStatus.value[id] = "waiting";
-    });
-
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value)
-        return;
-      tokenStatus.value[tokenId] = "running";
-
-      const token = tokens.value.find((t) => t.id === tokenId);
-      try {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== 开始PK房间预约: ${token.name} ===`,
-          type: "info",
-        });
-
-        await ensureConnection(tokenId);
-
-        await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "pkroom_getfightroominfo",
-          {},
-          5000,
-        );
-
-        await new Promise((r) => setTimeout(r, delayConfig.action));
-
-        await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "pkroom_getfightroomhistory",
-          { date: "2026/05" },
-          5000,
-        );
-
-        await new Promise((r) => setTimeout(r, delayConfig.action));
-
-        const result = await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "pkroom_appoint",
-          {},
-          5000,
-        );
-
-        if (result && !result.error) {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `=== ${token.name} PK房间预约成功`,
-            type: "success",
-          });
-        } else {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `=== ${token.name} PK房间预约失败: ${result?.error || "未知错误"}`,
-            type: "error",
-          });
-        }
-
-        tokenStatus.value[tokenId] = "completed";
-      } catch (error) {
-        console.error(error);
-        tokenStatus.value[tokenId] = "failed";
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} PK房间预约失败: ${error.message || "未知错误"}`,
-          type: "error",
-        });
-      } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
-      }
-    });
-
-    await Promise.all(taskPromises);
-
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
-    message.success("批量PK房间预约结束");
-  };
+  const pkroomAppoint = () => runAccountBatch(deps, "赛事预约", appointPkRoom);
 
   const batchGachaDrawReward = async () => {
     if (selectedTokens.value.length === 0)

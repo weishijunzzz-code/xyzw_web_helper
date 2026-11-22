@@ -99,7 +99,14 @@ export function registerDefaultCommands(reg) {
     .registerHeartbeat()
     //盐场-获取战场信息
     .register("war_getbattlefieldinfo")
-    .register("war_enterbattlefield");
+    .register("war_enterbattlefield")
+    .register("war_startbattle")
+    .register("war_startattackbuilding")
+    .register("war_startmarch")
+    .register("war_setbattleteam")
+    .register("war_suicide")
+    .register("war_speedup")
+    .register("war_getteaminfo");
 
   return registry;
 }
@@ -134,6 +141,7 @@ export class XyzwLegionWarWebSocketClient {
     this.isReconnecting = false; // 重连状态标志
 
     this.promises = Object.create(null);
+    this.pushWaiters = new Set();
     this.registry = registerDefaultCommands(
       new CommandRegistry(this.utils, this.enc, this.hint),
     );
@@ -246,6 +254,7 @@ export class XyzwLegionWarWebSocketClient {
                   // 收到Blob消息
                 }
 
+                this._dispatchPush(packet);
                 // 回调处理
                 if (this.messageListener) {
                   this.messageListener(packet);
@@ -322,6 +331,7 @@ export class XyzwLegionWarWebSocketClient {
           }
         }
 
+        this._dispatchPush(packet);
         // 回调处理
         if (this.messageListener) {
           this.messageListener(packet);
@@ -361,6 +371,34 @@ export class XyzwLegionWarWebSocketClient {
   /** 注册消息回调 */
   setMessageListener(fn) {
     this.messageListener = fn;
+  }
+
+  waitForPush(commands, timeoutMs = 8000) {
+    const expected = new Set([commands].flat().map((cmd) => cmd.toLowerCase()));
+    if (!this.connected) return Promise.reject(new Error("WebSocket 未连接"));
+    return new Promise((resolve, reject) => {
+      const waiter = { expected, resolve, reject, timer: null };
+      waiter.timer = setTimeout(() => {
+        this.pushWaiters.delete(waiter);
+        reject(new Error("等待战场服务器响应超时"));
+      }, timeoutMs);
+      this.pushWaiters.add(waiter);
+    });
+  }
+
+  _dispatchPush(packet) {
+    const cmd = packet?.cmd?.toLowerCase();
+    if (!cmd) return;
+    for (const waiter of this.pushWaiters) {
+      if (!waiter.expected.has(cmd)) continue;
+      clearTimeout(waiter.timer);
+      this.pushWaiters.delete(waiter);
+      if (packet.code) {
+        waiter.reject(new Error(`服务器错误: ${packet.code} - ${packet.hint || "战场请求失败"}`));
+      } else {
+        waiter.resolve(packet);
+      }
+    }
   }
 
   /** 控制台消息开关 */
@@ -788,9 +826,6 @@ export class XyzwLegionWarWebSocketClient {
       item_openpackresp: "item_openpack",
       // 咸王宝库
       matchteam_getroleteaminforesp: "matchteam_getroleteaminfo",
-      bosstower_getinforesp: "bosstower_getinfo",
-      bosstower_startbossreso: "bosstower_startboss",
-      bosstower_startboxresp: "bosstower_startbox",
       discount_getdiscountinforesp: "discount_getdiscountinfo",
       // 升星相关响应映射
       hero_heroupgradestarresp: "hero_heroupgradestar",
@@ -801,7 +836,6 @@ export class XyzwLegionWarWebSocketClient {
       legion_getinforresp: "legion_getinfo",
       role_gettargetteamresp: "role_gettargetteam",
       activity_warorderclaimresp: "activity_recyclewarorderrewardclaim",
-      bosstower_gethelprankresp: "bosstower_gethelprank",
       // 特殊响应映射 - 有些命令有独立响应，有些用同步响应
       task_claimdailyrewardresp: "task_claimdailyreward",
       task_claimweekrewardresp: "task_claimweekreward",
@@ -886,6 +920,11 @@ export class XyzwLegionWarWebSocketClient {
     }
     this.isReconnecting = false;
     this.dialogStatus = false;
+    for (const waiter of this.pushWaiters) {
+      clearTimeout(waiter.timer);
+      waiter.reject(new Error("WebSocket 连接已关闭"));
+    }
+    this.pushWaiters.clear();
     for (const [id, request] of Object.entries(this.promises)) {
       clearTimeout(request.timer);
       delete this.promises[id];

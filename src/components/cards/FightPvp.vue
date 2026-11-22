@@ -857,9 +857,10 @@ const getHeroInfo = (heroObj) => {
   let redCount = 0;
   let holeCount = 0;
   let heroList = [];
-  Object.values(heroObj).forEach((hero) => {
-    let heroInfo = HERO_DICT[hero.heroId];
-    let equipmentInfo = getEquipment(hero.equipment);
+  Object.values(heroObj ?? {}).forEach((hero) => {
+    if (!hero) return;
+    const heroInfo = HERO_DICT[hero.heroId];
+    const equipmentInfo = getEquipment(hero.equipment ?? {});
     let tempObj = {
       heroId: hero.heroId, //英雄ID
       heroSort: hero.battleTeamSlot, //阵容站位
@@ -867,8 +868,8 @@ const getHeroInfo = (heroObj) => {
       power: formatPower(hero.power), //英雄战力
       star: hero.star, //英雄星级
       equipment: hero.equipment, //英雄具体孔数和红数
-      heroName: heroInfo.name, //英雄姓名
-      heroAvate: heroInfo.avatar,
+      heroName: heroInfo?.name || `武将${hero.heroId}`,
+      heroAvate: heroInfo?.avatar || "",
       level: hero.level, //英雄等级
       hole: equipmentInfo.holeCount, //英雄开孔数量
       red: equipmentInfo.redCount, //英雄红数
@@ -892,13 +893,12 @@ const getHeroInfo = (heroObj) => {
 const getEquipment = (equipment) => {
   let redCount = 0;
   let holeCount = 0;
-  let equipArr = [];
   //此处遍历4件装备
   Object.values(equipment).forEach((equ) => {
     //遍历每件装备的属性
-    Object.values(equ.quenches).forEach((item) => {
+    Object.values(equ?.quenches ?? {}).forEach((item) => {
       holeCount++;
-      if (item.colorId == 6) {
+      if (Number(item?.colorId) === 6) {
         redCount++;
       }
     });

@@ -1,9 +1,10 @@
-import { XyzwWebSocketClient, CommandRegistry } from './xyzwWebSocket.js';
-import { registerDefaultCommands } from './commandRegistry.js';
-import { wsLogger, gameLogger, tokenLogger } from './logger.js';
-import { getGUtils } from './bonProtocol.js';
-import axios from 'axios';
 import fs from 'fs';
+import axios from 'axios';
+import { isReadOnlyCommand } from './accountSessions.js';
+import { getGUtils } from './bonProtocol.js';
+import { registerDefaultCommands } from './commandRegistry.js';
+import { gameLogger, tokenLogger, wsLogger } from './logger.js';
+import { CommandRegistry, XyzwWebSocketClient } from './xyzwWebSocket.js';
 
 const XOR_A = 2118920861;
 const XOR_B = 797788954;
@@ -142,7 +143,6 @@ export class GameManager {
         roleInfo: null,
         legionInfo: null,
         commonActivityInfo: null,
-        bossTowerInfo: null,
         evoTowerInfo: null,
         presetTeam: null,
         battleVersion: null,
@@ -207,7 +207,7 @@ export class GameManager {
     return conn.client.send(cmd, params);
   }
 
-  async sendMessageWithPromise(tokenId, cmd, params = {}, timeout = 5000) {
+  async sendMessageWithPromise(tokenId, cmd, params = {}, timeout = 5000, options = {}) {
     const conn = this.connections.get(tokenId);
     if (!conn || conn.status !== 'connected') {
       return Promise.reject(new Error(`未连接: ${tokenId}`));
@@ -238,7 +238,7 @@ export class GameManager {
     } catch (e) {
       protoCapture(tokenId, cmd, params, undefined, e);
       // 超时后尝试断开重连再重试一次
-      if (e.message && e.message.includes('超时')) {
+      if (options.retry !== false && isReadOnlyCommand(cmd) && e.message && e.message.includes('超时')) {
         gameLogger.warn(`命令超时，尝试重连重试: ${cmd} [${tokenId}]`);
         try {
           this.disconnect(tokenId);
@@ -292,9 +292,6 @@ export class GameManager {
       } else if (cmd === 'activity_getresp' && body && gd) {
         gd.commonActivityInfo = body;
         this.push.gameData(tokenId, 'commonActivityInfo', body);
-      } else if (cmd === 'bosstower_getinforesp' && body && gd) {
-        gd.bossTowerInfo = body;
-        this.push.gameData(tokenId, 'bossTowerInfo', body);
       } else if (cmd === 'evotowerinforesp' && body && gd) {
         gd.evoTowerInfo = body;
         this.push.gameData(tokenId, 'evoTowerInfo', body);
@@ -505,6 +502,7 @@ export class GameManager {
    * 发送命令，超时后自动重连重试
    */
   async sendWithReconnect(tokenId, userId, cmd, params = {}, timeout = 20000, maxRetries = 2) {
+    if (!isReadOnlyCommand(cmd)) maxRetries = 0;
     for (let i = 0; i <= maxRetries; i++) {
       try {
         return await this.sendMessageWithPromise(tokenId, cmd, params, timeout);

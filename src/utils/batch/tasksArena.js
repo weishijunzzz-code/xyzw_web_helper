@@ -4,6 +4,7 @@
  */
 
 import { FISH_TARGET, ARENA_TARGET } from "./constants.js";
+import { getDailyFreeArenaRemaining } from "../dailyArena.js";
 
 /**
  * 创建竞技场、补齐类任务执行器
@@ -62,27 +63,21 @@ export function createTasksArena(deps) {
         await ensureConnection(tokenId);
         if (shouldStop.value) return;
 
-        // 检查咸神门票 (ID: 1007)
-        let role = tokenStore.gameData?.roleInfo?.role;
-        if (!role) {
-          try {
-            const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
-            role = roleInfo?.role;
-          } catch {}
+        const role = (await tokenStore.sendGetRoleInfo(tokenId))?.role;
+        const ticketCount = Number(role?.items?.[1007]?.quantity) || 0;
+        let freeCount = 0;
+        try {
+          freeCount = getDailyFreeArenaRemaining(role);
+        } catch {
+          // An older role response can omit the timestamp. Only use known tickets.
         }
-        const ticketCount = role?.items?.[1007]?.quantity || 0;
+        const fights = Math.min(3, freeCount + ticketCount);
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `${token.name} 当前咸神门票: ${ticketCount}`,
+          message: "竞技场剩余免费 " + freeCount + " 次，门票 " + ticketCount + " 张，本次计划 " + fights + " 次",
           type: "info",
         });
-
-        if (ticketCount <= 0) {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 咸神门票不足，无法进行竞技场战斗`,
-            type: "warning",
-          });
+        if (!fights || shouldStop.value) {
           tokenStatus.value[tokenId] = "completed";
           return;
         }
@@ -124,18 +119,12 @@ export function createTasksArena(deps) {
           });
         }
         
-        const fights = Math.min(3, ticketCount);
-        if (fights < 3) {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 咸神门票仅剩 ${ticketCount} 张，将执行 ${fights} 次战斗`,
-            type: "warning",
-          });
+        if (!shouldStop.value) {
+          await tokenStore.sendMessageWithPromise(tokenId, "arena_startarea", {});
         }
 
         for (let i = 0; i < fights; i++) {
           if (shouldStop.value) break;
-          await tokenStore.sendMessageWithPromise(tokenId, "arena_startarea", {});
           let targets;
           try {
             targets = await tokenStore.sendMessageWithPromise(

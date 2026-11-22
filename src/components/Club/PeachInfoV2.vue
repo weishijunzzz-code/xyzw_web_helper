@@ -42,6 +42,10 @@
         </div>
       </div>
       <div class="right">
+        <NButton size="small" :loading="payloadState === 'connecting'" :disabled="!selectedTokenId" @click="togglePayloadSession">
+          {{ payloadSessionActive ? "离开实时战场" : "进入实时战场" }}
+        </NButton>
+        <NTag v-if="payloadStatusText" size="small" aria-live="polite">{{ payloadStatusText }}</NTag>
         <NButton
           size="small"
           type="warning"
@@ -671,7 +675,8 @@ import {
   NTag,
   useMessage,
 } from "naive-ui";
-import { computed, h, onMounted, reactive, ref, watch } from "vue";
+import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { createPayloadBattleSession } from "@/utils/payloadBattleRunner.js";
 import { useTokenStore } from "@/stores/tokenStore";
 import { isSameGameValue } from "@/utils/gameValue.js";
 
@@ -684,10 +689,39 @@ import {
   LINEUP_RULES,
 } from "@/utils/HeroList";
 import { downloadCanvasAsImage } from "@/utils/imageExport";
+import { getLivePayloadOpponent } from "@/utils/payloadBattlefield.js";
 import { getShowPet } from "@/utils/PetList";
 const message = useMessage();
 const tokenStore = useTokenStore();
 const selectedTokenId = computed(() => tokenStore.selectedToken?.id || "");
+const payloadState = ref("");
+const payloadSessionActive = computed(() => ["connecting", "entered", "reconnecting"].includes(payloadState.value));
+const payloadStatusText = computed(() => ({ entered: "已进入", reconnecting: "战场重连中", "not-open": "战场未开放", ended: "战场已结束", failed: "战场连接失败" })[payloadState.value]);
+let payloadSession;
+function closePayloadSession() {
+  payloadSession?.close();
+  payloadSession = null;
+  payloadState.value = "";
+}
+async function togglePayloadSession() {
+  if (payloadSessionActive.value) {
+    closePayloadSession();
+    return;
+  }
+  closePayloadSession();
+  payloadState.value = "connecting";
+  const session = createPayloadBattleSession(tokenStore, selectedTokenId.value, {
+    onState: (state) => { if (payloadSession === session) payloadState.value = state; },
+  });
+  payloadSession = session;
+  try {
+    await session.start();
+  } catch {
+    if (payloadSession === session) payloadState.value = "failed";
+  }
+}
+watch(selectedTokenId, closePayloadSession);
+onUnmounted(closePayloadSession);
 const currentClubInfo = ref(null);
 
 const exportDom = ref(null);
@@ -1820,23 +1854,9 @@ const fetchBattleInfo = async () => {
     // Time-based Logic
     // If selected date is today AND it is currently battle time, fetch live data
     if (queryDate.value === getLastSunday() && isSundayBattleTime()) {
-      // Sunday 18:00-20:30: Use legion_getpayloadbf
-      const res = await tokenStore.sendMessageWithPromise(
-        tokenId,
-        "legion_getpayloadbf",
-        {},
-        10000,
-      );
-      if (!res || !res.legions) {
-        message.error("未获取到战场信息");
-        loading.value = false;
-        return;
-      }
       ownLegionId = ownClubInfo.id;
-      opponentLegionId = res.legions[0].id;
-      if (ownLegionId === opponentLegionId) {
-        opponentLegionId = res.legions[1].id;
-      }
+      opponentLegionId = await getLivePayloadOpponent(tokenStore, tokenId, ownLegionId);
+      if (tokenStore.selectedToken?.id !== tokenId) return;
       if (!opponentLegionId) {
         message.error("未获取到对战俱乐部ID");
         return;

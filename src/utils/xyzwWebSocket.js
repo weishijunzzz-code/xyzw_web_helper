@@ -338,7 +338,6 @@ export function registerDefaultCommands(reg) {
     // 梦魇相关
     .register("nightmare_getroleinfo")
     .register("dungeon_selecthero")
-    .register("bosstower_gethelprank")
     .register("dungeon_buymerchant")
     // 活动/任务
     .register("activity_get")
@@ -354,6 +353,18 @@ export function registerDefaultCommands(reg) {
     .register("legion_getpayloadtask")
     .register("legion_getpayloadkillrecord")
     .register("legion_getpayloadbf")
+    .register("payload_enterbf")
+    .register("payload_ping")
+    .register("payload_startbattle")
+    .register("payload_startmarch")
+    .register("payload_cancelmarch")
+    .register("payload_startchangecarpath")
+    .register("payload_startpickitem")
+    .register("payload_updateflag")
+    .register("payload_useitem")
+    .register("payload_useskill")
+    .register("payload_setbattleteam")
+    .register("payload_getteaminfo")
     .register("legion_getpayloadrecord")
     .register("warguess_getrank")
     .register("warguess_startguess")
@@ -411,9 +422,22 @@ export function registerDefaultCommands(reg) {
 
     // 咸王宝库
     .register("matchteam_getroleteaminfo")
-    .register("bosstower_getinfo")
-    .register("bosstower_startboss")
-    .register("bosstower_startbox")
+    .register("matchteam_create")
+    .register("matchteam_join")
+    .register("matchteam_memberprepare")
+    .register("matchteam_getteaminfo")
+    .register("matchteam_dismiss")
+    .register("matchteam_openteam")
+    .register("nightmare_setfighter")
+    .register("nightmare_fight")
+    .register("nightmare_leadercomplete")
+    .register("nightmare_getroominfo")
+    .register("nightmare_restore")
+    .register("matchteam_getrandteamlist")
+    .register("team_setteam")
+    .register("hero_calcpowerbyteam")
+    .register("queue_getinfo")
+    .register("nmext_getinfo")
     .register("discount_getdiscountinfo")
 
     // 换皮闯关相关
@@ -434,6 +458,7 @@ export function registerDefaultCommands(reg) {
 
     // 逐鹿盐山竞猜
     .register("apex_getroleinfo")
+    .register("apex_taskclaim", { confId: 0 })
     .register("apex_getguesslist", { scheduleId: 0, idx: 0 })
     .register("apex_guess", { teamId: "" })
     .register("apex_get64oppomap", { scheduleId: 0, groupId: 0 })

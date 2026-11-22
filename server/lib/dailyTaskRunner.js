@@ -1,22 +1,8 @@
+import { runDailyFreeArena } from "../../src/utils/dailyArena.js";
+import { aggregateStatus } from './executionResults.js';
 /**
  * 后端版 DailyTaskRunner - 完整搬运前端 dailyTaskRunner.js
  */
-
-const pickArenaTargetId = (targets) => {
-  if (!targets) return null;
-  if (Array.isArray(targets)) {
-    const candidate = targets[0];
-    return candidate?.roleId || candidate?.id || candidate?.targetId;
-  }
-  const candidate =
-    targets?.rankList?.[0] || targets?.roleList?.[0] || targets?.targets?.[0] || targets?.targetList?.[0] || targets?.list?.[0];
-  if (candidate) {
-    if (candidate.roleId) return candidate.roleId;
-    if (candidate.id) return candidate.id;
-    if (candidate.targetId) return candidate.targetId;
-  }
-  return targets?.roleId || targets?.id || targets?.targetId;
-};
 
 const isTodayAvailable = (statisticsTime) => {
   if (!statisticsTime) return true;
@@ -37,6 +23,7 @@ export class DailyTaskRunner {
   }
 
   log(message, type = "info") {
+    if (type === "error" && this.stepErrors) this.stepErrors.push(message);
     if (this.callbacks?.onLog) {
       this.callbacks.onLog({ time: new Date().toLocaleTimeString(), message, type });
     }
@@ -45,6 +32,7 @@ export class DailyTaskRunner {
   async executeGameCommand(tokenId, cmd, params = {}, description = "", timeout = 8000) {
     try {
       if (description) this.log(`执行: ${description}`);
+      this.stepCommands = (this.stepCommands || 0) + 1;
       const result = await this.tokenStore.sendMessageWithPromise(tokenId, cmd, params, timeout);
       await new Promise(r => setTimeout(r, this.delaySettings.commandDelay));
       if (description) this.log(`${description} - 成功`, "success");
@@ -83,6 +71,7 @@ export class DailyTaskRunner {
 
   async run(tokenId, callbacks = {}, customSettings = null) {
     this.callbacks = callbacks;
+    this.stepErrors = [];
     const settings = customSettings || {
       arenaFormation: 1, bossFormation: 1, bossTimes: 2,
       claimBottle: true, payRecruit: true, openBox: true,
@@ -171,29 +160,25 @@ export class DailyTaskRunner {
       taskList.push({ name: "领取盐罐奖励", execute: () => this.executeGameCommand(tokenId, "bottlehelper_claim", {}, "领取盐罐奖励") });
     }
 
-    // 2. 竞技场
-    if (!isTaskCompleted(13) && settings.arenaEnable) {
+    if (settings.arenaEnable) {
       taskList.push({
-        name: "竞技场战斗",
+        name: "竞技场免费战斗",
         execute: async () => {
-          this.log("开始竞技场战斗流程");
-          const hour = new Date().getHours();
-          if (hour < 6) { this.log("当前时间未到6点，跳过竞技场战斗", "warning"); return; }
-          if (hour > 22) { this.log("当前时间已过22点，跳过竞技场战斗", "warning"); return; }
-          await this.switchToFormationIfNeeded(tokenId, settings.arenaFormation, "竞技场阵容");
-          await this.executeGameCommand(tokenId, "arena_startarea", {}, "开始竞技场");
-          for (let i = 1; i <= 3; i++) {
-            this.log(`竞技场战斗 ${i}/3`);
-            let targets;
-            try { targets = await this.executeGameCommand(tokenId, "arena_getareatarget", {}, `获取竞技场目标${i}`); } catch (err) { this.log(`竞技场战斗${i} - 获取对手失败: ${err.message}`, "error"); break; }
-            const targetId = pickArenaTargetId(targets);
-            if (targetId) {
-              await this.executeGameCommand(tokenId, "fight_startareaarena", { targetId }, `竞技场战斗${i}`, 10000);
-            } else {
-              this.log(`竞技场战斗${i} - 未找到目标`, "warning");
-            }
-            await new Promise(r => setTimeout(r, 1000));
+          const hour = new Date(Date.now() + 8 * 3600000).getUTCHours();
+          if (!settings.ignoreTimeCheck && (hour < 6 || hour >= 22)) {
+            this.log("竞技场未开放，跳过免费战斗", "info");
+            return;
           }
+          const confirmed = await runDailyFreeArena({
+            readRole: async () => {
+              const response = await this.tokenStore.sendGetRoleInfo(tokenId);
+              return response?.role ?? response?.body?.role ?? response?.data?.role;
+            },
+            command: (...args) => this.executeGameCommand(tokenId, ...args),
+            prepare: () => this.switchToFormationIfNeeded(tokenId, settings.arenaFormation, "竞技场阵容"),
+            pause: ms => new Promise(resolve => setTimeout(resolve, ms)),
+          });
+          if (!confirmed) this.log("服务器未确认竞技场免费次数进展，已停止补打", "error");
         },
       });
     }
@@ -288,10 +273,16 @@ export class DailyTaskRunner {
     taskList.push({ name: "领取周常任务奖励", execute: () => this.executeGameCommand(tokenId, "task_claimweekreward", {}, "领取周常任务奖励") });
     taskList.push({ name: "领取通行证奖励", execute: () => this.executeGameCommand(tokenId, "activity_recyclewarorderrewardclaim", { actId: 1 }, "领取通行证奖励") });
 
+    if (Array.isArray(customSettings?.retryStepNames)) {
+      const allowed = new Set(customSettings.retryStepNames);
+      taskList.splice(0, taskList.length, ...taskList.filter(task => allowed.has(task.name)));
+    }
+
     // 执行
     const totalTasks = taskList.length;
     this.log(`共有 ${totalTasks} 个任务待执行`);
 
+    const steps = [];
     for (let i = 0; i < taskList.length; i++) {
       const task = taskList[i];
       const status = this.tokenStore.getWebSocketStatus(tokenId);
@@ -304,19 +295,25 @@ export class DailyTaskRunner {
           this.log(`重连成功`, "success");
         } catch (e) {
           this.log(`重连失败，剩余任务跳过: ${e.message}`, "error");
+          steps.push(...taskList.slice(i).map(t => ({ name: t.name, status: 'error', reason: `重连失败，未执行：${e.message}` })));
           break;
         }
       }
+      this.stepErrors = [];
+      this.stepCommands = 0;
       try {
         await task.execute();
+        steps.push({ name: task.name, status: this.stepErrors.length ? 'error' : this.stepCommands ? 'ok' : 'skip', reason: this.stepErrors.join('；') || (this.stepCommands ? undefined : '无需执行或条件不满足') });
         if (this.callbacks?.onProgress) this.callbacks.onProgress(Math.floor(((i + 1) / totalTasks) * 100));
         await new Promise(r => setTimeout(r, this.delaySettings.taskDelay));
       } catch (error) {
+        steps.push({ name: task.name, status: "error", reason: error.message });
         this.log(`任务执行失败: ${task.name} - ${error.message}`, "error");
       }
     }
 
-    if (this.callbacks?.onProgress) this.callbacks.onProgress(100);
-    this.log("所有任务执行完成", "success");
+    const status = aggregateStatus(steps);
+    this.log(`日常任务结束：${steps.filter(s => s.status === 'ok').length}/${totalTasks} 项成功`, status === 'ok' ? 'success' : 'warning');
+    return { status, steps };
   }
 }

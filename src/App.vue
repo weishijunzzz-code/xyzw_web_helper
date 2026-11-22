@@ -8,6 +8,7 @@
               <ErrorBoundary>
                 <router-view />
               </ErrorBoundary>
+              <GameWorkspace v-if="gameWorkspaceMounted" v-show="gameWorkspaceActive" :workspace-active="gameWorkspaceActive" />
               <GlobalLoading />
               <BackToTop />
               <SuccessAnimation
@@ -27,7 +28,8 @@
 
 <script setup>
 import { darkTheme } from "naive-ui";
-import { computed, onMounted, onUnmounted, provide, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import BackToTop from "@/components/Common/BackToTop.vue";
 import CommandPalette from "@/components/Common/CommandPalette.vue";
 import ErrorBoundary from "@/components/Common/ErrorBoundary.vue";
@@ -38,6 +40,14 @@ import { useCompactMode } from "@/composables/useCompactMode";
 import { useTheme } from "@/composables/useTheme";
 import { initCapacitor, isNativePlatform } from "@/utils/capacitor";
 import { initUpdateChecker } from "@/utils/updateChecker";
+
+const route = useRoute();
+const GameWorkspace = defineAsyncComponent(() => import("@/views/GameMultiPlayer.vue"));
+const gameWorkspaceActive = computed(() => route.name === "GameMultiPlayer");
+const gameWorkspaceMounted = ref(false);
+watch(gameWorkspaceActive, (active) => {
+  if (active) gameWorkspaceMounted.value = true;
+}, { immediate: true });
 
 const { isDark, initTheme, setupSystemThemeListener, updateReactiveState } =
   useTheme();

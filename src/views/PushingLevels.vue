@@ -137,6 +137,56 @@
       </div>
     </n-card>
 
+    <n-card v-if="cloudEnabled" title="云端推关" size="small">
+      <div class="cloud-account-field">
+        <span id="cloud-push-account-label">云端账号</span>
+        <n-select
+          v-model:value="selectedCloudIds"
+          aria-labelledby="cloud-push-account-label"
+          :options="cloudAccountOptions"
+          :loading="cloudLoading"
+          :disabled="cloudBusy || cloudLoading || !cloudAccounts.length"
+          placeholder="选择云端账号"
+          multiple
+          filterable
+          clearable
+        />
+        <p v-if="cloudError" role="alert" class="cloud-account-hint">{{ cloudError }}</p>
+        <p v-else-if="!cloudLoading && !cloudAccounts.length" class="cloud-account-hint">
+          当前用户还没有云端账号。<RouterLink :to="{ name: 'CloudTasks' }">前往云端任务同步</RouterLink>
+        </p>
+        <p v-else-if="hasUnsyncedSelection" class="cloud-account-hint">
+          所选本地账号中有账号未按当前 ID 同步。可以从上方选择已同步的账号，或<RouterLink :to="{ name: 'CloudTasks' }">前往云端任务同步</RouterLink>。
+        </p>
+      </div>
+      <n-space>
+        <n-button size="small" :loading="cloudBusy" :disabled="cloudLoading || !selectedCloudIds.length" @click="runCloudAction('start')">云端开始</n-button>
+        <n-button size="small" :loading="cloudBusy" :disabled="cloudLoading || !selectedCloudIds.length" @click="runCloudAction('stop')">云端停止</n-button>
+        <n-button size="small" :loading="cloudLoading" :disabled="cloudBusy" @click="refreshCloudStatus">刷新状态</n-button>
+      </n-space>
+      <p v-if="cloudStatusStale" role="status" class="cloud-account-hint">
+        状态暂未更新，当前显示上一次结果。
+      </p>
+      <ul v-if="cloudRows.length" class="cloud-progress-list">
+        <li v-for="row in cloudRows" :key="row.id" class="cloud-progress-row">
+          <p>{{ row.name }} · {{ row.running ? (cloudPhaseLabels[row.phase] || "运行中") : "已停止" }} · {{ row.currLevel ?? "—" }} 关</p>
+          <n-space v-if="row.passed != null || row.failed != null" size="small">
+            <n-tag size="small" type="success">累计过关 {{ row.passed ?? "—" }}</n-tag>
+            <n-tag size="small" type="error">失败 {{ row.failed ?? "—" }} 场</n-tag>
+            <n-tag size="small" type="warning">连续失败 {{ row.failStreak ?? "—" }}</n-tag>
+          </n-space>
+          <p v-if="row.lastBattle">
+            最近一场 {{ row.lastBattle.won ? "过关" : "失败" }}
+            <span v-if="row.lastBattle.level != null"> · 第 {{ row.lastBattle.level }} 关</span>
+            <span v-if="row.lastBattle.completedAt"> · {{ cloudBattleTime.format(new Date(row.lastBattle.completedAt)) }}</span>
+          </p>
+          <p v-else-if="row.running && row.phase" class="cloud-account-hint">尚未收到战斗结果</p>
+          <p v-if="row.lastError" class="cloud-account-hint">最近异常 · {{ row.lastError }}</p>
+          <p v-if="row.stopReason" class="cloud-account-hint">停止原因 · {{ row.stopReason }}</p>
+        </li>
+      </ul>
+    </n-card>
+
     <!-- 推图卡片区 -->
     <div v-if="runningCards.length" class="running-section">
       <n-card
@@ -275,13 +325,17 @@ import { useMessage } from "naive-ui";
 import {
   computed,
   nextTick,
+  onActivated,
   onBeforeUnmount,
+  onDeactivated,
   onMounted,
   reactive,
   ref,
   watch,
 } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
+import { authApi, pushLevelApi } from "@/api/serverApi.js";
+import { bgSleep } from "@/utils/bgTicker.js";
 import { BOSS_NAMES } from "./boss_names.js";
 
 const MAX_LOGS = 2000;
@@ -293,6 +347,143 @@ const message = useMessage();
 const tokenStore = useTokenStore();
 
 const selectedTokenIds = ref([]);
+const cloudEnabled = ref(authApi.isLoggedIn());
+const cloudBusy = ref(false);
+const cloudLoading = ref(false);
+const cloudError = ref("");
+const cloudStatusStale = ref(false);
+const cloudAccounts = ref([]);
+const cloudSelection = ref(null);
+const cloudStatuses = ref({});
+const cloudAccountsById = computed(() => new Map(cloudAccounts.value.map((account) => [account.id, account])));
+const cloudAccountOptions = computed(() => cloudAccounts.value.map(({ id, name, server }) => ({
+  value: id,
+  label: server ? `${name} · ${server}` : name,
+})));
+const selectedCloudIds = computed({
+  get: () => (cloudSelection.value ?? selectedTokenIds.value).filter((id) => cloudAccountsById.value.has(id)),
+  set: (ids) => { cloudSelection.value = ids; },
+});
+const hasUnsyncedSelection = computed(() =>
+  !cloudLoading.value && selectedTokenIds.value.some((id) => !cloudAccountsById.value.has(id)),
+);
+const cloudRows = computed(() => cloudAccounts.value
+  .filter(({ id }) => Object.hasOwn(cloudStatuses.value, id))
+  .map(({ id, name }) => ({ ...cloudStatuses.value[id], id, name })));
+const cloudPhaseLabels = {
+  preparing: "计算战斗时间",
+  waiting: "等待结算",
+  settling: "正在结算",
+  reconnecting: "正在重连",
+  retrying: "等待重试",
+};
+const cloudBattleTime = new Intl.DateTimeFormat("zh-CN", { timeStyle: "medium", timeZone: "Asia/Shanghai" });
+
+function getCloudOwner() {
+  return authApi.isLoggedIn() ? authApi.getUser()?.userId ?? "" : null;
+}
+
+let cloudOwner = getCloudOwner();
+let cloudPollTimer;
+let cloudPollInFlight = false;
+let cloudStatusRevision = 0;
+
+function clearCloudAccounts() {
+  cloudAccounts.value = [];
+  cloudStatuses.value = {};
+  cloudSelection.value = null;
+  cloudStatusStale.value = false;
+}
+
+function onCloudAuthExpired() {
+  cloudOwner = null;
+  cloudEnabled.value = false;
+  clearCloudAccounts();
+}
+
+async function refreshCloudStatus() {
+  if (cloudLoading.value) return;
+  const owner = getCloudOwner();
+  if (owner !== cloudOwner) clearCloudAccounts();
+  cloudOwner = owner;
+  cloudEnabled.value = owner !== null;
+  if (!cloudEnabled.value) return;
+
+  cloudStatusRevision++;
+  cloudLoading.value = true;
+  cloudError.value = "";
+  try {
+    const [accounts, statuses] = await Promise.all([pushLevelApi.getAccounts(), pushLevelApi.getStatus()]);
+    if (getCloudOwner() !== owner) return;
+    cloudAccounts.value = accounts;
+    cloudStatuses.value = statuses;
+    cloudStatusStale.value = false;
+  } catch (error) {
+    if (getCloudOwner() !== owner) return;
+    clearCloudAccounts();
+    cloudError.value = error.response?.data?.error || "读取云端账号失败，请刷新状态后重试。";
+  } finally {
+    cloudLoading.value = false;
+  }
+}
+
+async function pollCloudStatus() {
+  if (!cloudEnabled.value || cloudLoading.value || cloudBusy.value ||
+      cloudPollInFlight || !cloudAccounts.value.length || document.hidden) return;
+  const owner = cloudOwner;
+  const revision = cloudStatusRevision;
+  cloudPollInFlight = true;
+  try {
+    const statuses = await pushLevelApi.getStatus();
+    if (getCloudOwner() !== owner || revision !== cloudStatusRevision) return;
+    cloudStatuses.value = statuses;
+    cloudStatusStale.value = false;
+  } catch {
+    if (getCloudOwner() === owner && revision === cloudStatusRevision) cloudStatusStale.value = true;
+  } finally {
+    cloudPollInFlight = false;
+  }
+}
+
+function startCloudUpdates() {
+  refreshCloudStatus();
+  if (cloudPollTimer == null) cloudPollTimer = window.setInterval(pollCloudStatus, 3000);
+}
+
+function stopCloudUpdates() {
+  window.clearInterval(cloudPollTimer);
+  cloudPollTimer = undefined;
+}
+
+async function runCloudAction(action) {
+  if (cloudBusy.value || cloudLoading.value || !selectedCloudIds.value.length) return;
+  const ids = [...selectedCloudIds.value];
+  const owner = cloudOwner;
+  cloudStatusRevision++;
+  cloudBusy.value = true;
+  let succeeded = 0;
+  try {
+    for (const id of ids) {
+      if (getCloudOwner() !== owner) break;
+      const name = cloudAccountsById.value.get(id)?.name || id;
+      try {
+        if (action === "start" && runningStates[id]?.running) throw new Error("请先停止该账号的本地推关");
+        const result = await pushLevelApi[action](id, maxRetries.value);
+        if (!result.ok) throw new Error(result.msg);
+        succeeded++;
+      } catch (error) {
+        const detail = error.response?.status === 404
+          ? "该账号已不在云端列表中，请刷新后重新选择。"
+          : error.response?.data?.error || error.message;
+        message.error(name + "：" + detail);
+      }
+    }
+    if (succeeded) message.success(action === "start" ? `已启动 ${succeeded} 个云端推关任务` : `已停止 ${succeeded} 个云端推关任务`);
+    if (authApi.isLoggedIn()) await refreshCloudStatus();
+  } finally {
+    cloudBusy.value = false;
+  }
+}
 const selectedGroupIds = ref([]);
 const searchKeyword = ref("");
 const autoContinue = ref(true);
@@ -750,9 +941,7 @@ function progressPercent(card) {
   );
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = bgSleep;
 
 async function waitConnected(tokenId, timeoutMs = 3000) {
   const start = Date.now();
@@ -1397,12 +1586,19 @@ async function useTorchForSelected() {
 }
 
 onMounted(() => {
+  window.addEventListener("cloud-auth-expired", onCloudAuthExpired);
+  startCloudUpdates();
   tickTimer = setInterval(() => {
     tickNow.value = Date.now();
   }, 1000);
 });
 
+onActivated(startCloudUpdates);
+onDeactivated(stopCloudUpdates);
+
 onBeforeUnmount(() => {
+  stopCloudUpdates();
+  window.removeEventListener("cloud-auth-expired", onCloudAuthExpired);
   if (tickTimer) {
     clearInterval(tickTimer);
     tickTimer = null;
@@ -1419,6 +1615,39 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.cloud-account-field {
+  display: grid;
+  gap: 6px;
+  max-width: 36rem;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+
+.cloud-account-hint {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.cloud-progress-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.cloud-progress-row {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.cloud-progress-row p {
+  margin: 0;
+}
+
 .pushing-levels-page {
   height: 100%;
   min-height: 0;

@@ -6,7 +6,7 @@ import { db } from './lib/db.js';
 import { GameManager } from './lib/gameManager.js';
 import { PushService } from './lib/pushService.js';
 import { PushLevelService } from './lib/pushLevelService.js';
-import { authMiddleware } from './lib/auth.js';
+import { authMiddleware, verifyToken } from './lib/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { tokenRoutes } from './routes/token.js';
 import { taskRoutes } from './routes/task.js';
@@ -21,6 +21,7 @@ import { ForceOnlineService } from './lib/forceOnlineService.js';
 import { Cron } from 'croner';
 
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 const app = express();
 app.use(cors());
@@ -28,8 +29,11 @@ app.use(express.json({ limit: '10mb' }));
 
 const httpServer = createServer(app);
 
-const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-const pushService = new PushService(wss);
+const wss = new WebSocketServer({ server: httpServer, path: '/ws', maxPayload: 8192 });
+const pushService = new PushService(wss, {
+  verifyToken,
+  ownsAccount: (tokenId, userId) => Boolean(tokenId && db.getToken(tokenId, userId)),
+});
 const gameManager = new GameManager(db, pushService);
 const pushLevelService = new PushLevelService(gameManager, pushService);
 const saltFieldService = new SaltFieldService(gameManager, pushService, db);
@@ -43,7 +47,7 @@ app.use('/api/task', authMiddleware, taskRoutes(gameManager));
 app.use('/api/status', authMiddleware, statusRoutes(gameManager));
 app.use('/api/settings', authMiddleware, settingsRoutes(db));
 app.use('/api/scheduled-tasks', authMiddleware, scheduledTaskRoutes(db, gameManager));
-app.use('/api/push-level', authMiddleware, pushLevelRoutes(pushLevelService));
+app.use('/api/push-level', authMiddleware, pushLevelRoutes(pushLevelService, db));
 app.use('/api/salt-field', authMiddleware, saltFieldRoutes(saltFieldService));
 app.use('/api/force-online', authMiddleware, forceOnlineRoutes(forceOnlineService));
 
@@ -89,7 +93,7 @@ async function start() {
     console.error('[强制在线] 巡检启动失败:', e.message);
   }
 
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, HOST, () => {
     console.log(`[server] running on http://localhost:${PORT}`);
   });
 }

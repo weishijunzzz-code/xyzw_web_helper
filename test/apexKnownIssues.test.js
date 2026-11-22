@@ -174,6 +174,8 @@ test("batch guessing processes every open round when schedule windows overlap", 
     new URL("../src/utils/batch/tasksApex.js", import.meta.url),
     {
       "@/utils/apexRules": rules,
+      "./apexEventTasks.js": {},
+      "./runAccountBatch.js": {},
       "@/utils/apexRateLimit": {
         ApexAction: { READ: "read", GUESS: "guess" },
         runApexAction: (_action, task) => task(0),

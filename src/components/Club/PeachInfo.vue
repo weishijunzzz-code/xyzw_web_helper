@@ -427,6 +427,7 @@ import {
   formatBattleRecordsForExport,
   copyToClipboard
 } from '@/utils/clubBattleUtils'
+import { getLivePayloadOpponent } from "@/utils/payloadBattlefield.js";
 const message = useMessage();
 const tokenStore = useTokenStore();
 const info = computed(() => tokenStore.gameData?.legionInfo || null);
@@ -1144,28 +1145,13 @@ const fetchBattleInfo = async () => {
     // Time-based Logic
     // If selected date is today AND it is currently battle time, fetch live data
     if (queryDate.value === getLastSunday() && isSundayBattleTime()) {
-      // Sunday 18:00-20:30: Use legion_getpayloadbf
-      const res = await tokenStore.sendMessageWithPromise(
-        tokenId,
-        "legion_getpayloadbf",
-        {},
-        10000
-      );
-      if (!res || !res.legions) {
-        message.error("未获取到战场信息");
-        loading.value = false;
-        return;
-      }
       if (!club.value?.id) {
         message.error("未获取到俱乐部信息，请检查Token是否已连接");
-        loading.value = false;
         return;
       }
       ownLegionId = club.value.id;
-      opponentLegionId = res.legions[0]?.id;
-      if (ownLegionId === opponentLegionId) {
-        opponentLegionId = res.legions[1]?.id;
-      }
+      opponentLegionId = await getLivePayloadOpponent(tokenStore, tokenId, ownLegionId);
+      if (tokenStore.selectedToken?.id !== tokenId) return;
       if (!opponentLegionId) {
         message.error("未获取到对战俱乐部ID");
         return;

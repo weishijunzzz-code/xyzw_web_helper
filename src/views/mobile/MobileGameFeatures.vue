@@ -31,6 +31,7 @@
         </div>
         <n-icon size="18" class="entry-arrow"><ChevronForward /></n-icon>
       </div>
+      <n-button size="small" @click="router.push({ name: 'NightmareTeamLab' })">十殿组队</n-button>
     </div>
 
     <!-- 功能主体：标签页 + 功能卡片 -->

@@ -622,7 +622,7 @@ export function createTasksItem(deps) {
                 const taskGroupprogressMap = progressMap[1] || progressMap["1"] || 0;
                 const selfPointprogressMap = progressMap[2] || progressMap["2"] || 0;
 
-                if (legionPoint > taskGroupprogressMap && taskGroupprogressMap < 25) {
+                if (legionPoint > taskGroupprogressMap) {
                   try {
                     await tokenStore.sendMessageWithPromise(
                       tokenId,
@@ -645,7 +645,7 @@ export function createTasksItem(deps) {
                   }
                 }
 
-                if (selfPoint > selfPointprogressMap && selfPointprogressMap < 25) {
+                if (selfPoint > selfPointprogressMap) {
                   try {
                     await tokenStore.sendMessageWithPromise(
                       tokenId,

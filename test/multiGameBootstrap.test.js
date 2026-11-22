@@ -13,6 +13,7 @@ const bootstrapScript = [
   .map((match) => match[1])
   .find((script) => script.includes("loadMultiGameRuntime"));
 const expectedRuntimeFiles = [
+  "embedded-hud.js",
   "patch.decrypted_readable.js",
   "src/settings.da7ef.js",
   "game-defines.a175e.js",

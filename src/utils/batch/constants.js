@@ -128,8 +128,6 @@ export const availableTasks = [
   { label: "批量钓鱼", value: "batchFish" },
   { label: "批量招募", value: "batchRecruit" },
   { label: "一键使用兑换码", value: "batchRedeemCodes" },
-  { label: "一键宝库前3层", value: "batchbaoku13" },
-  { label: "一键宝库4,5层", value: "batchbaoku45" },
   { label: "一键梦境", value: "batchmengjing" },
   { label: "一键俱乐部签到", value: "batchclubsign" },
   { label: "营地挑战", value: "batchCampChallenge" },
@@ -156,6 +154,10 @@ export const availableTasks = [
   { label: "开始功法挂机修炼", value: "batchLegacyBeginHangup" },
   { label: "一键使用怪异塔道具", value: "batchUseItems" },
   { label: "一键怪异塔合成", value: "batchMergeItems" },
+  { label: "一键怪异塔领取、使用并合成", value: "batchUseAndMergeItems" },
+  { label: "赛事每日领奖", value: "batchApexClaimTasks" },
+  { label: "赛事助威榜首（使用全部余票）", value: "batchApexVote" },
+  { label: "赛事预约", value: "pkroomAppoint" },
   { label: "一键领取蟠桃园任务", value: "batchClaimPeachTasks" },
   { label: "一键扫荡灯神", value: "batchGenieSweep" },
   { label: "一键购买梦境商品", value: "batchBuyDreamItems" },
@@ -270,3 +272,6 @@ export const defaultHelperSettings = {
   fishType: 1,
   count: 100,
 };
+
+export const isRetiredTreasureTask = (name) =>
+  name === "batchbaoku13" || name === "batchbaoku45";

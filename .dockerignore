@@ -1,0 +1,15 @@
+.git
+.agents
+.codex
+.aws
+**/node_modules
+dist
+desktop/.work
+desktop/web
+desktop/release
+server/data
+wms
+coverage
+**/.env*
+**/*.bin
+**/*.log

@@ -1,25 +1,28 @@
+import { isRetiredTreasureTask } from "../../src/utils/batch/constants.js";
+import { acquireAccount, createAccountSession } from './accountSessions.js';
+import { canClaim, countRacingRefreshTickets, gradeLabel, isBigPrize, normalizeCars, shouldSendCar } from './batch/carUtils.js';
 /**
  * 后端任务执行器 - 将前端 createTaskDeps + 9个任务模块整合
  * 定时任务触发时调用此模块执行用户选择的任务
  */
 
-import { createServerDeps } from './serverDeps.js';
-import { createTasksHangUp } from './batch/tasksHangUp.js';
-import { createTasksBottle } from './batch/tasksBottle.js';
-import { createTasksTower } from './batch/tasksTower.js';
-import { createTasksCar } from './batch/tasksCar.js';
-import { createTasksItem } from './batch/tasksItem.js';
-import { createTasksDungeon } from './batch/tasksDungeon.js';
-import { createTasksArena } from './batch/tasksArena.js';
-import { createTasksStore } from './batch/tasksStore.js';
-import { createTasksLegacy } from './batch/tasksLegacy.js';
-import { createTasksXuanwuBlessing } from './batch/tasksXuanwuBlessing.js';
+import { calculateMonthProgress, getActivityStatus, getTodayStartSec, isTodayAvailable, pickArenaTargetId } from './batch/connectionManager.js';
 import { createTasksApex } from './batch/tasksApex.js';
-import { createTasksFootball } from './batch/tasksFootball.js';
+import { createTasksArena } from './batch/tasksArena.js';
+import { createTasksBottle } from './batch/tasksBottle.js';
 import { createTasksCampChallenge } from './batch/tasksCampChallenge.js';
-import { getActivityStatus, getTodayStartSec, isTodayAvailable, calculateMonthProgress, pickArenaTargetId } from './batch/connectionManager.js';
-import { normalizeCars, gradeLabel, shouldSendCar, canClaim, isBigPrize, countRacingRefreshTickets } from './batch/carUtils.js';
+import { createTasksCar } from './batch/tasksCar.js';
+import { createTasksDungeon } from './batch/tasksDungeon.js';
+import { createTasksFootball } from './batch/tasksFootball.js';
+import { createTasksHangUp } from './batch/tasksHangUp.js';
+import { createTasksItem } from './batch/tasksItem.js';
+import { createTasksLegacy } from './batch/tasksLegacy.js';
+import { createTasksStore } from './batch/tasksStore.js';
+import { createTasksTower } from './batch/tasksTower.js';
+import { createTasksXuanwuBlessing } from './batch/tasksXuanwuBlessing.js';
+import { accountSummary, aggregateStatus } from './executionResults.js';
 import { gameLogger } from './logger.js';
+import { createServerDeps } from './serverDeps.js';
 
 // 任务名 → 模块+函数名 映射
 const TASK_MAP = {
@@ -39,6 +42,7 @@ const TASK_MAP = {
   skinChallenge: { module: 'tower', fn: 'skinChallenge' },
   batchUseItems: { module: 'tower', fn: 'batchUseItems' },
   batchMergeItems: { module: 'tower', fn: 'batchMergeItems' },
+  batchUseAndMergeItems: { module: 'tower', fn: 'batchUseAndMergeItems' },
   // tasksCar
   batchSmartSendCar: { module: 'car', fn: 'batchSmartSendCar' },
   batchClaimCars: { module: 'car', fn: 'batchClaimCars' },
@@ -56,8 +60,6 @@ const TASK_MAP = {
   batchOpenFragmentPacks: { module: 'item', fn: 'batchOpenFragmentPacks' },
   batchClaimBoxWeeklyRewards: { module: 'item', fn: 'batchClaimBoxWeeklyRewards' },
   // tasksDungeon
-  batchbaoku13: { module: 'dungeon', fn: 'batchbaoku13' },
-  batchbaoku45: { module: 'dungeon', fn: 'batchbaoku45' },
   batchmengjing: { module: 'dungeon', fn: 'batchmengjing' },
   batchBuyDreamItems: { module: 'dungeon', fn: 'batchBuyDreamItems' },
   // tasksArena
@@ -99,6 +101,8 @@ const TASK_MAP = {
   batchXuanwuBlessing: { module: 'xuanwuBlessing', fn: 'batchXuanwuBlessing' },
   // tasksApex
   batchApexGuess: { module: 'apex', fn: 'batchApexGuess' },
+  batchApexClaimTasks: { module: 'apex', fn: 'batchApexClaimTasks' },
+  batchApexVote: { module: 'apex', fn: 'batchApexVote' },
   // tasksFootball
   batchFootballBet: { module: 'football', fn: 'batchFootballBet' },
   // tasksCampChallenge
@@ -117,25 +121,35 @@ const TASK_MAP = {
  * @param {Object} gameManager
  * @returns {Object} 执行结果
  */
-export async function executeScheduledTask(task, userId, db, gameManager) {
+function createTaskEnvironment(task, userId, db, gameManager, session) {
   const tokenIds = task.tokenIds || [];
   const settings = task.settings || {};
   const selectedTasks = settings.selectedTasks || [];
 
   if (tokenIds.length === 0 || selectedTasks.length === 0) {
-    return { status: 'skip', reason: 'no tokens or tasks selected' };
+    return { status: 'skip', reason: '未选择账号或任务', results: [] };
   }
 
   gameLogger.info(`[定时任务] 开始执行: ${task.name}, 账号: ${tokenIds.length}, 任务: ${selectedTasks.length}`);
 
+  // Configuration is frozen when queued; connection credentials remain live for renewal.
+  const settingsDb = Object.create(db);
+  settingsDb.getKV = (key, owner) => {
+    if (key === 'batchSettings' && task.batchSettings !== undefined) return task.batchSettings;
+    if (key.startsWith('daily-settings:') && task.dailySettings) return task.dailySettings[key.slice('daily-settings:'.length)] ?? null;
+    return db.getKV?.(key, owner);
+  };
   // 构建 serverDeps
-  const deps = createServerDeps(gameManager, db, userId, {
+  const deps = createServerDeps(gameManager, settingsDb, userId, {
+    session,
     pushService: gameManager.push,
     tokenIds,
     maxActive: settings.maxActive || 3,
     commandDelay: settings.commandDelay || 500,
     taskDelay: settings.taskDelay || 1000,
   });
+
+  deps.dailyRetrySteps = task.retrySteps?.[tokenIds[0]];
 
   // 注入活动状态辅助函数
   deps.getActivityStatus = getActivityStatus;
@@ -169,38 +183,115 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
     campChallenge: createTasksCampChallenge(deps),
   };
 
-  const results = [];
+  return { deps, modules };
+}
 
-  // 从 tokenStatus 汇总本次任务各账号的真实成败。
-  // 任务模块内部会 catch 每个账号的异常只写日志，外层函数几乎不会抛出，
-  // 仅凭"没抛异常"标记 ok 会产生假成功（账号全挂也显示成功）。
-  const summarizeAccounts = (ids) => {
-    let completed = 0;
-    let failed = 0;
-    for (const id of ids) {
-      const s = deps.tokenStatus.value[id];
-      if (s === 'completed') completed++;
-      else if (s === 'failed') failed++;
-    }
-    const tracked = completed + failed;
-    return tracked === 0
-      ? null
-      : {
-          total: ids.length,
-          completed,
-          failed,
-          status: failed === 0 ? 'ok' : completed > 0 ? 'partial' : 'error',
-        };
+// All trigger paths use this scheduler. Account leases are held outside module cleanup.
+export async function executeScheduledTask(task, userId, db, gameManager) {
+  const ids = [...new Set(task.tokenIds || [])];
+  const selected = task.settings?.selectedTasks || [];
+  if (!ids.length || !selected.length) return { status: 'skip', reason: '未选择账号或任务', results: [] };
+  const mode = task.settings?.executionMode === 'account' ? 'account' : 'task';
+  const maxActive = Math.max(1, Math.floor(Number(task.batchSettings?.maxActive ?? task.settings?.maxActive) || 3));
+  const results = new Map(selected.map(name => [name, []]));
+  const logs = [];
+  const tokens = db.getAllTokens(userId);
+  const runAccount = async (id, names) => {
+    const release = await acquireAccount(gameManager, userId, id);
+    const session = createAccountSession(gameManager, userId, id);
+    let unavailable = null;
+    let sessionUsed = false;
+    try {
+      for (const name of names) {
+        if (task.retrySelection && !task.retrySelection.some(item => item.tokenId === id && item.task === name)) continue;
+        const token = tokens.find(t => t.id === id);
+        if (isRetiredTreasureTask(name)) {
+          const reason = '咸王宝库玩法已下线';
+          results.get(name).push({ id, name: token?.name || id, status: 'skip', reason });
+          logs.push({ time: new Date().toLocaleTimeString(), message: reason, type: 'warning' });
+          continue;
+        }
+        session.beginTask();
+        sessionUsed = true;
+        let detail;
+        try {
+          if (unavailable) { const error = new Error(`账号未就绪，未执行：${unavailable}`); error.stage = 'preflight'; throw error; }
+          if (!token) { const error = new Error('账号不存在'); error.permanent = true; throw error; }
+          await session.ensure();
+          const single = { ...task, tokenIds: [id], settings: { ...task.settings, selectedTasks: [name] } };
+          const { deps, modules } = createTaskEnvironment(single, userId, db, gameManager, session);
+          const outcome = await executeSelectedTasks(single, deps, modules);
+          detail = outcome.results[0]?.accounts?.details?.[0] || { id, name: token.name, status: outcome.status, reason: outcome.results[0]?.reason || outcome.results[0]?.error };
+          logs.push(...(outcome.logs || []));
+          if (logs.length > 300) logs.splice(0, logs.length - 300);
+        } catch (error) {
+          detail = { id, name: token?.name || id, status: 'error', reason: error.message, stage: error.stage || 'preflight', retryEligible: error.retryEligible === true };
+          if (detail.stage === 'preflight') unavailable = unavailable || error.message;
+        }
+        const metadata = session.metadata();
+        Object.assign(detail, metadata, { stage: detail.stage || 'execution', retryEligible: detail.retryEligible === true && !metadata.submitted });
+        if (metadata.unacknowledged && detail.status === 'ok') { detail.status = 'unverified'; detail.reason = '部分命令未等待响应，无法确认结果'; }
+        results.get(name).push(detail);
+      }
+    } finally { try { if (sessionUsed) session.close(); } finally { release(); } }
   };
+  const pool = async names => {
+    const eligibleIds = ids.filter(id => !task.retrySelection || task.retrySelection.some(item => item.tokenId === id && names.includes(item.task)));
+    let cursor = 0;
+    await Promise.all(Array.from({ length: Math.min(maxActive, eligibleIds.length) }, async () => {
+      while (cursor < eligibleIds.length) { const id = eligibleIds[cursor++]; await runAccount(id, names); }
+    }));
+  };
+  if (mode === 'account') await pool(selected);
+  else for (const name of selected) await pool([name]);
+  const list = selected.map(name => ({ task: name, accounts: accountSummary(results.get(name)), status: aggregateStatus(results.get(name)) }));
+  return { status: aggregateStatus(list), executionMode: mode, results: list, logs, totalLogs: logs.length };
+}
+
+// Separated from transport construction so ordering and reporting can be tested without game connections.
+export async function executeSelectedTasks(task, deps, modules) {
+  const tokenIds = task.tokenIds || [];
+  const settings = task.settings || {};
+  const selectedTasks = settings.selectedTasks || [];
+  const results = [];
+  // Missing/deleted accounts remain in the report, but must not crash a module's parallel batch.
+  if (deps.selectedTokens) deps.selectedTokens.value = tokenIds.filter(id => deps.tokens.value.some(t => t.id === id));
+
+  // Reset for each selected task; absent terminal status must never inherit success.
+  let commandErrors = {};
+  const send = deps.tokenStore.sendMessageWithPromise.bind(deps.tokenStore);
+  deps.tokenStore.sendMessageWithPromise = async (id, ...args) => {
+    try { return await send(id, ...args); }
+    catch (error) {
+      const failures = commandErrors[id] ||= [];
+      if (failures.length < 30) failures.push({ name: args[0], status: 'error', reason: error.message });
+      throw error;
+    }
+  };
+  const summarizeAccounts = (error) => accountSummary(tokenIds.map(id => {
+    const token = deps.tokens.value.find(t => t.id === id);
+    const state = deps.tokenStatus.value[id];
+    const reported = deps.accountOutcomes?.[id];
+    if (token && reported) return { id, name: token.name, ...reported, ...(error ? { status: reported.status === 'ok' ? 'partial' : reported.status, reason: `${reported.reason || ''}；${error.message}` } : {}) };
+    const failures = commandErrors[id] || [];
+    const status = !token || failures.length || state === 'failed' ? 'error'
+      : state === 'completed' ? 'ok' : error ? 'error' : state === 'skipped' ? 'skip' : 'unverified';
+    return { id, name: token?.name || id, status,
+      reason: status === 'ok' ? undefined : !token ? '账号不存在' : error?.message || failures.map(f => f.reason).join('；') || (status === 'error' ? '任务模块报告失败' : status === 'unverified' ? '未收到本轮明确完成结果' : status === 'skip' ? '任务模块跳过' : undefined),
+      ...(failures.length ? { steps: failures } : {}) };
+  }));
 
   // 按顺序执行用户选择的任务
   for (const taskName of selectedTasks) {
-    if (deps.shouldStop.value) break;
+    deps.tokenStatus.value = {};
+    deps.accountOutcomes = {};
+    commandErrors = {};
+    if (deps.shouldStop.value) { results.push({ task: taskName, status: 'skip', reason: '执行提前停止' }); continue; }
 
     const mapping = TASK_MAP[taskName];
     if (!mapping) {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `未知任务: ${taskName}`, type: 'warning' });
-      results.push({ task: taskName, status: 'skip', reason: 'unknown task' });
+      results.push({ task: taskName, status: 'skip', reason: '未知任务，未执行', accounts: accountSummary(tokenIds.map(id => ({ id, name: deps.tokens.value.find(t => t.id === id)?.name || id, status: 'skip', reason: '未知任务，未执行' }))) });
       continue;
     }
 
@@ -209,9 +300,10 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `=== 开始执行日常任务 ===`, type: 'info' });
       try {
         const accounts = await executeStartBatch(deps, modules);
-        results.push({ task: taskName, status: accounts ? accounts.status : 'ok', accounts: accounts || undefined });
+        results.push({ task: taskName, status: accounts.status, accounts });
       } catch (e) {
-        results.push({ task: taskName, status: 'error', error: e.message });
+        const accounts = summarizeAccounts(e);
+        results.push({ task: taskName, status: accounts.status === 'ok' ? 'partial' : accounts.status, error: e.message, accounts });
       }
       continue;
     }
@@ -221,7 +313,7 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
 
     if (typeof fn !== 'function') {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `任务函数不存在: ${taskName}`, type: 'error' });
-      results.push({ task: taskName, status: 'error', reason: 'function not found' });
+      results.push({ task: taskName, status: 'error', reason: '任务函数不存在', accounts: summarizeAccounts(new Error('任务函数不存在')) });
       continue;
     }
 
@@ -240,15 +332,16 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
       } else {
         await fn();
       }
-      const accounts = summarizeAccounts(tokenIds);
+      const accounts = summarizeAccounts();
       results.push({
         task: taskName,
-        status: accounts ? accounts.status : 'ok',
+        status: accounts.status,
         ...(accounts ? { accounts } : {}),
       });
     } catch (e) {
       deps.addLog({ time: new Date().toLocaleTimeString(), message: `任务失败: ${taskName} - ${e.message}`, type: 'error' });
-      results.push({ task: taskName, status: 'error', error: e.message });
+      const accounts = summarizeAccounts(e);
+        results.push({ task: taskName, status: accounts.status === 'ok' ? 'partial' : accounts.status, error: e.message, accounts });
     }
 
     // 任务间延迟
@@ -263,7 +356,7 @@ export async function executeScheduledTask(task, userId, db, gameManager) {
   const MAX_LOGS = 300;
   const allLogs = deps.logs || [];
   const logs = allLogs.length > MAX_LOGS ? allLogs.slice(-MAX_LOGS) : allLogs;
-  return { results, logs, totalLogs: allLogs.length, logsTruncated: allLogs.length > MAX_LOGS };
+  return { status: aggregateStatus(results), results, logs, totalLogs: allLogs.length, logsTruncated: allLogs.length > MAX_LOGS };
 }
 
 import { DailyTaskRunner } from './dailyTaskRunner.js';
@@ -274,15 +367,13 @@ import { DailyTaskRunner } from './dailyTaskRunner.js';
 async function executeStartBatch(deps, modules) {
   const { selectedTokens, tokens, tokenStore, addLog, ensureConnection, releaseConnectionSlot, shouldStop, loadSettings } = deps;
 
-  let completed = 0;
-  let failed = 0;
-  const total = selectedTokens.value.length;
+  const details = [];
 
   for (const tokenId of selectedTokens.value) {
-    if (shouldStop.value) break;
+    if (shouldStop.value) { details.push({ id: tokenId, name: tokenId, status: 'skip', reason: '执行提前停止' }); continue; }
 
     const token = tokens.value.find(t => t.id === tokenId);
-    if (!token) continue;
+    if (!token) { details.push({ id: tokenId, name: tokenId, status: 'error', reason: '账号不存在' }); continue; }
 
     try {
       await ensureConnection(tokenId);
@@ -295,28 +386,21 @@ async function executeStartBatch(deps, modules) {
         taskDelay: settings?.taskDelay || 500,
       });
 
-      await runner.run(tokenId, {
+      const outcome = await runner.run(tokenId, {
         onLog: (entry) => addLog({ time: entry.time, message: `[${token.name}] ${entry.message}`, type: entry.type }),
         onProgress: () => {},
-      }, settings);
+      }, deps.dailyRetrySteps ? { ...settings, retryStepNames: deps.dailyRetrySteps } : settings);
 
-      addLog({ time: new Date().toLocaleTimeString(), message: `[${token.name}] 日常任务完成`, type: 'success' });
-      completed++;
+      details.push({ id: tokenId, name: token.name, ...outcome });
+      addLog({ time: new Date().toLocaleTimeString(), message: `[${token.name}] 日常任务结束：${outcome.status}`, type: outcome.status === 'ok' ? 'success' : 'warning' });
     } catch (e) {
       addLog({ time: new Date().toLocaleTimeString(), message: `[${token.name}] 日常任务失败: ${e.message}`, type: 'error' });
-      failed++;
+      details.push({ id: tokenId, name: token.name, status: 'error', reason: e.message });
     } finally {
       tokenStore.closeWebSocketConnection(tokenId);
       releaseConnectionSlot();
     }
   }
 
-  // 与普通任务保持同一口径：按账号真实成败给出状态（无账号则沿用旧 ok 行为）
-  if (completed + failed === 0) return null;
-  return {
-    total,
-    completed,
-    failed,
-    status: failed === 0 ? 'ok' : completed > 0 ? 'partial' : 'error',
-  };
+  return accountSummary(details);
 }

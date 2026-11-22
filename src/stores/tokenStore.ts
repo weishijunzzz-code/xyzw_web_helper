@@ -14,6 +14,7 @@ import {
   setAuthUserRateLimiterCallback,
   transformToken,
 } from "@/utils/token";
+import { getTokenErrorMessage } from "@/utils/tokenLogin.js";
 import {
   refreshTokenFromCombUser,
   roleIndexFromServerId,
@@ -48,7 +49,9 @@ declare interface WebSocketConnection {
   status:
     "connecting" | "connected" | "disconnecting" | "disconnected" | "error";
   client: XyzwWebSocketClient | null;
+  actualToken?: string;
   lastError: { timestamp: string; error: string } | null;
+  loginTimer?: ReturnType<typeof setTimeout>;
   tokenId: string;
   sessionId: string;
   createdAt: string;
@@ -100,12 +103,27 @@ export const useTokenStore = defineStore("tokens", () => {
   const wsConnections = ref<WebCtx>({}); // WebSocket连接状态
   const connectionLocks = ref<LockCtx>({}); // 连接操作锁，防止竞态条件
 
+  const clearLoginTimer = (connection?: Partial<WebSocketConnection>) => {
+    if (!connection) return;
+    clearTimeout(connection.loginTimer);
+    connection.loginTimer = undefined;
+  };
+
+  const setLoginError = (tokenId: string, error: unknown, code = 0) => {
+    const connection = (wsConnections.value[tokenId] ??= { tokenId });
+    clearLoginTimer(connection);
+    connection.status = "error";
+    connection.lastError = {
+      timestamp: new Date().toISOString(),
+      error: getTokenErrorMessage(error, code),
+    };
+  };
+
   // 游戏数据存储
   const gameData = ref({
     roleInfo: null,
     legionInfo: null,
     commonActivityInfo: null, // 消耗活动进度
-    bossTowerInfo: null, //宝库
     evoTowerInfo: null, //怪异塔
     presetTeam: null,
     battleVersion: null as number | null, // 战斗版本号
@@ -316,7 +334,7 @@ export const useTokenStore = defineStore("tokens", () => {
     // 更新最后使用时间
     updateToken(tokenId, { lastUsed: new Date().toISOString() });
     //避免点击断开链接
-    if (isConnected) {
+    if (isConnected && !forceReconnect) {
       return token;
     }
     // 智能连接判断
@@ -518,19 +536,14 @@ export const useTokenStore = defineStore("tokens", () => {
         gameLogger.warn(`消息处理跳过 [${tokenId}]: 无效消息`);
         return;
       }
-      if (message.error) {
-        const errText = String(message.error).toLowerCase();
+      if (message.error || Number(message.code)) {
+        const errText = String(message.error || message.hint || "").toLowerCase();
         gameLogger.warn(`消息处理跳过 [${tokenId}]:`, message.error);
-        if (errText.includes("token") && errText.includes("expired")) {
-          const conn = wsConnections.value[tokenId];
-          if (conn) {
-            conn.status = "error";
-            conn.lastError = {
-              timestamp: new Date().toISOString(),
-              error: "token expired",
-            };
-          }
-
+        if (/token.*expir|token.*过期|check\s+token\s+error/i.test(errText)) {
+          setLoginError(tokenId, errText, Number(message.code));
+          client.disconnect();
+          updateCrossTabConnectionState(tokenId, "disconnected");
+          releaseConnectionLock(tokenId, "connect");
           const gameToken = gameTokens.value.find((t) => t.id === tokenId);
           if (gameToken) {
             // 调用统一的Token刷新逻辑
@@ -629,7 +642,7 @@ export const useTokenStore = defineStore("tokens", () => {
 
       // 验证token有效性
       if (!validateToken(actualToken)) {
-        throw new Error(`提取的token无效: "${actualToken}"`);
+        throw new Error("提取的 Token 无效");
       }
 
       return {
@@ -846,6 +859,7 @@ export const useTokenStore = defineStore("tokens", () => {
       const crossTabState = checkCrossTabConnection(tokenId);
       if (crossTabState) {
         wsLogger.debug(`跳过创建，其他标签页已有连接: ${tokenId}`);
+        setLoginError(tokenId, "此账号正在其他标签页连接，请先断开后再登录");
         releaseConnectionLock(tokenId, "connect");
         return null;
       }
@@ -856,7 +870,7 @@ export const useTokenStore = defineStore("tokens", () => {
       // 4. 如果存在现有连接，先优雅关闭
       if (wsConnections.value[tokenId]) {
         wsLogger.debug(`优雅关闭现有连接: ${tokenId}`);
-        await closeWebSocketConnectionAsync(tokenId);
+        await closeWebSocketConnectionAsync(tokenId, true);
       }
 
       // 5. 解析token
@@ -875,10 +889,6 @@ export const useTokenStore = defineStore("tokens", () => {
       const baseWsUrl = `wss://xxz-xyzw.hortorgames.com/agent?p=${encodeURIComponent(actualToken)}&e=x&lang=chinese`;
 
       const wsUrl = customWsUrl || baseWsUrl;
-
-      wsLogger.debug(
-        `Token: ${actualToken.substring(0, 10)}...${actualToken.slice(-4)}`,
-      );
 
       // 7. 创建新的WebSocket客户端（增强版）
       const wsClient = new XyzwWebSocketClient({
@@ -908,37 +918,58 @@ export const useTokenStore = defineStore("tokens", () => {
       const connection = wsConnections.value[tokenId];
       const isCurrentConnection = () =>
         wsConnections.value[tokenId] === connection;
+      const failLogin = (error: unknown) => {
+        if (!isCurrentConnection() || connection.status !== "connecting") return;
+        setLoginError(tokenId, error);
+        wsClient.disconnect();
+        updateCrossTabConnectionState(tokenId, "disconnected");
+        releaseConnectionLock(tokenId, "connect");
+      };
+      connection.loginTimer = setTimeout(
+        () => failLogin(new Error("登录超时")),
+        20000,
+      );
 
       // 9. 设置事件监听（增强版）
-      wsClient.onConnect = () => {
+      wsClient.onConnect = async () => {
         if (!isCurrentConnection()) return;
-        wsLogger.wsConnect(tokenId);
-        if (wsConnections.value[tokenId]) {
-          wsConnections.value[tokenId].status = "connected";
-          wsConnections.value[tokenId].connectedAt = new Date().toISOString();
-          wsConnections.value[tokenId].reconnectAttempts = 0;
-          wsConnections.value[tokenId].randomSeedSynced = false;
-          wsConnections.value[tokenId].lastRandomSeedSource = null;
-          wsConnections.value[tokenId].lastRandomSeed = null;
-        }
-        updateCrossTabConnectionState(tokenId, "connected");
-        releaseConnectionLock(tokenId, "connect");
-        localStorage.removeItem("xyzw_chat_msg_list");
+        connection.status = "connecting";
+        connection.connectedAt = new Date().toISOString();
+        connection.randomSeedSynced = false;
+        connection.lastRandomSeedSource = null;
+        connection.lastRandomSeed = null;
         try {
-          wsClient.send("role_getroleinfo");
+          const response = await wsClient.sendWithPromise("role_getroleinfo", {}, 12000);
+          if (!isCurrentConnection() || connection.status !== "connecting") return;
+          if (!response?.role || typeof response.role !== "object" ||
+            Array.isArray(response.role) || !Object.keys(response.role).length) {
+            throw new Error("登录响应中没有有效角色信息");
+          }
+          clearLoginTimer(connection);
+          connection.status = "connected";
+          connection.lastError = null;
+          connection.reconnectAttempts = 0;
+          syncRandomSeedFromStatistics(tokenId, response, wsClient);
+          updateCrossTabConnectionState(tokenId, "connected");
+          releaseConnectionLock(tokenId, "connect");
+          localStorage.removeItem("xyzw_chat_msg_list");
+          wsLogger.wsConnect(tokenId);
         } catch (error) {
-          wsLogger.warn(`初始化角色信息请求失败 [${tokenId}]`, error);
+          failLogin(error);
         }
       };
 
       wsClient.onDisconnect = async (event) => {
         if (!isCurrentConnection()) return;
+        clearLoginTimer(connection);
+        releaseConnectionLock(tokenId, "connect");
         const reason = event.code === 1006 ? "异常断开" : event.reason || "";
         wsLogger.wsDisconnect(tokenId, reason);
         if (wsConnections.value[tokenId]) {
           const conn = wsConnections.value[tokenId];
           const wasDisconnecting = conn.status === "disconnecting";
-          conn.status = "disconnected";
+          if (wasDisconnecting) conn.status = "disconnected";
+          else if (!conn.lastError) setLoginError(tokenId, event.reason || "连接已断开，请检查网络后重试");
           conn.randomSeedSynced = false;
           updateCrossTabConnectionState(tokenId, "disconnected");
 
@@ -955,14 +986,8 @@ export const useTokenStore = defineStore("tokens", () => {
       wsClient.onError = (error) => {
         if (!isCurrentConnection()) return;
         wsLogger.wsError(tokenId, error);
-        if (wsConnections.value[tokenId]) {
-          wsConnections.value[tokenId].status = "error";
-          wsConnections.value[tokenId].lastError = {
-            timestamp: new Date().toISOString(),
-            error: error.toString(),
-            url: wsUrl,
-          };
-        }
+        setLoginError(tokenId, error);
+        updateCrossTabConnectionState(tokenId, "disconnected");
         releaseConnectionLock(tokenId, "connect");
       };
 
@@ -989,6 +1014,7 @@ export const useTokenStore = defineStore("tokens", () => {
       return wsClient;
     } catch (error) {
       wsLogger.error(`创建连接失败 [${tokenId}]:`, error);
+      setLoginError(tokenId, error);
       updateCrossTabConnectionState(tokenId, "disconnected");
       releaseConnectionLock(tokenId, "connect");
       return null;
@@ -1000,7 +1026,10 @@ export const useTokenStore = defineStore("tokens", () => {
    * @param {string} tokenId Account connection to close.
    * @returns {Promise<void>} Resolves after transport closure or the five-second limit.
    */
-  const closeWebSocketConnectionAsync = async (tokenId: string) => {
+  const closeWebSocketConnectionAsync = async (
+    tokenId: string,
+    preserveConnectLock = false,
+  ) => {
     const lockAcquired = await acquireConnectionLock(tokenId, "disconnect");
     if (!lockAcquired) {
       wsLogger.warn(`无法获取断开连接锁: ${tokenId}`);
@@ -1009,11 +1038,16 @@ export const useTokenStore = defineStore("tokens", () => {
 
     try {
       const connection = wsConnections.value[tokenId];
+      clearLoginTimer(connection);
       if (connection && connection.client) {
         wsLogger.debug(`开始优雅关闭连接: ${tokenId}`);
 
+        const cancelingLogin = connection.status === "connecting";
         connection.status = "disconnecting";
         updateCrossTabConnectionState(tokenId, "disconnecting");
+        if (cancelingLogin && !preserveConnectLock) {
+          releaseConnectionLock(tokenId, "connect");
+        }
 
         // disconnect() clears client.socket immediately, before the native close event.
         const socket = connection.client.socket;
@@ -1756,6 +1790,8 @@ export const useTokenStore = defineStore("tokens", () => {
     createWebSocketConnection,
     closeWebSocketConnection,
     getWebSocketStatus,
+    getWebSocketError: (tokenId: string) => wsConnections.value[tokenId]?.lastError?.error,
+    getBattlefieldCredential: (tokenId: string) => wsConnections.value[tokenId]?.actualToken,
     getWebSocketClient,
     sendMessage,
     sendMessageWithPromise,

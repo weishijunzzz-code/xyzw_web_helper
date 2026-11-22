@@ -14,7 +14,8 @@ function sign(payload) {
   return header + '.' + body + '.' + sig;
 }
 
-function verify(token) {
+export function verifyToken(token) {
+  if (typeof token !== "string") return null;
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const sig = crypto.createHmac('sha256', JWT_SECRET).update(parts[0] + '.' + parts[1]).digest('base64url');
@@ -33,7 +34,7 @@ export function authMiddleware(req, res, next) {
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: '未登录' });
   }
-  const payload = verify(authHeader.slice(7));
+  const payload = verifyToken(authHeader.slice(7));
   if (!payload) {
     return res.status(401).json({ error: '登录已过期' });
   }

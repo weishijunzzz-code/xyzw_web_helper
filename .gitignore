@@ -148,3 +148,10 @@ server/config.json
 # 后端服务数据与日志（SQLite 用户数据、运行日志）
 server/data/
 server/logs/
+.env.docker
+/desktop/.work/
+/desktop/.build.lock
+/desktop/proxies.cjs
+/desktop/release/
+/desktop/web/
+!/desktop/README.md

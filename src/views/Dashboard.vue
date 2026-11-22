@@ -119,7 +119,7 @@ import {
   PersonCircle,
   Time,
 } from "@vicons/ionicons5";
-import lz4 from "lz4js";
+import { prepareSingleGameLaunch } from "@/utils/gameLauncher.js";
 import { useMessage } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -133,96 +133,13 @@ const { getArrayBuffer } = useIndexedDB();
 
 // ============ BIN 格式转换 ============
 
-function extractKey(bytes) {
-  return (
-    (((bytes[2] >> 6) & 1) << 7) |
-    (((bytes[2] >> 4) & 1) << 6) |
-    (((bytes[2] >> 2) & 1) << 5) |
-    ((bytes[2] & 1) << 4) |
-    (((bytes[3] >> 6) & 1) << 3) |
-    (((bytes[3] >> 4) & 1) << 2) |
-    (((bytes[3] >> 2) & 1) << 1) |
-    (bytes[3] & 1)
-  );
-}
-
-function encodeKey(bytes, r) {
-  bytes[2] =
-    (bytes[2] & 0b10101010) |
-    (((r >> 7) & 1) << 6) |
-    (((r >> 6) & 1) << 4) |
-    (((r >> 5) & 1) << 2) |
-    ((r >> 4) & 1);
-  bytes[3] =
-    (bytes[3] & 0b10101010) |
-    (((r >> 3) & 1) << 6) |
-    (((r >> 2) & 1) << 4) |
-    (((r >> 1) & 1) << 2) |
-    (r & 1);
-}
-
-function xDecrypt(buf) {
-  const e = new Uint8Array(buf);
-  const t = extractKey(e);
-  const out = new Uint8Array(e);
-  for (let n = out.length; --n >= 4;) out[n] ^= t;
-  return out.subarray(4);
-}
-
-function lxEncrypt(plain) {
-  const compressed = lz4.compress(plain);
-  const out = new Uint8Array(compressed.length);
-  out.set(compressed);
-  const r = 2 + ~~(Math.random() * 248);
-  for (let n = Math.min(out.length, 100); --n >= 0;) out[n] ^= r;
-  out[0] = 112;
-  out[1] = 108;
-  encodeKey(out, r);
-  return out;
-}
-
-function convertBinToLx(buf) {
-  const e = new Uint8Array(buf);
-  if (e.length > 4 && e[0] === 112 && e[1] === 108) return e;
-  if (e.length > 4 && e[0] === 112 && e[1] === 120) {
-    const plain = xDecrypt(e);
-    return lxEncrypt(plain);
-  }
-  return e;
-}
-
 const openGame = async () => {
-  const token = tokenStore.selectedToken;
-  if (!token) {
-    message.warning("请先选择一个Token");
-    return;
-  }
-  const binData = await getArrayBuffer(token.id);
-  if (!binData) {
-    message.error("未找到该Token的BIN数据");
-    return;
-  }
-  const converted = convertBinToLx(binData);
-  const hex = Array.from(converted)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  localStorage.setItem(`bin_data_${token.id}`, hex);
-  localStorage.setItem("current_bin_id", token.id);
-  let binList = [];
   try {
-    binList = JSON.parse(localStorage.getItem("bin_file_list") || "[]");
-  } catch (e) {}
-  if (!binList.find((i) => i.id === token.id)) {
-    binList.push({
-      id: token.id,
-      name: token.name || "Token",
-      byteLength: binData.byteLength,
-      size: `${(binData.byteLength / 1024).toFixed(1)} KB`,
-      order: binList.length,
-    });
-    localStorage.setItem("bin_file_list", JSON.stringify(binList));
+    await prepareSingleGameLaunch({ token: tokenStore.selectedToken, getArrayBuffer, localStorage });
+    await router.push("/game");
+  } catch (error) {
+    message.error(error.message || "打开游戏失败");
   }
-  router.push("/game");
 };
 
 // 响应式数据

@@ -55,6 +55,7 @@
 
     <!-- 每日任务状态（仅日常） -->
     <DailyTaskStatus v-show="activeSection === 'daily'" />
+    <ShopGoodsCard v-if="activeSection === 'daily'" :key="tokenStore.selectedToken?.id" class="shop-goods-card" />
 
     <!-- 咸将塔状态 -->
     <TowerStatus v-show="activeSection === 'daily' && isShowTowerStatus" />
@@ -98,7 +99,6 @@
     <!-- 消耗活动进度（提取组件） -->
     <ConsumptionProgressCard v-if="activeSection === 'tools'" />
     <!-- 咸王宝库（提取组件） -->
-    <BossTower v-if="activeSection === 'tools'" />
     <!-- 俱乐部排位（暂时隐藏） -->
     <div
       class="status-card legion-match"
@@ -381,6 +381,7 @@
 </template>
 
 <script setup>
+import ShopGoodsCard from "./cards/ShopGoodsCard.vue";
 import { useMessage } from "naive-ui";
 import IdentityCard from "./Common/IdentityCard.vue";
 import DailyTaskStatus from "./Daily/DailyTaskStatus.vue";
@@ -419,7 +420,6 @@ import LegionWarStatistics from "./Club/LegionWarStatistics.vue";
 import PeachBattleRecords from "./Club/PeachBattleRecords.vue";
 import PeachInfo from "./Club/PeachInfo.vue";
 import PeachInfoV2 from "./Club/PeachInfoV2.vue";
-import BossTower from "./Tower/BossTower.vue";
 import TowerStatus from "./Tower/TowerStatus.vue";
 import WeirdTowerStatus from "./Tower/WeirdTowerStatus.vue";
 
@@ -715,6 +715,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.shop-goods-card { grid-column: 1 / -1; min-width: 0; }
 .game-status-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

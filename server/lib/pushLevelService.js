@@ -46,19 +46,25 @@ export class PushLevelService {
     if (!r) return { running: false };
     return {
       running: r.running,
+      phase: r.phase,
       currLevel: r.currLevel,
       passed: r.passed,
+      failed: r.failed,
       failStreak: r.failStreak,
       maxFail: r.maxFail,
       startedAt: r.startedAt,
       lastMsg: r.lastMsg,
+      lastBattle: r.lastBattle,
+      lastError: r.lastError,
       stopReason: r.stopReason || null,
     };
   }
 
-  getAllStatus() {
+  getAllStatus(userId) {
     const out = {};
-    for (const [tokenId] of this.runners) out[tokenId] = this.getStatus(tokenId);
+    for (const [tokenId, runner] of this.runners) {
+      if (runner.userId === userId) out[tokenId] = this.getStatus(tokenId);
+    }
     return out;
   }
 
@@ -86,16 +92,21 @@ export class PushLevelService {
       }
     }
 
+    if (this.isRunning(tokenId)) return { ok: false, msg: "该账号已在推关中" };
     const runner = {
       running: true,
+      phase: 'preparing',
       tokenId,
       userId: userId || '',
       maxFail,
       failStreak: 0,
       passed: 0,
+      failed: 0,
       currLevel: null,
       startedAt: new Date().toISOString(),
       lastMsg: '已启动',
+      lastBattle: null,
+      lastError: null,
       stopReason: null,
     };
     this.runners.set(tokenId, runner);
@@ -104,9 +115,8 @@ export class PushLevelService {
     this._broadcast(tokenId);
 
     // 异步跑循环，不阻塞接口返回
-    this._loop(tokenId).catch(e => {
-      gameLogger.error(`推关循环异常 [${tokenId}]: ${e.message}`);
-      this._stopInternal(tokenId, '循环异常: ' + e.message);
+    this._loop(runner).catch(() => {
+      if (runner.running) this._stopInternal(tokenId, '推关循环异常');
     });
 
     return { ok: true, msg: '已开始推关' };
@@ -130,6 +140,7 @@ export class PushLevelService {
     const r = this.runners.get(tokenId);
     if (!r) return;
     r.running = false;
+    r.phase = 'stopped';
     r.stopReason = reason;
     r.lastMsg = '已停止: ' + reason;
     this._log(tokenId, 'info', '推关停止: ' + reason);
@@ -137,63 +148,75 @@ export class PushLevelService {
   }
 
   // 核心循环（优化版：开头calc一次定时间，之后只发level + 用nextTime等待）
-  async _loop(tokenId) {
-    const r = this.runners.get(tokenId);
-    if (!r) return;
-
-    // 开头：算第一关要等多久
-    let waitSec = 2;
-    try {
-      const calcResp = await this.gm.sendMessageWithPromise(tokenId, 'fight_calcleveltime', {}, 8000);
-      const bt = pick(calcResp, 'battleTime');
-      const cl = pick(calcResp, 'currLevel');
-      if (cl != null) r.currLevel = cl;
-      if (bt != null) waitSec = bt < 0 ? 30 : bt;
-    } catch (e) {
-      this._log(tokenId, 'warn', '首次calcleveltime失败: ' + e.message);
-      if (!await this._ensureConnected(tokenId)) {
-        this._stopInternal(tokenId, r._kicked ? '账号被顶号，已停止（未抢号）' : '掉线且重连失败');
-        return;
-      }
-      // 重连成功，重新进循环
-      return this._loop(tokenId);
-    }
-
+  async _loop(r) {
+    const { tokenId } = r;
+    let waitSec = null;
     while (r.running) {
+      if (waitSec === null) {
+        r.phase = 'preparing';
+        r.lastMsg = '计算战斗时间';
+        this._broadcast(tokenId);
+        try {
+          const calcResp = await this.gm.sendMessageWithPromise(tokenId, 'fight_calcleveltime', {}, 8000);
+          if (!r.running) return;
+          const bt = pick(calcResp, 'battleTime');
+          const cl = pick(calcResp, 'currLevel');
+          if (cl != null) r.currLevel = cl;
+          waitSec = bt == null ? 2 : bt < 0 ? 30 : bt;
+        } catch {
+          if (!await this._recover(r, '计算战斗时间失败')) return;
+          continue;
+        }
+      }
       if (waitSec > 300) waitSec = 300; // 安全上限
 
-      r.lastMsg = `第${r.currLevel || '?'}关 战斗中(${waitSec}s)`;
+      r.phase = 'waiting';
+      r.lastMsg = `第${r.currLevel || '?'}关 等待结算(${waitSec}s)`;
       this._broadcast(tokenId);
 
       // 等待（可中断）
-      const ok = await this._interruptibleWait(tokenId, waitSec * 1000);
+      const ok = await this._interruptibleWait(r, waitSec * 1000);
       if (!ok || !r.running) return;
 
       // 提交过关
+      r.phase = 'settling';
+      r.lastMsg = '正在获取战斗结果';
+      this._broadcast(tokenId);
+      const battleLevel = r.currLevel;
       let success, nextTime, currLevel;
       try {
         const levelResp = await this.gm.sendMessageWithPromise(tokenId, 'fight_level', {}, 8000);
-        success = pick(levelResp, 'success');
+        if (!r.running) return;
+        success = pick(levelResp, 'success') ?? pick(levelResp, 'isWin');
         nextTime = pick(levelResp, 'nextTime');
         currLevel = pick(levelResp, 'currLevel');
-      } catch (e) {
-        this._log(tokenId, 'warn', 'level失败: ' + e.message);
-        if (!await this._ensureConnected(tokenId)) {
-          this._stopInternal(tokenId, r._kicked ? '账号被顶号，已停止（未抢号）' : '掉线且重连失败');
-          return;
-        }
-        // 重连成功，重新calc一次再继续
-        return this._loop(tokenId);
+      } catch {
+        if (!await this._recover(r, '获取战斗结果失败')) return;
+        waitSec = null;
+        continue;
+      }
+
+      // 旧响应可能省略默认的 false，此时用同一关卡的服务端回执确认。
+      if (success == null && Number(battleLevel) > 0 && Number(currLevel) >= Number(battleLevel)) {
+        success = Number(currLevel) > Number(battleLevel);
+      }
+      if (![true, false, 0, 1].includes(success)) {
+        if (!await this._recover(r, '服务端未返回可确认的战斗结果')) return;
+        waitSec = null;
+        continue;
       }
 
       if (currLevel != null) r.currLevel = currLevel;
-
-      if (success === true || success === 1) {
+      const won = success === true || success === 1;
+      r.lastError = null;
+      r.lastBattle = { won, level: battleLevel, completedAt: new Date().toISOString() };
+      if (won) {
         r.passed++;
         r.failStreak = 0;
         r.lastMsg = `✅ 过关 -> 第${currLevel}关 (累计${r.passed})`;
         this._log(tokenId, 'info', r.lastMsg);
       } else {
+        r.failed++;
         r.failStreak++;
         r.lastMsg = `❌ 失败 第${r.currLevel}关 (连续${r.failStreak}/${r.maxFail})`;
         this._log(tokenId, 'info', r.lastMsg);
@@ -209,12 +232,34 @@ export class PushLevelService {
     }
   }
 
+  async _recover(runner, message) {
+    if (!runner.running) return false;
+    const { tokenId } = runner;
+    runner.lastError = message;
+    runner.phase = this.gm.getConnectionStatus(tokenId) === 'connected' ? 'retrying' : 'reconnecting';
+    runner.lastMsg = message;
+    this._log(tokenId, 'warn', message);
+    this._broadcast(tokenId);
+    if (!await this._ensureConnected(runner)) {
+      if (runner.running) {
+        this._stopInternal(tokenId, runner._kicked ? '账号被顶号，已停止（未抢号）' : '掉线且重连失败');
+      }
+      return false;
+    }
+    // 连接正常但命令失败时稍后重试，避免紧密循环。
+    if (!runner.running) return false;
+    if (runner.phase !== 'retrying') {
+      runner.phase = 'retrying';
+      this._broadcast(tokenId);
+    }
+    return (await this._interruptibleWait(runner, 2000)) && runner.running;
+  }
+
   // 可中断的等待（每500ms检查是否被停止）
-  async _interruptibleWait(tokenId, ms) {
-    const r = this.runners.get(tokenId);
+  async _interruptibleWait(r, ms) {
     let waited = 0;
     while (waited < ms) {
-      if (!r || !r.running) return false;
+      if (!r.running) return false;
       const step = Math.min(500, ms - waited);
       await sleep(step);
       waited += step;
@@ -224,10 +269,10 @@ export class PushLevelService {
 
   // 确保连接。掉线处理策略：让（不抢号）
   // 网络抖动 -> 重连1次继续；疑似被顶号（重连后又立刻断 / 短时间内反复掉线）-> 停止不抢
-  async _ensureConnected(tokenId) {
+  async _ensureConnected(r) {
+    const { tokenId } = r;
+    if (!r.running) return false;
     if (this.gm.getConnectionStatus(tokenId) === 'connected') return true;
-    const r = this.runners.get(tokenId);
-    if (!r) return false;
 
     const now = Date.now();
     // 记录掉线时间点

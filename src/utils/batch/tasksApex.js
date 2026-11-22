@@ -22,6 +22,8 @@ import {
   getCurrentSeason,
   getGuessTabs,
 } from "@/utils/apexRules";
+import { claimApexEventTasks, voteInApexEvent } from "./apexEventTasks.js";
+import { runAccountBatch } from "./runAccountBatch.js";
 
 /** 单次请求超时（ms） */
 const TIMEOUT_MS = 8000;
@@ -340,5 +342,7 @@ export function createTasksApex(deps) {
 
   return {
     batchApexGuess,
+    batchApexClaimTasks: () => runAccountBatch(deps, "赛事每日领奖", claimApexEventTasks),
+    batchApexVote: (rank = 1) => runAccountBatch(deps, "赛事批量助威", (context) => voteInApexEvent({ ...context, rank })),
   };
 }

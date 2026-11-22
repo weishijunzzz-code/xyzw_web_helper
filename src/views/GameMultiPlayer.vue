@@ -6,6 +6,9 @@
       </button>
       <strong class="toolbar-title">批量游戏</strong>
       <span class="toolbar-count">{{ frames.length }} 个窗口</span>
+      <button class="toolbar-button" type="button" :aria-pressed="muted" @click="toggleMute">{{ muted ? "恢复声音" : "静音" }}</button>
+      <button class="toolbar-button" type="button" :aria-pressed="lowFrameRate" @click="toggleFrameRate">{{ lowFrameRate ? "恢复帧率" : "低帧率" }}</button>
+      <button v-if="!isMobile" class="toolbar-button" type="button" :aria-pressed="compactFrames" @click="compactFrames = !compactFrames">{{ compactFrames ? "标准窗口" : "缩小窗口" }}</button>
       <span
         v-if="skippedSummary"
         class="toolbar-skipped"
@@ -54,6 +57,7 @@
       v-if="frames.length"
       ref="gameStrip"
       class="game-strip"
+      :class="{ 'compact-frames': compactFrames }"
       @wheel="handleStripWheel"
     >
       <article
@@ -128,6 +132,7 @@
 
         <div class="game-frame-shell">
           <iframe
+            v-if="frameStates[frame.scopeId]?.owned"
             :key="`${frame.scopeId}:${frameStates[frame.scopeId].revision}`"
             :ref="(element) => setFrameElement(frame.scopeId, element)"
             :src="frame.src"
@@ -137,11 +142,10 @@
             @error="markFrameFatal(frame.scopeId)"
           />
           <div
-            v-if="frameStates[frame.scopeId]?.status === 'fatal'"
+            v-if="['fatal', 'occupied'].includes(frameStates[frame.scopeId]?.status)"
             class="frame-error"
           >
-            <strong>该账号加载失败</strong>
-            <span>其他游戏窗口不受影响</span>
+            <strong>{{ frameStates[frame.scopeId]?.status === "occupied" ? "账号已在其他工作区打开" : "该账号加载失败" }}</strong>
             <button type="button" @click="reloadFrame(frame.scopeId)">
               重试
             </button>
@@ -170,6 +174,7 @@ import {
   onUnmounted,
   reactive,
   ref,
+  watch,
 } from "vue";
 import { useRouter } from "vue-router";
 import { useMobile } from "@/composables/useMobile";
@@ -181,7 +186,11 @@ import {
   resolveMultiGameFrameMessage,
 } from "@/utils/gameLauncher";
 
+const props = defineProps({ workspaceActive: { type: Boolean, default: true } });
 const router = useRouter();
+const muted = ref(false);
+const compactFrames = ref(false);
+const lowFrameRate = ref(false);
 const { isMobile } = useMobile();
 const FRAME_LOAD_TIMEOUT_MS = 45_000;
 const launch = ref(readLaunchSafely());
@@ -189,14 +198,14 @@ const gameStrip = ref(null);
 const movingFrame = ref(false);
 let stripScrollTarget = 0;
 let stripScrollAnimationId = 0;
-const frameDomOrder = (launch.value?.sessions || []).map(
+const frameDomOrder = ref((launch.value?.sessions || []).map(
   (session) => session.scopeId,
-);
+));
 const frames = computed(() => {
   const sessionsByScope = new Map(
     (launch.value?.sessions || []).map((session) => [session.scopeId, session]),
   );
-  return frameDomOrder
+  return frameDomOrder.value
     .map((scopeId) => sessionsByScope.get(scopeId))
     .filter(Boolean)
     .map((session) => ({
@@ -206,6 +215,7 @@ const frames = computed(() => {
 });
 const frameElements = new Map();
 const frameTimeouts = new Map();
+const frameLeases = new Map();
 const frameStates = reactive(
   Object.fromEntries(
     frames.value.map((frame) => [
@@ -255,6 +265,7 @@ function statusLabel(scopeId) {
     loading: "加载中",
     ready: "已启动",
     fatal: "加载失败",
+    occupied: "账号占用",
   }[frameStates[scopeId]?.status || "loading"];
 }
 
@@ -267,6 +278,41 @@ function clearFrameTimeout(scopeId) {
   const timeoutId = frameTimeouts.get(scopeId);
   if (timeoutId !== undefined) window.clearTimeout(timeoutId);
   frameTimeouts.delete(scopeId);
+}
+
+function releaseFrameLease(scopeId) {
+  frameLeases.get(scopeId)?.release();
+  frameLeases.delete(scopeId);
+}
+
+function openFrame(frame) {
+  const state = frameStates[frame.scopeId];
+  if (!state || frameLeases.has(frame.scopeId)) return;
+  if (!navigator.locks) {
+    state.owned = true;
+    armFrameTimeout(frame.scopeId);
+    return;
+  }
+  let release;
+  const held = new Promise((done) => { release = done; });
+  const lease = { release };
+  frameLeases.set(frame.scopeId, lease);
+  navigator.locks.request("xyzw-game:" + frame.tokenId, { ifAvailable: true }, (lock) => {
+    if (frameLeases.get(frame.scopeId) !== lease) return;
+    if (!lock) {
+      state.status = "occupied";
+      frameLeases.delete(frame.scopeId);
+      return;
+    }
+    state.owned = true;
+    armFrameTimeout(frame.scopeId);
+    return held;
+  }).catch(() => {
+    if (frameLeases.get(frame.scopeId) === lease) {
+      frameLeases.delete(frame.scopeId);
+      markFrameFatal(frame.scopeId);
+    }
+  });
 }
 
 function armFrameTimeout(scopeId) {
@@ -297,7 +343,11 @@ function reloadFrame(scopeId) {
   frameElements.delete(scopeId);
   state.status = "loading";
   state.revision += 1;
-  armFrameTimeout(scopeId);
+  if (state.owned) armFrameTimeout(scopeId);
+  else {
+    const frame = frames.value.find((entry) => entry.scopeId === scopeId);
+    if (frame) openFrame(frame);
+  }
 }
 
 function canMoveFrame(scopeId, direction) {
@@ -412,6 +462,7 @@ function closeFrame(frame) {
       sessionStorage: window.sessionStorage,
     });
     clearFrameTimeout(frame.scopeId);
+    releaseFrameLease(frame.scopeId);
     frameElements.delete(frame.scopeId);
     delete frameStates[frame.scopeId];
     launch.value = updatedLaunch;
@@ -421,6 +472,43 @@ function closeFrame(frame) {
     window.alert("关闭游戏窗口失败，请重试");
   }
 }
+
+function applyFrameSettings(scopeId) {
+  try {
+    const engine = frameElements.get(scopeId)?.contentWindow?.cc;
+    if (!engine) return;
+    engine.audioEngine?.setMusicVolume?.(muted.value ? 0 : 1);
+    engine.audioEngine?.setEffectsVolume?.(muted.value ? 0 : 1);
+    engine.game?.setFrameRate?.(lowFrameRate.value ? 20 : 60);
+  } catch {
+    // A frame can navigate away from the same-origin game page.
+  }
+}
+
+function toggleMute() {
+  muted.value = !muted.value;
+  for (const frame of frames.value) applyFrameSettings(frame.scopeId);
+}
+
+function toggleFrameRate() {
+  lowFrameRate.value = !lowFrameRate.value;
+  for (const frame of frames.value) applyFrameSettings(frame.scopeId);
+}
+
+watch(() => props.workspaceActive, (active) => {
+  if (!active) return;
+  const next = readLaunchSafely();
+  if (next?.id === launch.value?.id) return;
+  for (const scopeId of Object.keys(frameStates)) {
+    clearFrameTimeout(scopeId);
+    releaseFrameLease(scopeId);
+    delete frameStates[scopeId];
+  }
+  frameDomOrder.value = (next?.sessions || []).map((frame) => frame.scopeId);
+  for (const scopeId of frameDomOrder.value) frameStates[scopeId] = { status: "loading", revision: 0 };
+  launch.value = next;
+  for (const frame of frames.value) openFrame(frame);
+});
 
 function handleMessage(event) {
   const result = resolveMultiGameFrameMessage({
@@ -432,6 +520,7 @@ function handleMessage(event) {
   if (result && frameStates[result.scopeId]) {
     clearFrameTimeout(result.scopeId);
     frameStates[result.scopeId].status = result.status;
+    if (result.status === "ready" && (muted.value || lowFrameRate.value)) applyFrameSettings(result.scopeId);
   }
 }
 
@@ -441,12 +530,13 @@ function goToTokens() {
 
 onBeforeMount(() => window.addEventListener("message", handleMessage));
 onMounted(() =>
-  frames.value.forEach((frame) => armFrameTimeout(frame.scopeId)),
+  frames.value.forEach(openFrame),
 );
 onUnmounted(() => {
   window.removeEventListener("message", handleMessage);
   stopStripScrollAnimation();
   for (const scopeId of frameTimeouts.keys()) clearFrameTimeout(scopeId);
+  for (const scopeId of frameLeases.keys()) releaseFrameLease(scopeId);
 });
 </script>
 
@@ -569,6 +659,9 @@ onUnmounted(() => {
   background: #000;
   box-shadow: 0 10px 28px rgb(0 0 0 / 35%);
 }
+
+.compact-frames .game-frame-shell { max-height: 70dvh; }
+.compact-frames .game-panel { flex-basis: min(320px, 41dvh); }
 
 .game-panel-header {
   box-sizing: border-box;
