@@ -150,12 +150,18 @@ const switchStageLabel = computed(() => {
 const knownPhases = {
   bin: '准备账号', iframe: '打开游戏窗口', scripts: '加载本地脚本', version: '查询游戏版本',
   assets: '下载游戏包（累计）', bundles: '下载游戏包', decode: '解码游戏包（累计）', launcher: '启动游戏引擎',
-  switches: '读取游戏开关', login: '登录角色', interactive: '从启动到进入主界面', resume: '恢复游戏',
+  switches: '读取游戏开关', login: '登录角色', 'auth-response': '等待游戏发起角色连接',
+  'game-socket': '连接角色服务器', 'game-socket-open': '等待游戏主界面',
+  interactive: '从启动到进入主界面', resume: '恢复游戏',
 };
 const startupFailures = {
   'unsafe-game-origin': '游戏窗口未通过身份校验，请关闭后重新启动。',
   'game-handshake-timeout': '游戏窗口未完成初始化，请重新加载。',
   'game-window-reclaimed': 'iOS 已回收游戏窗口，请重新加载以恢复游戏。',
+  'game-initialization-failed': '游戏窗口初始化失败，可尝试无脚本重试。',
+  'game-auth-rejected': '游戏登录未返回有效认证响应。',
+  'game-auth-network': '游戏登录请求没有收到响应，请检查网络后重试。',
+  'game-socket-failed': '角色服务器连接未能建立，请重试。',
 };
 const activeSrc = computed(() => props.retained ? singleGameSession.value?.src : gameSrc.value);
 const activeStatus = computed(() => {
@@ -291,7 +297,9 @@ function applyNativeGameStatus(session, data) {
     }
   } else if (data.type === 'failed') {
     const known = Object.prototype.hasOwnProperty.call(startupFailures, data.code);
-    reportFailure(known ? startupFailures[data.code] : '游戏资源加载失败，请检查网络后重试。');
+    const status = Number.isInteger(data.status) && data.status >= 100 && data.status <= 4999
+      ? `（${data.status < 600 ? 'HTTP' : 'WebSocket'} ${data.status}）` : '';
+    reportFailure(known ? `${startupFailures[data.code]}${status}` : '游戏资源加载失败，请检查网络后重试。');
   } else if (data.type === 'script-result' && session.scripts.some(script => script.id === data.id)
     && ['loaded', 'failed', 'unsupported'].includes(data.status)) {
     updateSingleGame(session.id, { scriptResults: { ...session.scriptResults, [data.id]: { status: data.status } } });
@@ -434,7 +442,12 @@ if (props.retained) {
   }, { immediate: true });
   watch(() => singleGameSession.value?.id, id => {
     clearTimeout(loadTimer);
-    if (id) loadTimer = setTimeout(() => reportFailure('游戏加载等待过久，可尝试重新加载。'), 90000);
+    if (id) loadTimer = setTimeout(() => {
+      const session = singleGameSession.value;
+      if (session?.id !== id || session.status !== 'loading') return;
+      const stage = session.nativeIOS ? knownPhases[session.stage] : null;
+      reportFailure(stage ? `「${stage}」超时，可尝试无脚本重试。` : '游戏加载等待过久，可尝试重新加载。');
+    }, 90000);
   }, { immediate: true });
 } else {
   watch(() => props.binId, loadGame, { immediate: true });

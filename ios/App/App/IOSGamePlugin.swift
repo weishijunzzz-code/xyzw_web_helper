@@ -134,6 +134,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
     private var session: String?
     private var staged: [String: Any]?
     private var ready = false
+    private var gameSockets: Set<String> = []
     private var shellAppearance: (opaque: Bool, background: UIColor?, scroll: UIColor?)?
     private lazy var network = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: .main)
     private struct Request {
@@ -145,6 +146,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
     }
     private var requests: [Int: Request] = [:]
     private var host: GameBridgeViewController? { bridge?.viewController as? GameBridgeViewController }
+    private var socketTransport: IOSAccountSocketPlugin? { bridge?.plugin(withName: "IOSAccountSocket") as? IOSAccountSocketPlugin }
     private var available: Bool {
         guard host != nil, let root = IOSGameBundle.root else { return false }
         return FileManager.default.fileExists(atPath: root.appendingPathComponent("android-single.html").path)
@@ -246,6 +248,10 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
 
     private func dispose() {
         setPresentation(visible: false, region: nil)
+        if let session = session {
+            for id in gameSockets { socketTransport?.closeGameSocket("\(session).\(id)", notify: false) }
+        }
+        gameSockets.removeAll()
         game?.stopLoading()
         game?.configuration.userContentController.removeScriptMessageHandler(forName: "gameRuntime")
         game?.navigationDelegate = nil
@@ -282,10 +288,12 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         if webView === game && (error as? URLError)?.code != .cancelled { failWindow("resource-load-failed") }
     }
 
-    private func failWindow(_ code: String) {
+    private func failWindow(_ code: String, status: Int? = nil) {
         guard let id = session else { return }
         dispose()
-        notifyListeners("gameEvent", data: ["session": id, "type": "failed", "code": code])
+        var event: [String: Any] = ["session": id, "type": "failed", "code": code]
+        if let status = status, (100...4999).contains(status) { event["status"] = status }
+        notifyListeners("gameEvent", data: event)
     }
 
     fileprivate func receive(_ message: WKScriptMessage) {
@@ -314,14 +322,48 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
             guard staged == nil, !ready else { return }
             ready = true
         case "failed":
-            failWindow(data["code"] as? String == "game-handshake-timeout" ? "game-handshake-timeout" : "resource-load-failed")
+            let code = data["code"] as? String ?? ""
+            let known = ["game-handshake-timeout", "game-initialization-failed", "game-auth-rejected", "game-auth-network", "game-socket-failed"]
+            failWindow(known.contains(code) ? code : "resource-load-failed", status: data["status"] as? Int)
             return
         case "http-request":
             if staged == nil { request(data, session: session) }
             return
+        case "socket-open", "socket-send", "socket-close":
+            if staged == nil { handleSocket(type, payload: data, session: session) }
+            return
         default: return
         }
         notifyListeners("gameEvent", data: event)
+    }
+
+    private func handleSocket(_ type: String, payload: [String: Any], session: String) {
+        guard let id = payload["socketId"] as? String,
+              id.range(of: "^[1-9][0-9]{0,5}$", options: .regularExpression) != nil else { return }
+        let key = "\(session).\(id)"
+        switch type {
+        case "socket-open":
+            guard !gameSockets.contains(id) else { return }
+            if gameSockets.count < 4, let url = payload["url"] as? String,
+               socketTransport?.openGameSocket(key, address: url, event: { [weak self] event in
+                   guard let self = self, self.session == session else { return }
+                   if event["type"] as? String == "close" { self.gameSockets.remove(id) }
+                   var data = event
+                   data["event"] = data["type"]
+                   data["type"] = "socket-event"
+                   data["socketId"] = id
+                   self.reply(data, session: session)
+               }) == true {
+                gameSockets.insert(id)
+            } else {
+                reply(["type": "socket-event", "event": "close", "socketId": id, "code": 1006], session: session)
+            }
+        case "socket-send":
+            if gameSockets.contains(id) { socketTransport?.sendGameSocket(key, payload: payload) }
+        case "socket-close":
+            if gameSockets.contains(id) { socketTransport?.closeGameSocket(key, notify: true) }
+        default: break
+        }
     }
 
     private func reply(_ data: [String: Any], session id: String) {

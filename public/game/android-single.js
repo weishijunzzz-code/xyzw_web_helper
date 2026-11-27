@@ -15,7 +15,9 @@
   const splash = doc.getElementById('splash');
   const openedAt = performance.now();
   const pending = new Map();
+  const gameSockets = new Map();
   let requestSequence = 0;
+  let socketSequence = 0;
   let initialized = false;
   let settled = false;
   let launchTimer;
@@ -26,14 +28,14 @@
     else root.parent.postMessage(message, appOrigin);
   };
   const progress = (phase, start) => send('progress', { phase, durationMs: Math.round(performance.now() - start) });
-  function fail(code) {
+  function fail(code, status) {
     if (settled) return;
     settled = true;
     clearTimeout(launchTimer);
     splash.style.display = 'block';
     splash.style.backgroundImage = 'none';
     splash.textContent = '游戏启动失败';
-    send('failed', { code });
+    send('failed', { code, ...(Number.isInteger(status) ? { status } : {}) });
   }
 
   if (root.androidBridge || root.CapacitorCookiesAndroidInterface || root.webkit?.messageHandlers?.bridge || root.Capacitor?.isNativePlatform?.()) {
@@ -122,10 +124,15 @@
       if (ios && isAuthenticationURL(url)) {
         const start = performance.now();
         const request = new Request(input, options);
+        progress('login', start);
         try {
           const { status, contentType, data } = await iosAuthentication(await request.arrayBuffer(), url, request.signal);
+          reportAuthentication(status, data, start);
           return new Response(data.length ? data : null, { status, headers: { 'Content-Type': contentType } });
-        } finally { progress('login', start); }
+        } catch (error) {
+          if (!request.signal.aborted) fail('game-auth-network');
+          throw error;
+        }
       }
       if (!endpoints.has(url.href)) return webFetch(input, options);
       const request = new Request(input, options);
@@ -172,15 +179,16 @@
       const auth = authentication.get(this);
       if (auth) {
         const start = performance.now();
-        this.addEventListener('loadend', () => progress('login', start), { once: true });
         if (ios && auth.async) {
+          progress('login', start);
           const controller = new AbortController();
           iosRequests.set(this, controller);
-          sendIOSAuthentication(this, args[0], auth.url, controller.signal).finally(() => {
+          sendIOSAuthentication(this, args[0], auth.url, controller.signal, start).finally(() => {
             if (iosRequests.get(this) === controller) iosRequests.delete(this);
           });
           return;
         }
+        this.addEventListener('loadend', () => progress('login', start), { once: true });
       }
       return originalSend.apply(this, args);
     };
@@ -188,6 +196,11 @@
 
   function isAuthenticationURL(url) {
     return url.origin === 'https://xxz-xyzw.hortorgames.com' && url.pathname === '/login/authuser';
+  }
+
+  function reportAuthentication(status, data, start) {
+    if (status !== 200 || !data.byteLength) fail('game-auth-rejected', status);
+    else progress('auth-response', start);
   }
 
   async function iosAuthentication(body, url, signal) {
@@ -203,11 +216,12 @@
     return { status, contentType, data: Uint8Array.from(atob(dataBase64), char => char.charCodeAt(0)) };
   }
 
-  async function sendIOSAuthentication(xhr, body, url, signal) {
+  async function sendIOSAuthentication(xhr, body, url, signal, start) {
     const set = (name, value) => Object.defineProperty(xhr, name, { configurable: true, value });
     try {
       const { status, contentType, data } = await iosAuthentication(await new Blob([body ?? '']).arrayBuffer(), url, signal);
       if (signal.aborted) return;
+      reportAuthentication(status, data, start);
       const responseType = xhr.responseType;
       const text = responseType === '' || responseType === 'text' ? new TextDecoder().decode(data) : null;
       set('status', status);
@@ -221,6 +235,7 @@
       xhr.dispatchEvent(new Event('load'));
     } catch {
       if (signal.aborted) return;
+      fail('game-auth-network');
       set('readyState', 4);
       xhr.dispatchEvent(new Event('readystatechange'));
       xhr.dispatchEvent(new Event('error'));
@@ -230,6 +245,98 @@
 
   function parseJSON(data) {
     try { return JSON.parse(new TextDecoder().decode(data)); } catch { return null; }
+  }
+
+  function installIOSGameSocket() {
+    const BrowserSocket = root.WebSocket;
+    if (!ios || typeof BrowserSocket !== 'function') return;
+
+    class GameSocket extends EventTarget {
+      constructor(url) {
+        super();
+        this.url = url.href;
+        this.readyState = 0;
+        this.binaryType = 'blob';
+        this.bufferedAmount = 0;
+        this.extensions = '';
+        this.protocol = '';
+        this.id = String(++socketSequence);
+        this.queue = Promise.resolve();
+        this.startedAt = performance.now();
+        gameSockets.set(this.id, this);
+        progress('game-socket', this.startedAt);
+        send('socket-open', { socketId: this.id, url: this.url });
+      }
+
+      send(payload) {
+        if (this.readyState === 0) throw new DOMException('Socket is connecting', 'InvalidStateError');
+        if (this.readyState !== 1) return;
+        const size = typeof payload === 'string' ? new Blob([payload]).size : payload?.byteLength ?? payload?.size ?? 0;
+        this.bufferedAmount += size;
+        this.queue = this.queue.then(async () => {
+          const data = typeof payload === 'string' ? { text: payload } : { data: encodeSocketFrame(
+            payload instanceof Blob ? await payload.arrayBuffer() : payload,
+          ) };
+          if (this.readyState === 1) send('socket-send', { socketId: this.id, ...data });
+        }).catch(() => this.close()).finally(() => { this.bufferedAmount -= size; });
+      }
+
+      close() {
+        if (this.readyState > 1) return;
+        this.readyState = 2;
+        send('socket-close', { socketId: this.id });
+      }
+
+      emit(event) {
+        this.dispatchEvent(event);
+        this[`on${event.type}`]?.(event);
+      }
+
+      receive(data) {
+        if (data.event === 'open' && this.readyState === 0) {
+          this.readyState = 1;
+          progress('game-socket-open', this.startedAt);
+          this.emit(new Event('open'));
+        } else if (data.event === 'message' && this.readyState === 1) {
+          const bytes = typeof data.text === 'string' ? null : Uint8Array.from(atob(data.data), char => char.charCodeAt(0));
+          this.emit(new MessageEvent('message', { data: bytes ? (this.binaryType === 'arraybuffer' ? bytes.buffer : new Blob([bytes])) : data.text }));
+        } else if (data.event === 'close') {
+          const wasConnecting = this.readyState === 0;
+          this.readyState = 3;
+          gameSockets.delete(this.id);
+          const code = Number.isInteger(data.code) ? data.code : 1006;
+          if (code !== 1000) this.emit(new Event('error'));
+          this.emit(new CloseEvent('close', { code, reason: data.reason || '', wasClean: code === 1000 }));
+          if (wasConnecting && !gameSockets.size) fail('game-socket-failed', code);
+        }
+      }
+    }
+
+    root.WebSocket = new Proxy(BrowserSocket, {
+      construct(target, args, newTarget) {
+        const url = new URL(args[0], root.location.href);
+        const protocols = args[1];
+        if (url.origin === 'wss://xxz-xyzw.hortorgames.com' && url.pathname === '/agent'
+            && !url.username && !url.password && !url.hash && (protocols == null || Array.isArray(protocols) && !protocols.length)) {
+          return new GameSocket(url);
+        }
+        return Reflect.construct(target, args, newTarget);
+      },
+      get(target, key, receiver) {
+        if (key === Symbol.hasInstance) return socket => socket instanceof GameSocket || socket instanceof target;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    for (const name of ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED']) GameSocket.prototype[name] = BrowserSocket[name];
+  }
+
+  function encodeSocketFrame(data) {
+    const bytes = ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : new Uint8Array(data);
+    let text = '';
+    for (let index = 0; index < bytes.length; index += 8192) {
+      text += String.fromCharCode(...bytes.subarray(index, index + 8192));
+    }
+    return btoa(text);
   }
 
   function loadScript(src) {
@@ -262,6 +369,7 @@
   async function start({ binId, binHex, scripts }) {
     stageCredential(binId, binHex);
     installRequests();
+    installIOSGameSocket();
     progress('iframe', openedAt);
     const entries = Array.isArray(scripts) ? scripts.filter(script => typeof script?.id === 'string' &&
       typeof script.code === 'string' && typeof script.name === 'string') : [];
@@ -299,6 +407,7 @@
       const finish = pending.get(data.requestId);
       if (finish) finish(data.response ? null : new Error('network-request-failed'), data.response);
     }
+    if (data.type === 'socket-event') gameSockets.get(data.socketId)?.receive(data);
     if (data.type !== 'initialize' || initialized || settled) return;
     initialized = true;
     clearInterval(handshakeTimer);

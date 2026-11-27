@@ -13,6 +13,8 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
 
     private let maxFrameBytes = 8 * 1024 * 1024
     private var sockets: [String: URLSessionWebSocketTask] = [:]
+    private var gameEvents: [String: ([String: Any]) -> Void] = [:]
+    private var closingCalls: [String: CAPPluginCall] = [:]
     private lazy var network = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: .main)
 
     @objc func open(_ call: CAPPluginCall) {
@@ -23,17 +25,14 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
                 call.reject("游戏连接参数无效")
                 return
             }
-            let task = self.network.webSocketTask(with: URLRequest(url: url, timeoutInterval: 20))
-            task.maximumMessageSize = self.maxFrameBytes
-            self.sockets[id] = task
-            task.resume()
+            self.start(id, url: url)
             call.resolve()
         }
     }
 
     @objc func send(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            guard let id = call.getString("id"), let task = self.sockets[id],
+            guard let id = call.getString("id"), UUID(uuidString: id) != nil, let task = self.sockets[id],
                   let encoded = call.getString("data"), encoded.utf8.count <= ((self.maxFrameBytes + 2) / 3) * 4,
                   let bytes = Data(base64Encoded: encoded), bytes.count <= self.maxFrameBytes else {
                 call.reject("游戏连接不可用或消息无效")
@@ -48,18 +47,67 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
 
     @objc func close(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            if let id = call.getString("id"), let task = self.sockets.removeValue(forKey: id) {
-                task.cancel(with: .normalClosure, reason: nil)
+            guard let id = call.getString("id"), UUID(uuidString: id) != nil,
+                  let task = self.sockets[id], self.closingCalls[id] == nil else {
+                call.resolve()
+                return
             }
-            call.resolve()
+            self.closingCalls[id] = call
+            task.cancel(with: .normalClosure, reason: nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if self.sockets[id] === task { self.finish(task, code: 1000) }
+            }
+        }
+    }
+
+    private func start(_ id: String, url: URL) {
+        let task = network.webSocketTask(with: URLRequest(url: url, timeoutInterval: 20))
+        task.maximumMessageSize = maxFrameBytes
+        sockets[id] = task
+        task.resume()
+    }
+
+    func openGameSocket(_ id: String, address: String, event: @escaping ([String: Any]) -> Void) -> Bool {
+        guard sockets[id] == nil, let endpoint = Self.gameEndpoint(address), let url = endpoint.url else { return false }
+        gameEvents[id] = event
+        start(id, url: url)
+        return true
+    }
+
+    func sendGameSocket(_ id: String, payload: [String: Any]) {
+        guard let task = sockets[id], gameEvents[id] != nil else { return }
+        let message: URLSessionWebSocketTask.Message
+        if let text = payload["text"] as? String, text.utf8.count <= maxFrameBytes {
+            message = .string(text)
+        } else if let encoded = payload["data"] as? String,
+                  encoded.utf8.count <= ((maxFrameBytes + 2) / 3) * 4,
+                  let bytes = Data(base64Encoded: encoded), bytes.count <= maxFrameBytes {
+            message = .data(bytes)
+        } else { return }
+        task.send(message) { [weak self] error in
+            if error != nil {
+                DispatchQueue.main.async { self?.finish(task, code: 1006) }
+            }
+        }
+    }
+
+    func closeGameSocket(_ id: String, notify: Bool) {
+        guard let event = gameEvents.removeValue(forKey: id) else { return }
+        sockets.removeValue(forKey: id)?.cancel(with: .normalClosure, reason: nil)
+        if notify { event(["type": "close", "code": 1000, "reason": ""]) }
+    }
+
+    private func emit(_ id: String, _ event: [String: Any]) {
+        if let relay = gameEvents[id] { relay(event) }
+        else if closingCalls[id] == nil {
+            var data = event
+            data["id"] = id
+            notifyListeners("socketEvent", data: data)
         }
     }
 
     private static func gameURL(_ address: String) -> URL? {
-        guard address.utf8.count <= 32768, let components = URLComponents(string: address),
-              components.scheme == "wss", components.host == "xxz-xyzw.hortorgames.com",
-              components.port == nil, components.user == nil, components.password == nil,
-              components.fragment == nil, components.percentEncodedPath == "/agent",
+        guard let components = gameEndpoint(address),
               let query = components.queryItems, query.count == 3,
               query.contains(where: { $0.name == "p" && !($0.value ?? "").isEmpty }),
               query.contains(URLQueryItem(name: "e", value: "x")),
@@ -67,9 +115,17 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
         return components.url
     }
 
+    private static func gameEndpoint(_ address: String) -> URLComponents? {
+        guard address.utf8.count <= 32768, let components = URLComponents(string: address),
+              components.scheme == "wss", components.host == "xxz-xyzw.hortorgames.com",
+              components.port == nil, components.user == nil, components.password == nil,
+              components.fragment == nil, components.percentEncodedPath == "/agent" else { return nil }
+        return components
+    }
+
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocolName: String?) {
-        guard let id = socketId(webSocketTask) else { return }
-        notifyListeners("socketEvent", data: ["id": id, "type": "open"])
+        guard let id = socketId(webSocketTask), closingCalls[id] == nil else { return }
+        emit(id, ["type": "open"])
         receive(webSocketTask, id: id)
     }
 
@@ -77,7 +133,7 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
         task.receive { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self, self.sockets[id] === task else { return }
-                var event: [String: Any] = ["id": id, "type": "message"]
+                var event: [String: Any] = ["type": "message"]
                 switch result {
                 case .success(.data(let bytes)): event["data"] = bytes.base64EncodedString()
                 case .success(.string(let text)): event["text"] = text
@@ -88,7 +144,7 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
                     self.finish(task, code: 1003)
                     return
                 }
-                self.notifyListeners("socketEvent", data: event)
+                self.emit(id, event)
                 self.receive(task, id: id)
             }
         }
@@ -122,8 +178,14 @@ final class IOSAccountSocketPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionWebSo
         guard let id = socketId(task) else { return }
         sockets.removeValue(forKey: id)
         task.cancel()
+        if let call = closingCalls.removeValue(forKey: id) {
+            call.resolve()
+            return
+        }
         let text = reason ?? task.closeReason ?? Data()
-        notifyListeners("socketEvent", data: ["id": id, "type": "close", "code": code,
-            "reason": String(data: text.prefix(123), encoding: .utf8) ?? ""])
+        let event: [String: Any] = ["type": "close", "code": code,
+            "reason": String(data: text.prefix(123), encoding: .utf8) ?? ""]
+        if let relay = gameEvents.removeValue(forKey: id) { relay(event) }
+        else { emit(id, event) }
     }
 }
