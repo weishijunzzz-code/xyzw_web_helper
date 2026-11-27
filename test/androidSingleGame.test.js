@@ -214,6 +214,37 @@ test('iOS game startup reports an authentication HTTP rejection with its status'
   ]);
 });
 
+test('iOS role authentication forwards the game SDK language and hint query fields', async () => {
+  const { root, sent } = fixture({ ios: true, interactive: false });
+  const receive = root.__xyzwReceiveGameRuntime;
+  receive({ ...envelope, type: 'initialize', binId: 'ios-test', binHex: '000102ff' });
+  await drain();
+  const url = 'https://xxz-xyzw.hortorgames.com/login/authuser?_seq=7&_hint=sdk%2Bmobile&_lang=zh-CN';
+  const response = root.fetch(url, { method: 'POST', body: 'fixture' });
+  await drain();
+  const request = sent.find(item => item.data.type === 'http-request').data;
+  assert.deepEqual([request.seq, request.language, request.hint], ['7', 'zh-CN', 'sdk+mobile']);
+  receive({ ...envelope, type: 'http-response', requestId: request.requestId,
+    response: { status: 200, dataBase64: 'AQI=', contentType: 'application/octet-stream' } });
+  assert.deepEqual([...new Uint8Array(await (await response).arrayBuffer())], [1, 2]);
+  await assert.rejects(root.fetch(`${url}&_lang=duplicate`, { method: 'POST', body: 'fixture' }), /invalid-auth-query/);
+  assert.equal(sent.find(item => item.data.type === 'failed').data.code, 'game-auth-request');
+  assert.equal(sent.filter(item => item.data.type === 'http-request').length, 1);
+});
+
+test('iOS reads the running state from the persistent engine entity during scene changes', async () => {
+  const { root, sent } = fixture({ ios: true, interactive: false });
+  root.cc.director.getScene = () => null;
+  root.cc.sys = { entityNode1: {
+    getComponent: name => name === 'Game' ? { stateMachine: { current: { stateId: 'GameRunning' } } } : null,
+  } };
+  root.__xyzwReceiveGameRuntime({ ...envelope, type: 'initialize', binId: 'ios-test', binHex: '000102ff' });
+  await drain();
+  const launcher = sent.findIndex(({ data }) => data.phase === 'launcher');
+  const ready = sent.findIndex(({ data }) => data.type === 'ready');
+  assert.ok(launcher >= 0 && launcher < ready);
+});
+
 test('iOS game uses a session-scoped native socket for the official game endpoint', async () => {
   const { root, sent } = fixture({ ios: true, interactive: false });
   const receive = root.__xyzwReceiveGameRuntime;

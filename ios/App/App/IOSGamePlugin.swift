@@ -134,6 +134,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
     private var session: String?
     private var staged: [String: Any]?
     private var ready = false
+    private var sceneReady = false
     private var gameSockets: Set<String> = []
     private var shellAppearance: (opaque: Bool, background: UIColor?, scroll: UIColor?)?
     private lazy var network = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: .main)
@@ -199,7 +200,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
     @objc func present(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             if let session = self.session, call.getString("session") == session {
-                let visible = self.ready && (call.getBool("visible") ?? false)
+                let visible = (self.sceneReady || self.ready) && (call.getBool("visible") ?? false)
                 self.setPresentation(visible: visible, region: visible ? call.getObject("region") : nil)
             }
             call.resolve()
@@ -264,6 +265,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         session = nil
         staged = nil
         ready = false
+        sceneReady = false
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -311,6 +313,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         case "progress":
             guard let phase = data["phase"] as? String, phase.utf8.count <= 32,
                   let duration = data["durationMs"] as? Double, duration.isFinite, duration >= 0 else { return }
+            if phase == "launcher", staged == nil { sceneReady = true }
             event["phase"] = phase
             event["durationMs"] = duration
         case "script-result":
@@ -323,7 +326,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
             ready = true
         case "failed":
             let code = data["code"] as? String ?? ""
-            let known = ["game-handshake-timeout", "game-initialization-failed", "game-auth-rejected", "game-auth-network", "game-socket-failed"]
+            let known = ["game-handshake-timeout", "game-initialization-failed", "game-auth-rejected", "game-auth-network", "game-auth-request", "game-socket-failed"]
             failWindow(known.contains(code) ? code : "resource-load-failed", status: data["status"] as? Int)
             return
         case "http-request":
@@ -442,11 +445,32 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         case "authuser", "serverlist":
             guard let encoded = data["bodyBase64"] as? String, encoded.utf8.count <= ((maxBinaryBytes + 2) / 3) * 4,
                   let decoded = Data(base64Encoded: encoded), decoded.count <= maxBinaryBytes else { return nil }
-            let base = "https://xxz-xyzw.hortorgames.com/login/" + endpoint
+            var components = URLComponents()
+            components.scheme = "https"
+            components.host = "xxz-xyzw.hortorgames.com"
+            components.path = "/login/" + endpoint
+            var query: [URLQueryItem] = []
             if let seq = data["seq"] as? String {
                 guard seq.range(of: "^[0-9]{1,12}$", options: .regularExpression) != nil else { return nil }
-                path = base + "?_seq=" + seq
-            } else { path = base }
+                query.append(URLQueryItem(name: "_seq", value: seq))
+            }
+            if endpoint == "authuser", let language = data["language"] as? String {
+                guard !query.isEmpty,
+                      language.range(of: "^[A-Za-z][A-Za-z0-9_-]{0,31}$", options: .regularExpression) != nil else { return nil }
+                query.append(URLQueryItem(name: "_lang", value: language))
+            }
+            if endpoint == "authuser", let hint = data["hint"] as? String {
+                guard !query.isEmpty, hint.utf16.count <= 128,
+                      !hint.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { return nil }
+                query.append(URLQueryItem(name: "_hint", value: hint))
+            }
+            if !query.isEmpty {
+                components.queryItems = query
+                // Form-style readers interpret a literal plus as a space.
+                components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+            }
+            guard let authenticationURL = components.url else { return nil }
+            path = authenticationURL.absoluteString
             body = decoded
             contentType = "application/octet-stream"
         default: return nil

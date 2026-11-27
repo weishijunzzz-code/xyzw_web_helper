@@ -205,14 +205,26 @@
 
   async function iosAuthentication(body, url, signal) {
     const seq = url.searchParams.get('_seq');
-    if (url.search && (!seq || !/^\d{1,12}$/.test(seq) || [...url.searchParams.keys()].length !== 1)) {
+    const language = url.searchParams.get('_lang');
+    const hint = url.searchParams.get('_hint');
+    const keys = [...url.searchParams.keys()];
+    const invalidHint = hint !== null && (hint.length > 128 || [...hint].some(character => {
+      const code = character.codePointAt(0);
+      return code < 32 || code === 127;
+    }));
+    if (url.search && (!seq || !/^\d{1,12}$/.test(seq)
+        || new Set(keys).size !== keys.length || keys.some(key => !['_seq', '_lang', '_hint'].includes(key))
+        || (language !== null && !/^[a-z][\w-]{0,31}$/i.test(language)) || invalidHint)) {
+      fail('game-auth-request');
       throw new Error('invalid-auth-query');
     }
     const bytes = new Uint8Array(body);
     if (bytes.length > 2 * 1024 * 1024) throw new Error('request-too-large');
     let binary = '';
     for (const byte of bytes) binary += String.fromCharCode(byte);
-    const { status, contentType, dataBase64 } = await requestNative('authuser', '', signal, { bodyBase64: btoa(binary), seq });
+    const { status, contentType, dataBase64 } = await requestNative('authuser', '', signal, {
+      bodyBase64: btoa(binary), seq, language, hint,
+    });
     return { status, contentType, data: Uint8Array.from(atob(dataBase64), char => char.charCodeAt(0)) };
   }
 
@@ -352,9 +364,11 @@
   function waitForInteractive(start, runScripts, assetTime) {
     if (settled) return;
     const cc = root.cc;
-    const game = cc?.director?.getScene()?.getChildByName('Global Entity')?._components
+    const entity = cc?.sys?.entityNode1 || cc?.director?.getScene()?.getChildByName('Global Entity');
+    const game = entity?.getComponent?.('Game') || entity?._components
       ?.find(component => cc.js.getClassName(component) === 'Game');
-    if (game?._stateMachine?._current?.stateId !== 'GameRunning') {
+    const state = game?.stateMachine?.current ?? game?._stateMachine?._current;
+    if (state?.stateId !== 'GameRunning') {
       launchTimer = setTimeout(() => waitForInteractive(start, runScripts, assetTime), 200);
       return;
     }

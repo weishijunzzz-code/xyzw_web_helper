@@ -83,6 +83,7 @@
         <button v-else type="button" @click="router.replace(retained ? '/mobile/tokens' : '/tokens')">返回账号列表</button>
       </template>
     </div>
+    <p v-else-if="showIOSSurface && activeStatus === 'loading'" class="game-preview-status" role="status">{{ loadingLabel }}</p>
     <GameAccountSwitchDrawer
       v-if="retained"
       :show="showSwitchDrawer"
@@ -137,7 +138,11 @@ const switchError = ref('');
 const switchState = computed(() => props.retained ? singleGameSwitch.value : null);
 const canSwitchAccount = computed(() => singleGameSession.value?.isolated && singleGameSession.value.status === 'ready');
 const showSwitchStatus = computed(() => switchState.value && (switchState.value.phase !== 'preparing' || !singleGameSession.value));
-const showGameGear = computed(() => props.retained && singleGameSession.value?.status === 'ready' && !routeProblem.value && !showSwitchStatus.value);
+const showGameGear = computed(() => {
+  const session = singleGameSession.value;
+  const usableSurface = session?.status === 'ready' || (session?.nativeIOS && session.status === 'loading' && session.revealed);
+  return props.retained && usableSurface && !routeProblem.value && !showSwitchStatus.value;
+});
 const showIOSSurface = computed(() => Boolean(props.workspaceActive && showGameGear.value && singleGameSession.value?.nativeIOS));
 const switchStageLabel = computed(() => {
   const attempt = switchState.value;
@@ -161,6 +166,7 @@ const startupFailures = {
   'game-initialization-failed': '游戏窗口初始化失败，可尝试无脚本重试。',
   'game-auth-rejected': '游戏登录未返回有效认证响应。',
   'game-auth-network': '游戏登录请求没有收到响应，请检查网络后重试。',
+  'game-auth-request': 'iOS 未能识别游戏发出的角色登录请求。',
   'game-socket-failed': '角色服务器连接未能建立，请重试。',
 };
 const activeSrc = computed(() => props.retained ? singleGameSession.value?.src : gameSrc.value);
@@ -172,7 +178,7 @@ const activeFailure = computed(() => props.retained ? singleGameSession.value?.f
 const loadingLabel = computed(() => props.retained && singleGameSession.value?.isolated
   ? `${knownPhases[singleGameSession.value.stage] || '加载游戏'}…` : '正在加载游戏…');
 const showStartup = computed(() => activeStatus.value !== 'ready'
-  && (activeStatus.value !== 'loading' || !props.retained || singleGameSession.value?.nativeIOS || !singleGameSession.value?.revealed));
+  && (activeStatus.value !== 'loading' || !props.retained || !singleGameSession.value?.revealed));
 const timingRows = computed(() => Object.entries(singleGameSession.value?.timings || {})
   .map(([key, duration]) => [key, knownPhases[key], duration]));
 const settingsChanged = computed(() => singleGameSession.value?.isolated
@@ -607,6 +613,21 @@ onUnmounted(() => {
 
 .game-startup p { margin: 0; }
 .game-startup button { min-height: 44px; padding-inline: 16px; }
+
+.game-preview-status {
+  position: absolute;
+  inset: auto 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 198;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}
 
 .game-switch-status {
   z-index: 199;
