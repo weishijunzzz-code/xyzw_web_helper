@@ -20,17 +20,16 @@
           还需普通道具(库存 {{ ActivityItem }} 已计入): {{ remainingOrdNeeded }}
         </div>
         <div class="current">
-          可行方案:
           <a-button
             type="primary"
             size="small"
-            style="margin-left: 8px"
+            :disabled="!hasActivityData || remainingOrdNeeded <= 0"
             @click="showCombosModal = true"
-            >查看所有可行方案</a-button
+            >查看可行方案</a-button
           >
         </div>
-        <div class="current" v-if="feasibleCombos.length === 0">
-          暂无可行组合或已满足目标
+        <div class="current" v-if="hasActivityData && remainingOrdNeeded <= 0">
+          已满足所需道具数量
         </div>
       </div>
     </div>
@@ -92,11 +91,12 @@
       :footer="false"
     >
       <template #title>
-        <h3>所有可行组合（按总普通道具升序）</h3>
+        <h3>可行方案</h3>
       </template>
       <div class="cp-modal-scroll">
-        <div v-if="feasibleCombos.length === 0">暂无可行组合或已满足目标</div>
+        <div v-if="feasibleCombos.length === 0">暂无满足目标的组合</div>
         <div v-else>
+          <p>最多显示 {{ CONSUMPTION_PLAN_LIMIT }} 个方案，按所获普通道具数量升序排列。</p>
           <div
             v-for="(combo, idx) in feasibleCombos"
             :key="idx"
@@ -130,6 +130,7 @@
 import { useMessage } from "naive-ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { useTokenStore } from "@/stores/tokenStore";
+import { CONSUMPTION_PLAN_LIMIT, findConsumptionPlans } from "@/utils/consumptionPlans";
 
 const tokenStore = useTokenStore();
 const message = useMessage();
@@ -417,7 +418,6 @@ const commonActivityInfo = computed(() => {
 });
 
 const hasActivityData = computed(() => {
-  console.log("🚀 ~ commonActivityInfo.value:", commonActivityInfo.value);
   if (!commonActivityInfo.value) return false;
 
   // 查找包含有效任务ID (1-5) 的活动
@@ -619,47 +619,9 @@ const groupedUpgradeOptions = computed(() => {
   return groups;
 });
 
-// 列出所有可行组合（供用户查看不同组合方案），按总消耗升序排列
-const feasibleCombos = computed(() => {
-  const target = Math.ceil(remainingOrdNeeded.value || 0);
-  const groups = groupedUpgradeOptions.value || [];
-  const combos = [];
-  const m = groups.length;
-  // recursive enumeration: for each group pick 0 or one option
-  const MAX_COMBOS = 1e6;
-  let count = 0;
-
-  const recurse = (idx, chosen, sumDelta, sumCost) => {
-    if (count > MAX_COMBOS) return;
-    if (idx === m) {
-      if (sumDelta >= target) {
-        // chosen is array of option objects
-        combos.push({
-          sumDelta,
-          sumCost,
-          combo: chosen.slice(),
-          totalOrd: (totalObtained.value || 0) + sumDelta,
-        });
-      }
-      count++;
-      return;
-    }
-    const group = groups[idx];
-    // option: pick none
-    recurse(idx + 1, chosen, sumDelta, sumCost);
-    // option: pick one of group's options
-    for (const opt of group.options) {
-      chosen.push(opt);
-      recurse(idx + 1, chosen, sumDelta + opt.delta, sumCost + opt.cost);
-      chosen.pop();
-      if (count > MAX_COMBOS) return;
-    }
-  };
-
-  recurse(0, [], 0, 0);
-  combos.sort((a, b) => a.sumDelta - b.sumDelta || a.sumCost - b.sumCost);
-  return combos;
-});
+const feasibleCombos = computed(() => showCombosModal.value && hasActivityData.value
+  ? findConsumptionPlans(groupedUpgradeOptions.value, remainingOrdNeeded.value, totalObtained.value)
+  : []);
 </script>
 
 <style scoped lang="scss">
