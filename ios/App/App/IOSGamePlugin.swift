@@ -121,7 +121,12 @@ private final class GameMessageReceiver: NSObject, WKScriptMessageHandler {
 final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, URLSessionDataDelegate {
     let identifier = "IOSGamePlugin"
     let jsName = "IOSGame"
-    let pluginMethods = ["status", "open", "present", "close"].map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "present", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "close", returnType: CAPPluginReturnPromise)
+    ]
     private static let channel = "xyzw-android-game"
     private static let maxBinaryBytes = 2 * 1024 * 1024
     private var game: WKWebView?

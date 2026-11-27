@@ -36,7 +36,7 @@ private final class GameDocumentPicker: NSObject, UIDocumentPickerDelegate {
 final class IOSBinFilePickerPlugin: CAPPlugin, CAPBridgedPlugin {
     let identifier = "IOSBinFilePickerPlugin"
     let jsName = "BinFilePicker"
-    let pluginMethods = [CAPPluginMethod(name: "pick", returnType: CAPPluginReturnPromise)]
+    let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "pick", returnType: CAPPluginReturnPromise)]
     private let picker = GameDocumentPicker()
 
     @objc func pick(_ call: CAPPluginCall) {
@@ -106,7 +106,11 @@ private final class GameScriptFile {
 final class IOSScriptFilePickerPlugin: CAPPlugin, CAPBridgedPlugin {
     let identifier = "IOSScriptFilePickerPlugin"
     let jsName = "ScriptFilePicker"
-    let pluginMethods = ["pick", "readChunk", "finish"].map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "pick", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readChunk", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise)
+    ]
     private let picker = GameDocumentPicker()
     private let io = DispatchQueue(label: "gamehelper.script-import", qos: .userInitiated)
     private static let limit = 8 * 1024 * 1024

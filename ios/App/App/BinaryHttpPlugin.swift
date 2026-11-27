@@ -4,7 +4,7 @@ import Capacitor
 final class BinaryHttpPlugin: CAPPlugin, CAPBridgedPlugin {
     let identifier = "BinaryHttpPlugin"
     let jsName = "BinaryHttp"
-    let pluginMethods = [CAPPluginMethod(name: "post", returnType: CAPPluginReturnPromise)]
+    let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "post", returnType: CAPPluginReturnPromise)]
 
     @objc func post(_ call: CAPPluginCall) {
         guard let transport = bridge?.plugin(withName: "IOSGame") as? IOSGamePlugin else {
