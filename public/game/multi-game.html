@@ -85,7 +85,8 @@
           document.getElementById("minimizeBtn")?.click();
           window.HtmlIsLoaded = true;
           document.getElementById("splash").style.display = "none";
-          await window.boot();
+          const autoFullscreen = new URLSearchParams(window.location.search).get("auto_fullscreen") !== "0";
+          await window.boot({ autoFullscreen });
           notify("ready");
         })().catch(() => {
           document.getElementById("splash").textContent = "游戏资源加载失败";

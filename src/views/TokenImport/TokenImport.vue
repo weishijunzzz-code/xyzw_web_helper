@@ -17,6 +17,14 @@
         <n-button secondary @click="confirmCloseRetained">关闭游戏</n-button>
       </section>
 
+      <section v-if="retainedMultiGameCount" class="retained-game-summary" aria-label="保留的批量游戏">
+        <div class="retained-game-identity">
+          <strong>批量游戏</strong>
+          <span>{{ retainedMultiGameCount }} 个窗口</span>
+        </div>
+        <n-button type="primary" @click="router.push('/multi-game')">继续批量游戏</n-button>
+      </section>
+
       <!-- 限流等待提示 -->
       <n-alert
         v-if="rateLimitWaiting"
@@ -659,7 +667,7 @@ import { useMobile } from "@/composables/useMobile";
 import { closeSingleGame, openSingleGame, resumeSingleGame, singleGameSession } from "@/composables/useSingleGameSession";
 import { restoreFullBackup, validateBackup } from "@/utils/fullBackup";
 import { isGameAccountReserved } from "@/utils/gameAccountLease";
-import { prepareMultiGameLaunch, prepareSingleGameLaunch } from "@/utils/gameLauncher";
+import { prepareMultiGameLaunch, prepareSingleGameLaunch, readActiveMultiGameLaunch } from "@/utils/gameLauncher";
 import {
   pruneTokenSelection,
   selectAllTokenIds,
@@ -685,6 +693,8 @@ const message = useMessage();
 const dialog = useDialog();
 const tokenStore = useTokenStore();
 const nativeGame = isNativeGameApp();
+const retainedMultiGameCount = computed(() => nativeGame && route.name === 'MobileTokens'
+  ? readActiveMultiGameLaunch(window.sessionStorage)?.sessions.length ?? 0 : 0);
 const { isMobile: isNarrow } = useMobile();
 const isMobile = computed(() => isNarrow.value || route.name === "MobileTokens");
 

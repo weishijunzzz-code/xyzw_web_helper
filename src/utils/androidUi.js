@@ -82,6 +82,10 @@ export function initNativeUi(router, getLandingPage, leaveGame) {
         await leaveGame()
         return
       }
+      if (router.currentRoute.value.name === 'GameMultiPlayer') {
+        await router.replace('/mobile/tokens')
+        return
+      }
 
       const landingPage = getLandingPage()
       if (router.currentRoute.value.path === landingPage) {

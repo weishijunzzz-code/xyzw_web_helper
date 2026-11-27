@@ -13,6 +13,7 @@ const bootstrapScript = [
   .map((match) => match[1])
   .find((script) => script.includes("loadMultiGameRuntime"));
 const expectedRuntimeFiles = [
+  "embedded-game-http.js",
   "embedded-hud.js",
   "patch.decrypted_readable.js",
   "src/settings.da7ef.js",
@@ -24,7 +25,7 @@ const expectedRuntimeFiles = [
   "diagnose_require.js",
 ];
 
-function executeBootstrap(boot) {
+function executeBootstrap(boot, search = "") {
   const messages = [];
   const loadedScripts = [];
   const splash = { style: {}, textContent: "" };
@@ -67,11 +68,11 @@ function executeBootstrap(boot) {
     __MULTI_GAME_BRIDGE_READY__: {
       scope: "mg-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     },
-    boot() {
-      return boot([...loadedScripts], { binTool });
+    boot(options) {
+      return boot([...loadedScripts], { binTool, autoFullscreen: options.autoFullscreen });
     },
     document,
-    location: { origin: "https://helper.example" },
+    location: { origin: "https://helper.example", search },
     parent: {
       postMessage(payload, origin) {
         messages.push({ payload, origin });
@@ -84,6 +85,7 @@ function executeBootstrap(boot) {
     document,
     Error,
     Promise,
+    URLSearchParams,
     queueMicrotask,
     window,
   });
@@ -139,6 +141,14 @@ test("multi-game bootstrap waits for boot completion before reporting ready", as
     },
     origin: "https://helper.example",
   });
+});
+
+test("native multi-game disables engine fullscreen and web multi-game keeps its existing setting", async () => {
+  const modes = [];
+  executeBootstrap((_scripts, state) => modes.push(state.autoFullscreen), "?auto_fullscreen=0");
+  executeBootstrap((_scripts, state) => modes.push(state.autoFullscreen));
+  await flushBootstrap();
+  assert.deepEqual(modes, [false, true]);
 });
 
 test("multi-game bootstrap uses the native button to minimize the account tool", async () => {

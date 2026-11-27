@@ -133,10 +133,11 @@ function isFailure(value) {
   );
 }
 
-export function buildMultiGameFrameSrc(baseUrl, session) {
+export function buildMultiGameFrameSrc(baseUrl, session, { autoFullscreen = true } = {}) {
   const scope = encodeURIComponent(session.scopeId);
   const tokenId = encodeURIComponent(session.tokenId);
-  return `${normalizeBaseUrl(baseUrl)}game/multi-game.html?scope=${scope}&bin_id=${tokenId}`;
+  const fullscreen = autoFullscreen ? "" : "&auto_fullscreen=0";
+  return `${normalizeBaseUrl(baseUrl)}game/multi-game.html?scope=${scope}&bin_id=${tokenId}${fullscreen}`;
 }
 
 export function resolveMultiGameFrameMessage({

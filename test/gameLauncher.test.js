@@ -71,6 +71,10 @@ test("buildMultiGameFrameSrc encodes scope and account without exposing token da
     }),
     "/helper/game/multi-game.html?scope=mg-0123456789abcdef0123456789abcdef&bin_id=account%20%2F%20%E4%B8%80%E5%8F%B7",
   );
+  assert.equal(
+    launcher.buildMultiGameFrameSrc("/helper/", { scopeId: "scope", tokenId: "account" }, { autoFullscreen: false }),
+    "/helper/game/multi-game.html?scope=scope&bin_id=account&auto_fullscreen=0",
+  );
 });
 
 test("readActiveMultiGameLaunch rejects malformed and wrong-version manifests", () => {

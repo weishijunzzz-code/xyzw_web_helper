@@ -1,10 +1,16 @@
 <template>
-  <div class="multi-game-page">
-    <header class="multi-game-toolbar">
+  <div class="multi-game-page" :class="{ 'native-multi-game': nativeGame }">
+    <div v-if="nativeGame" class="native-multi-game-header">
       <button class="toolbar-button" type="button" @click="goToTokens">
-        ← 返回 Token 管理
+        <span aria-hidden="true">←</span> 返回账号
       </button>
       <strong class="toolbar-title">批量游戏</strong>
+    </div>
+    <header class="multi-game-toolbar">
+      <button v-if="!nativeGame" class="toolbar-button" type="button" @click="goToTokens">
+        ← 返回 Token 管理
+      </button>
+      <strong v-if="!nativeGame" class="toolbar-title">批量游戏</strong>
       <span class="toolbar-count">{{ frames.length }} 个窗口</span>
       <button class="toolbar-button" type="button" :aria-pressed="muted" @click="toggleMute">{{ muted ? "恢复声音" : "静音" }}</button>
       <button class="toolbar-button" type="button" :aria-pressed="lowFrameRate" @click="toggleFrameRate">{{ lowFrameRate ? "恢复帧率" : "低帧率" }}</button>
@@ -96,6 +102,8 @@
           </button>
           <n-popconfirm
             :show-icon="false"
+            :data-mobile-escape="nativeGame ? '' : undefined"
+            :negative-button-props="{'data-mobile-overlay-close': ''}"
             positive-text="确认重新加载"
             negative-text="取消"
             @positive-click="reloadFrame(frame.scopeId)"
@@ -113,6 +121,8 @@
           </n-popconfirm>
           <n-popconfirm
             :show-icon="false"
+            :data-mobile-escape="nativeGame ? '' : undefined"
+            :negative-button-props="{'data-mobile-overlay-close': ''}"
             positive-text="确认关闭"
             negative-text="取消"
             @positive-click="closeFrame(frame)"
@@ -138,7 +148,7 @@
             :src="frame.src"
             :title="`${frame.name} 的游戏窗口`"
             class="game-frame"
-            allow="fullscreen; autoplay"
+            :allow="nativeGame ? `autoplay; fullscreen 'none'` : 'fullscreen; autoplay'"
             @error="markFrameFatal(frame.scopeId)"
           />
           <div
@@ -215,7 +225,7 @@ const frames = computed(() => {
     .filter(Boolean)
     .map((session) => ({
       ...session,
-      src: buildMultiGameFrameSrc(import.meta.env.BASE_URL, session),
+      src: buildMultiGameFrameSrc(import.meta.env.BASE_URL, session, { autoFullscreen: !nativeGame }),
     }));
 });
 const frameElements = new Map();
@@ -532,7 +542,8 @@ function handleMessage(event) {
 }
 
 function goToTokens() {
-  router.push("/tokens");
+  if (nativeGame) return router.replace('/mobile/tokens');
+  return router.push('/tokens');
 }
 
 onBeforeMount(() => window.addEventListener("message", handleMessage));
@@ -567,6 +578,37 @@ onUnmounted(() => {
   white-space: nowrap;
   border-bottom: 1px solid #273244;
   background: #111827;
+}
+
+.native-multi-game {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+.native-multi-game-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  background: #111827;
+}
+
+.native-multi-game-header .toolbar-button {
+  flex: none;
+  min-height: 44px;
+}
+
+.native-multi-game .multi-game-toolbar { flex: none; }
+.native-multi-game :is(.game-strip, .empty-state) {
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
 }
 
 .toolbar-button,
