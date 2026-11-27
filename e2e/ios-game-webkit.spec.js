@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 
 const bootstrap = readFileSync(new URL('../public/game/android-single.js', import.meta.url), 'utf8');
 const scriptsRuntime = readFileSync(new URL('../public/game/android-game-scripts.js', import.meta.url), 'utf8');
+const inviteRuntime = readFileSync(new URL('../public/game/native-team-invite.js', import.meta.url), 'utf8');
 const engine = readFileSync(new URL('../public/game/cocos2d-js-min.a5841.js', import.meta.url), 'utf8');
 
 test('the iOS login bootstrap delivers real browser XHR and WebSocket events', async ({ page }) => {
@@ -156,4 +157,75 @@ test('native game fits a tall portrait and runs the floating UI after the role e
   await page.setViewportSize({ width: 360, height: 640 });
   await expect.poll(dimensions).toEqual([0, 0, 360, 640]);
   await expect(page.getByRole('button', { name: '浮层已打开' })).toHaveCount(1);
+});
+
+test('team copy settles on success, failure and timeout, and a failed invite releases only its own mask', async ({ page }) => {
+  await page.route('https://team-invite-fixture.test/', route => route.fulfill({
+    contentType: 'text/html', body: '<!doctype html><button id="underlying">Play</button><div id="unrelated"></div><div id="splash"></div>',
+  }));
+  await page.goto('https://team-invite-fixture.test/');
+  await page.addScriptTag({ content: inviteRuntime });
+  await page.evaluate(() => {
+    const results = [];
+    const messages = [];
+    const platform = { setClipboardData: ({ data }) => results.push(`original:${data}`) };
+    class Dialog {
+      onAwake() {
+        this.mask = document.createElement('div');
+        this.mask.style.cssText = 'position:fixed;inset:0';
+        this.mask.id = 'invite-mask';
+        document.body.append(this.mask);
+      }
+      async onShown() { if (this.broken) throw new Error('missing invite view'); }
+      close() { return false; }
+      hide() { this.mask.remove(); }
+    }
+    window.__require = name => name === 'PlatformManager' ? { PlatformManager: { instance: platform } } : { TeamUpShareChatDialog: Dialog };
+    const runtime = window.gameFixture = {
+      location: new URL('xyzw-game://runtime/android-single.html?session=00000000000000000000000000000001'),
+      localStorage: window.localStorage, XMLHttpRequest, WebSocket, fetch: window.fetch.bind(window),
+      document: { getElementById: id => document.getElementById(id), createElement: () => ({}),
+        head: { appendChild: element => queueMicrotask(element.onload) } },
+      cc: { sys: { entityNode1: { getComponent: () => ({ stateMachine: { current: { stateId: 'GameRunning' } } }) } } },
+      boot: ({ onReady }) => onReady(), createLocalGameScriptRunner: () => () => {},
+      installNativeTeamInvite: window.installNativeTeamInvite, results, messages,
+      copy(id) { platform.setClipboardData({ data: id, success: () => results.push('success'),
+        fail: () => results.push('fail'), complete: () => results.push('complete') }); },
+      open(broken) { const dialog = runtime.dialog ??= new Dialog(); dialog.broken = broken; dialog.onAwake(); return dialog.onShown(); },
+      webkit: { messageHandlers: { gameRuntime: { postMessage(data) {
+        messages.push(data);
+        const { channel, version, session, requestId, roomId } = data;
+        const reply = response => queueMicrotask(() => runtime.__xyzwReceiveGameRuntime({ channel, version, session, ...response }));
+        if (data.type === 'hello') reply({ type: 'initialize', binId: 'fixture', binHex: '0102' });
+        if (data.type === 'team-copy-request' && roomId !== '90003') reply({ type: 'team-copy-response', requestId, ok: roomId === '90001' });
+      } } } },
+    };
+    runtime.parent = runtime;
+    document.querySelector('#underlying').onclick = () => { document.body.dataset.inputRestored = 'true'; };
+  });
+  await page.addScriptTag({ content: bootstrap.replace(/\}\)\(window\);\s*$/, '})(window.gameFixture);') });
+  await expect.poll(() => page.evaluate(() => window.gameFixture.messages.some(message => message.type === 'ready'))).toBe(true);
+  const results = () => page.evaluate(() => window.gameFixture.results);
+  await page.evaluate(() => window.gameFixture.copy('90001'));
+  await expect.poll(results).toEqual(['success', 'complete']);
+  await page.evaluate(() => window.gameFixture.copy('90002'));
+  await expect.poll(results).toEqual(['success', 'complete', 'fail', 'complete']);
+  await page.evaluate(() => window.gameFixture.copy('90003'));
+  await expect.poll(results, { timeout: 4500 }).toEqual(['success', 'complete', 'fail', 'complete', 'fail', 'complete']);
+  await page.evaluate(() => window.gameFixture.copy('90001'));
+  await expect.poll(results).toEqual(['success', 'complete', 'fail', 'complete', 'fail', 'complete', 'success', 'complete']);
+  await page.evaluate(() => window.gameFixture.copy('other content'));
+  expect((await results()).at(-1)).toBe('original:other content');
+
+  await page.evaluate(() => window.gameFixture.open(false));
+  await expect(page.locator('#invite-mask')).toBeVisible();
+  await page.evaluate(() => window.gameFixture.dialog.hide());
+  for (let i = 0; i < 2; i++) {
+    await page.evaluate(() => window.gameFixture.open(true));
+    await expect(page.locator('#invite-mask')).toHaveCount(0);
+  }
+  await expect(page.locator('#unrelated')).toHaveCount(1);
+  await page.locator('#underlying').click();
+  await expect(page.locator('body')).toHaveAttribute('data-input-restored', 'true');
+  expect(await page.evaluate(() => window.gameFixture.messages.filter(item => item.type === 'team-invite-failed').length)).toBe(2);
 });

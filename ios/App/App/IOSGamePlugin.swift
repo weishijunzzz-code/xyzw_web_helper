@@ -346,6 +346,21 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         case "http-request":
             if staged == nil { request(data, session: session) }
             return
+        case "team-copy-request":
+            guard let id = data["requestId"] as? String,
+                  id.range(of: "^[1-9][0-9]{0,5}$", options: .regularExpression) != nil else { return }
+            var copied = false
+            if ready, UIApplication.shared.applicationState == .active,
+               host?.gameSurface.isUserInteractionEnabled == true,
+               let roomId = data["roomId"] as? String,
+               roomId.range(of: "^[0-9]{1,20}$", options: .regularExpression) != nil {
+                UIPasteboard.general.string = roomId
+                copied = true
+            }
+            reply(["type": "team-copy-response", "requestId": id, "ok": copied], session: session)
+            return
+        case "team-copy-failed", "team-invite-failed":
+            guard ready, host?.gameSurface.isUserInteractionEnabled == true else { return }
         case "socket-open", "socket-send", "socket-close":
             if staged == nil { handleSocket(type, payload: data, session: session) }
             return

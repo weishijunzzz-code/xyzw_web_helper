@@ -16,6 +16,7 @@
   const openedAt = performance.now();
   const pending = new Map();
   const gameSockets = new Map();
+  let teamCopy;
   let requestSequence = 0;
   let socketSequence = 0;
   let initialized = false;
@@ -408,6 +409,8 @@
     progress('interactive', start);
     send('progress', { phase: 'assets', durationMs: Math.round(assetTime.download) });
     send('progress', { phase: 'decode', durationMs: Math.round(assetTime.decode) });
+    try { root.installNativeTeamInvite?.(send, copyTeamId); }
+    catch { console.warn('[Game] Team invite compatibility unavailable'); }
     runScripts('document-idle');
     settled = true;
     send('ready');
@@ -449,6 +452,21 @@
   }
 
   const hello = () => send('hello');
+  function copyTeamId(id) {
+    if (teamCopy) return Promise.resolve(false);
+    return new Promise(resolve => {
+      const requestId = String(++requestSequence);
+      const timeout = setTimeout(() => teamCopy?.finish(false), 3000);
+      const finish = (ok) => {
+        clearTimeout(timeout);
+        teamCopy = undefined;
+        resolve(ok);
+      };
+      teamCopy = { requestId, finish };
+      try { send('team-copy-request', { requestId, roomId: id }); } catch { finish(false); }
+    });
+  }
+
   function receive(data) {
     if (data?.channel !== channel || data.version !== 1 || data.session !== session) return;
     if (data.type === 'http-response') {
@@ -456,6 +474,7 @@
       if (finish) finish(data.response ? null : new Error('network-request-failed'), data.response);
     }
     if (data.type === 'socket-event') gameSockets.get(data.socketId)?.receive(data);
+    if (data.type === 'team-copy-response' && teamCopy?.requestId === data.requestId) teamCopy.finish(data.ok === true);
     if (data.type !== 'initialize' || initialized || settled) return;
     initialized = true;
     clearInterval(handshakeTimer);

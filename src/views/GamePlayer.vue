@@ -116,7 +116,7 @@ import {
   reloadSingleGame, SCRIPT_LIBRARY_UNAVAILABLE, singleGameSession, singleGameSwitch, startSingleGameSwitch, updateSingleGame,
 } from '@/composables/useSingleGameSession';
 import { useTokenStore } from '@/stores/tokenStore';
-import { ANDROID_GAME_CHANNEL, ANDROID_GAME_ORIGIN, ANDROID_GAME_VERSION, handleAndroidGameRequest, isAndroidGameMessage } from '@/utils/androidGameBridge';
+import { ANDROID_GAME_CHANNEL, ANDROID_GAME_ORIGIN, ANDROID_GAME_VERSION, handleAndroidGameRequest, handleAndroidTeamCopy, isAndroidGameMessage } from '@/utils/androidGameBridge';
 import { recordGameStartupTiming } from '@/utils/gameStartupTimings';
 import { IOSGame } from '@/utils/iosGameBridge';
 import { isAndroidApp, isIOSApp } from '@/utils/runtimePlatform';
@@ -283,6 +283,10 @@ function handleRetainedStartup(event) {
     return;
   }
   if (!isAndroidGameMessage(event, source, session.id)) return;
+  if (handleAndroidTeamCopy(event, { source, session: session.id, isActive: () => props.workspaceActive
+    && document.visibilityState === 'visible' && singleGameSession.value?.id === session.id
+    && singleGameSession.value.status === 'ready' && showGameGear.value && !showGearMenu.value
+    && !showSwitchDrawer.value && !scriptLibrary.visible.value && !dialogList.value.length })) return;
   if (handleAndroidGameRequest(event, { source, session: session.id, isCurrent: () => singleGameSession.value?.id === session.id })) return;
 
   if (data.type === 'hello' && initializedSession !== session.id) {
@@ -323,6 +327,10 @@ function applyNativeGameStatus(session, data) {
     const code = typeof data.code === 'string' && Object.prototype.hasOwnProperty.call(scriptResultReasons, data.code)
       ? data.code : undefined;
     updateSingleGame(session.id, { scriptResults: { ...session.scriptResults, [data.id]: { status: data.status, code } } });
+  } else if (props.workspaceActive && data.type === 'team-copy-failed') {
+    message.warning('房间号复制失败，请重新点击复制。');
+  } else if (props.workspaceActive && data.type === 'team-invite-failed') {
+    message.warning('招募弹窗无法打开，请重新点击复制。');
   }
 }
 

@@ -1,3 +1,4 @@
+import { Clipboard } from '@capacitor/clipboard';
 import { registerPlugin } from '@capacitor/core';
 
 export const ANDROID_GAME_ORIGIN = 'https://appassets.androidplatform.net';
@@ -6,6 +7,7 @@ export const ANDROID_GAME_VERSION = 1;
 
 const assets = registerPlugin('GameAssets');
 const frameRequests = new WeakMap();
+const clipboardWrites = new WeakSet();
 const requestIdPattern = /^[1-9]\d{0,5}$/;
 const jsonBodyLimit = 64 * 1024;
 
@@ -13,6 +15,24 @@ export function isAndroidGameMessage(event, source, session) {
   const data = event.data;
   return Boolean(source && session && event.source === source && event.origin === ANDROID_GAME_ORIGIN &&
     data?.channel === ANDROID_GAME_CHANNEL && data.version === ANDROID_GAME_VERSION && data.session === session);
+}
+
+export function handleAndroidTeamCopy(event, { source, session, isActive }) {
+  if (event.data?.type !== 'team-copy-request' || !isAndroidGameMessage(event, source, session)) return false;
+  const { requestId, roomId } = event.data;
+  if (typeof requestId !== 'string' || !requestIdPattern.test(requestId)) return true;
+  const reply = ok => source.postMessage({ channel: ANDROID_GAME_CHANNEL, version: ANDROID_GAME_VERSION, session,
+    type: 'team-copy-response', requestId, ok }, ANDROID_GAME_ORIGIN);
+  if (!isActive() || clipboardWrites.has(source) || typeof roomId !== 'string' || !/^\d{1,20}$/.test(roomId)) {
+    reply(false);
+    return true;
+  }
+  clipboardWrites.add(source);
+  Clipboard.write({ string: roomId }).then(
+    () => reply(isActive()),
+    () => reply(false),
+  ).finally(() => clipboardWrites.delete(source));
+  return true;
 }
 
 function encodeBody(body) {
