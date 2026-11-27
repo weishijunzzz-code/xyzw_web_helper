@@ -1954,10 +1954,12 @@
     <n-modal
       v-model:show="showTaskModal"
       preset="card"
+      class="batch-schedule-modal"
+      :class="{ 'batch-schedule-compact': isCompactSchedule }"
       :title="editingTask ? '编辑定时任务' : '新增定时任务'"
       style="width: 90%; max-width: 600px"
     >
-      <div class="settings-content">
+      <div class="batch-schedule-content">
         <div class="settings-grid">
           <div class="setting-item">
             <label class="setting-label">任务名称</label>
@@ -1970,6 +1972,7 @@
             <label class="setting-label">运行类型</label>
             <n-radio-group
               v-model:value="taskForm.runType"
+              class="batch-schedule-run-type"
               @update:value="resetRunType"
             >
               <n-radio value="daily">每天固定时间</n-radio>
@@ -1977,8 +1980,16 @@
             </n-radio-group>
           </div>
           <div class="setting-item" v-if="taskForm.runType === 'daily'">
-            <label class="setting-label">运行时间</label>
-            <n-time-picker v-model:value="taskForm.runTime" format="HH:mm" />
+            <label class="setting-label" :for="isCompactSchedule ? 'batch-schedule-time' : undefined">运行时间</label>
+            <input
+              v-if="isCompactSchedule"
+              id="batch-schedule-time"
+              class="batch-schedule-time"
+              type="time"
+              :value="dailyTimeValue"
+              @change="updateDailyTime"
+            />
+            <n-time-picker v-else v-model:value="taskForm.runTime" format="HH:mm" />
           </div>
           <div class="setting-item" v-if="taskForm.runType === 'cron'">
             <label class="setting-label">Cron表达式</label>
@@ -2012,14 +2023,7 @@
             </div>
           </div>
           <div class="setting-item">
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-              "
-            >
+            <div class="batch-schedule-section-heading">
               <label class="setting-label">选择账号</label>
               <n-space size="small">
                 <n-button size="small" @click="selectAllTokens">
@@ -2104,7 +2108,7 @@
             </div>
 
             <n-checkbox-group v-model:value="taskForm.selectedTokens">
-              <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
+              <n-grid :cols="isCompactSchedule ? 1 : 2" :x-gap="12" :y-gap="8">
                 <n-grid-item v-for="token in sortedTokens" :key="token.id">
                   <n-checkbox :value="token.id">{{ token.name }}</n-checkbox>
                 </n-grid-item>
@@ -2112,14 +2116,7 @@
             </n-checkbox-group>
           </div>
           <div class="setting-item">
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-              "
-            >
+            <div class="batch-schedule-section-heading">
               <label class="setting-label">选择任务</label>
               <n-space size="small">
                 <n-button size="small" @click="selectAllTasks"> 全选 </n-button>
@@ -2143,7 +2140,7 @@
                   :name="group.name"
                   :tab="group.label"
                 >
-                  <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
+                  <n-grid :cols="isCompactSchedule ? 1 : 2" :x-gap="12" :y-gap="8">
                     <n-grid-item
                       v-for="task in groupedAvailableTasks[group.name]"
                       :key="task.value"
@@ -2163,7 +2160,7 @@
                   name="other"
                   tab="其他"
                 >
-                  <n-grid :cols="isMobile ? 1 : 2" :x-gap="12" :y-gap="8">
+                  <n-grid :cols="isCompactSchedule ? 1 : 2" :x-gap="12" :y-gap="8">
                     <n-grid-item
                       v-for="task in groupedAvailableTasks.other"
                       :key="task.value"
@@ -2193,13 +2190,13 @@
             </div>
           </div>
         </div>
-        <div class="modal-actions" style="margin-top: 20px; text-align: right">
-          <n-button @click="showTaskModal = false" style="margin-right: 12px"
-            >取消</n-button
-          >
+      </div>
+      <template #footer>
+        <div class="batch-schedule-actions">
+          <n-button @click="showTaskModal = false">取消</n-button>
           <n-button type="primary" @click="saveTask">保存</n-button>
         </div>
-      </div>
+      </template>
     </n-modal>
 
     <!-- Batch Settings Modal -->
@@ -3288,6 +3285,7 @@ import { gameTokens, tokenGroups, useTokenStore } from "@/stores/tokenStore";
 import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useKeepAlive } from "@/composables/useKeepAlive";
 import { useMobile } from "@/composables/useMobile";
+import { isNativeGameApp } from "@/utils/runtimePlatform";
 
 // Import batch task modules
 import {
@@ -3353,6 +3351,7 @@ import { DEFAULT_WEIRD_TOWER_MAX_CLIMB } from "@/utils/towerClimbLimit.js";
 const tokenStore = useTokenStore();
 const message = useMessage();
 const { isMobile } = useMobile();
+const isCompactSchedule = computed(() => isMobile.value || isNativeGameApp());
 const weirdTowerMaxClimb = ref(DEFAULT_WEIRD_TOWER_MAX_CLIMB);
 
 // 排序配置（从localStorage读取，与TokenImport共享）
@@ -4346,6 +4345,23 @@ const taskForm = reactive({
   legionApplyTargetId: null, // Target legion for batchApplyLegion
   enabled: true, // Whether the task is enabled
 });
+
+const dailyTimeValue = computed(() => {
+  if (taskForm.runTime == null) return "";
+  const time = new Date(taskForm.runTime);
+  return [time.getHours(), time.getMinutes()].map(value => String(value).padStart(2, "0")).join(":");
+});
+
+function updateDailyTime(event) {
+  const value = event.target.value;
+  if (!value) {
+    taskForm.runTime = null;
+    return;
+  }
+  const [hours, minutes] = value.split(":").map(Number);
+  const time = new Date(taskForm.runTime ?? Date.now());
+  taskForm.runTime = time.setHours(hours, minutes, 0, 0);
+}
 
 // 任务分组定义
 const taskGroupDefinitions = [
@@ -7361,6 +7377,69 @@ const stopBatch = () => {
   font-size: 14px;
   color: var(--color-text-secondary);
 }
+
+.batch-schedule-section-heading,
+.batch-schedule-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.batch-schedule-section-heading { justify-content: space-between; }
+.batch-schedule-actions { justify-content: flex-end; }
+
+.batch-schedule-compact {
+  max-height: var(--mobile-panel-height, calc(100dvh - 24px));
+}
+
+.batch-schedule-compact :deep(.n-card-header),
+.batch-schedule-compact :deep(.n-card__footer) {
+  flex-shrink: 0;
+  padding: 12px;
+}
+
+.batch-schedule-compact :deep(.n-card__content) {
+  min-height: 0;
+  padding: 4px 12px 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.batch-schedule-compact :deep(.n-card__footer) { border-top: 1px solid var(--border-color); }
+
+.batch-schedule-compact .setting-item {
+  min-width: 0;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px;
+}
+
+.batch-schedule-compact .batch-schedule-run-type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.batch-schedule-compact .settings-grid { min-width: 0; }
+
+.batch-schedule-compact .batch-schedule-actions > button { flex: 1 1 0; }
+
+.batch-schedule-time {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-medium);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+}
+
+.batch-schedule-time:focus-visible { outline: 2px solid var(--primary-color); }
 
 .setting-switches {
   display: flex;

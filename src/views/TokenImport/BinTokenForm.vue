@@ -6,8 +6,8 @@
     size="large"
     :show-label="true"
   >
-    <NFormItem label="BIN 文件" :show-label="true">
-      <NButton v-if="nativeBinPicker" :loading="isPickingBin" :disabled="isImporting" @click="pickBinFiles">
+    <NFormItem label="BIN 文件" :show-label="true" :validation-status="binError ? 'error' : undefined">
+      <NButton v-if="nativeBinPicker" :loading="isPickingBin || isReadingBin" :disabled="isImporting || isReadingBin" @click="pickBinFiles">
         选择 BIN 文件
       </NButton>
       <a-upload
@@ -24,6 +24,10 @@
           请点击上传或将bind文件拖拽到此处
         </div> -->
       </a-upload>
+      <template #feedback>
+        <span v-if="binError" role="alert">{{ binError }}</span>
+        <span v-else-if="isReadingBin" role="status">正在读取角色列表…</span>
+      </template>
     </NFormItem>
 
     <NFormItem label="角色命名格式" :show-label="true">
@@ -71,7 +75,7 @@
         size="large"
         block
         :loading="isImporting"
-        :disabled="isPickingBin"
+        :disabled="isPickingBin || isReadingBin"
         @click="handleImport"
       >
         <template #icon>
@@ -101,10 +105,10 @@ import { useTokenStore } from "@/stores/tokenStore";
 import {
   buildRoleBin,
   downloadBinFile,
+  getBinPayload,
   getRoleBinFileName,
 } from "@/utils/binFile";
 import { useBinFilePicker } from "@/utils/binFilePicker";
-import { g_utils } from "@/utils/bonProtocol";
 import { getServerList, getTokenId, transformToken } from "@/utils/token";
 
 const $emit = defineEmits(["cancel", "ok"]);
@@ -123,6 +127,8 @@ const removeRole = (index: number) => {
 const tokenStore = useTokenStore();
 const message = useMessage();
 const isImporting = ref(false);
+const isReadingBin = ref(false);
+const binError = ref("");
 const importForm = reactive({
   name: "",
   server: "",
@@ -227,19 +233,21 @@ const addSelectedRole = async (roleInfo: any) => {
 
 const uploadBin = (binFile: File) => {
   void tQueue.add(async () => {
+    isReadingBin.value = true;
+    binError.value = "";
     serverListData.value = [];
     originalBinData.value = null;
     try {
       if (!/\.(?:bin|dmp)$/i.test(binFile.name)) {
-        message.warning("仅支持 .bin 和 .dmp 文件");
+        binError.value = "仅支持 .bin 和 .dmp 文件";
         return;
       }
       const bin = await binFile.arrayBuffer();
-      const binMsg = g_utils.parse(bin);
-      const rawBin = (binMsg as any)._raw;
-      const binData = binMsg.getData() || (rawBin ? { ...rawBin } : null);
-      if (!binData) {
-        message.warning("文件内容无法识别，请重新选择");
+      let binData;
+      try {
+        binData = getBinPayload(bin);
+      } catch {
+        binError.value = "文件内容无法识别，请重新选择 BIN 文件";
         return;
       }
 
@@ -249,15 +257,19 @@ const uploadBin = (binFile: File) => {
         ? Object.values(parsedList).sort((a: any, b: any) => b.power - a.power)
         : [];
       if (serverListData.value.length) message.success("请选择要添加的角色");
-      else message.warning("这个文件没有可导入的角色");
-    } catch {
-      message.warning("无法读取角色列表，请检查文件和网络后重试");
+      else binError.value = "未找到可导入的角色。若文件对应单个角色，可切换到「单角色 BIN」导入";
+    } catch (error) {
+      binError.value = error instanceof Error ? error.message : "无法读取角色列表，请重新选择文件重试";
+    } finally {
+      isReadingBin.value = false;
     }
   });
   return false;
 };
 
-const { nativeBinPicker, isPickingBin, pickBinFiles } = useBinFilePicker(uploadBin, message.error);
+const { nativeBinPicker, isPickingBin, pickBinFiles } = useBinFilePicker(uploadBin, (error) => {
+  binError.value = error;
+});
 
 const handleImport = async () => {
   if (roleList.value.length === 0) {

@@ -18,7 +18,9 @@ function toArrayBuffer(data: BinaryData): ArrayBuffer {
 
 /** Extract the login envelope carried by a BIN file. */
 export function getBinPayload(data: BinaryData): Record<string, any> {
-  const message = g_utils.parse(toArrayBuffer(data));
+  // BON decryption can write into its input. Keep the original bytes for requests and storage.
+  const buffer = data instanceof ArrayBuffer ? data.slice(0) : toArrayBuffer(data);
+  const message = g_utils.parse(buffer);
   const payload = message.getData() || (message as any)._raw;
   if (!payload || typeof payload !== "object") {
     throw new Error("BIN 登录凭据解析为空");

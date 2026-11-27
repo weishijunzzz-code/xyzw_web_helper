@@ -6,6 +6,7 @@ import { computed, markRaw, ref } from "vue";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { g_utils } from "@/utils/bonProtocol";
 import { isGameAccountReserved } from "@/utils/gameAccountLease";
+import { hasIOSAccountSocket, openIOSAccountSocket } from "@/utils/iosAccountSocket";
 
 import { gameLogger, tokenLogger, wsLogger } from "@/utils/logger";
 import { generateRandomSeed } from "@/utils/randomSeed";
@@ -818,7 +819,8 @@ export const useTokenStore = defineStore("tokens", () => {
     // Existing user-configured endpoints stay explicit. A refresh never silently submits
     // credentials through a different transport or replaces a supplied URL's parameters.
     const wsUrl = attempt.customWsUrl || `wss://xxz-xyzw.hortorgames.com/agent?p=${encodeURIComponent(actualToken)}&e=x&lang=chinese`;
-    const client = markRaw(new XyzwWebSocketClient({ url: wsUrl, utils: g_utils, heartbeatMs: 5000 }));
+    const createSocket = !attempt.customWsUrl && hasIOSAccountSocket() ? openIOSAccountSocket : undefined;
+    const client = markRaw(new XyzwWebSocketClient({ url: wsUrl, utils: g_utils, heartbeatMs: 5000, createSocket }));
     attempt.transport = client;
     wsConnections.value[tokenId] = {
       client, status: "connecting", tokenId, actualToken, sessionId: currentSessionId,

@@ -510,9 +510,10 @@ export function registerDefaultCommands(reg) {
  * XYZW WebSocket 客户端
  */
 export class XyzwWebSocketClient {
-  constructor({ url, utils, heartbeatMs = 5000 }) {
+  constructor({ url, utils, heartbeatMs = 5000, createSocket = (address) => new WebSocket(address) }) {
     this.url = url;
     this.utils = utils || g_utils;
+    this.createSocket = createSocket;
     this.enc = this.utils?.getEnc ? this.utils.getEnc("auto") : undefined;
 
     this.socket = null;
@@ -560,7 +561,7 @@ export class XyzwWebSocketClient {
       this.isReconnecting = false;
     }
     if (this.socket) this.disconnect();
-    const socket = new WebSocket(this.url);
+    const socket = this.createSocket(this.url);
     this.socket = socket;
     this.serverTime = undefined;
     this.wireSeq = 0;

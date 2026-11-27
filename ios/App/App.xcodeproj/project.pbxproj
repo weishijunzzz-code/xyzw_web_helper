@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E36A71A1014A000000000007 /* IOSAccountSocketPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36A71A1014A000000000008 /* IOSAccountSocketPlugin.swift */; };
 		E36A71A1014A000000000005 /* BinaryHttpPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36A71A1014A000000000006 /* BinaryHttpPlugin.swift */; };
 		E36A71A1014A000000000001 /* IOSGamePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36A71A1014A000000000002 /* IOSGamePlugin.swift */; };
 		E36A71A1014A000000000003 /* IOSFilePickerPlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36A71A1014A000000000004 /* IOSFilePickerPlugins.swift */; };
@@ -21,6 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E36A71A1014A000000000008 /* IOSAccountSocketPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSAccountSocketPlugin.swift; sourceTree = "<group>"; };
 		E36A71A1014A000000000006 /* BinaryHttpPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryHttpPlugin.swift; sourceTree = "<group>"; };
 		E36A71A1014A000000000002 /* IOSGamePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSGamePlugin.swift; sourceTree = "<group>"; };
 		E36A71A1014A000000000004 /* IOSFilePickerPlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSFilePickerPlugins.swift; sourceTree = "<group>"; };
@@ -72,6 +74,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				E36A71A1014A000000000006 /* BinaryHttpPlugin.swift */,
 				E36A71A1014A000000000002 /* IOSGamePlugin.swift */,
+				E36A71A1014A000000000008 /* IOSAccountSocketPlugin.swift */,
 				E36A71A1014A000000000004 /* IOSFilePickerPlugins.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
@@ -167,6 +170,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				E36A71A1014A000000000005 /* BinaryHttpPlugin.swift in Sources */,
 				E36A71A1014A000000000001 /* IOSGamePlugin.swift in Sources */,
+				E36A71A1014A000000000007 /* IOSAccountSocketPlugin.swift in Sources */,
 				E36A71A1014A000000000003 /* IOSFilePickerPlugins.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

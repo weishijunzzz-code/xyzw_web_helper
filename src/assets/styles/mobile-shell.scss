@@ -33,6 +33,12 @@
   }
 
   // Portalled overlays are outside MobileLayout's DOM tree.
+  .n-message-container--top {
+    top: calc(var(--mobile-safe-top) + 12px);
+    inset-inline: calc(var(--mobile-safe-left) + var(--mobile-page-gutter))
+      calc(var(--mobile-safe-right) + var(--mobile-page-gutter));
+  }
+
   :is(.n-modal, .n-dialog, .arco-modal) {
     min-width: 0;
     max-width: min(42rem, var(--mobile-panel-width)) !important;

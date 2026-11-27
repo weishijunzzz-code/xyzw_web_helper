@@ -16,6 +16,7 @@ final class GameBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(IOSBinFilePickerPlugin())
         bridge?.registerPluginInstance(IOSScriptFilePickerPlugin())
         bridge?.registerPluginInstance(BinaryHttpPlugin())
+        bridge?.registerPluginInstance(IOSAccountSocketPlugin())
     }
 
     override func viewDidLoad() {

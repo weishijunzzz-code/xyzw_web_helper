@@ -197,95 +197,52 @@ export const getServerList = async (arrayBuffer: ArrayBuffer) => {
   };
 
   let responseData: ArrayBuffer;
-
-  if (isNativePlatform()) {
-    // 移动端使用自定义插件发送请求
-    console.log("[getServerList] Mobile request using BinaryHttp plugin, length=" + arrayBuffer.byteLength);
-    
-    try {
-      // 将 ArrayBuffer 转换为 base64
-      const uint8Array = new Uint8Array(arrayBuffer);
-      let binaryString = '';
-      for (let i = 0; i < uint8Array.length; i++) {
-        binaryString += String.fromCharCode(uint8Array[i]);
-      }
-      const base64Data = btoa(binaryString);
-      
-      const response = await BinaryHttp.post({
-        url,
-        data: base64Data,
-        headers,
-      });
-      
-      console.log("[getServerList] BinaryHttp status=" + response.status);
-      
-      if (response.status !== 200) {
-        throw new Error("HTTP " + response.status);
-      }
-      
-      // 将 base64 响应解码为 ArrayBuffer
-      const responseBinaryString = atob(response.data);
-      const responseUint8Array = new Uint8Array(responseBinaryString.length);
-      for (let i = 0; i < responseBinaryString.length; i++) {
-        responseUint8Array[i] = responseBinaryString.charCodeAt(i);
-      }
-      responseData = responseUint8Array.buffer;
-      
-      console.log("[getServerList] BinaryHttp response length:", responseData.byteLength);
-      
-      // 检查数据前10个字节
-      if (responseData && responseData.byteLength > 0) {
-        const u8 = new Uint8Array(responseData);
-        const bytes = Array.from(u8.slice(0, 10));
-        console.log("[getServerList] Bytes=" + JSON.stringify(bytes));
-        console.log("[getServerList] Chars=" + String.fromCharCode(u8[0], u8[1]));
-      }
-    } catch (httpError: any) {
-      console.error("[getServerList] BinaryHttp failed: " + httpError.message);
-      throw new Error("HTTP: " + httpError.message);
-    }
-  } else {
-    // 网页端使用 axios
-    console.log("[getServerList] Using axios for web");
-    const res = await axios.post(url, arrayBuffer, {
-      headers,
-      responseType: "arraybuffer",
-      timeout: 30000,
-    });
-    responseData = res.data;
-    console.log("[getServerList] Axios response length:", responseData.byteLength);
-    const u8 = new Uint8Array(responseData);
-    console.log("[getServerList] Axios response first 10 bytes:", Array.from(u8.slice(0, 10)));
-  }
-
+  let status: number;
   try {
-    console.log("[getServerList] Parsing response data...");
-    console.log("[getServerList] Creating Uint8Array from response...");
-    const u8Response = new Uint8Array(responseData);
-    console.log("[getServerList] Uint8Array length:", u8Response.length);
-    console.log("[getServerList] First 4 bytes:", u8Response[0], u8Response[1], u8Response[2], u8Response[3]);
-    
-    // 检查是否是 'px' 加密格式
-    if (u8Response.length > 4 && u8Response[0] === 112 && u8Response[1] === 120) {
-      console.log("[getServerList] Detected 'px' encryption format");
+    if (isNativePlatform()) {
+      let bytes = "";
+      for (const byte of new Uint8Array(arrayBuffer)) {
+        bytes += String.fromCharCode(byte);
+      }
+      const response = await BinaryHttp.post({ url, data: btoa(bytes), headers });
+      status = response.status;
+      responseData = status === 200
+        ? Uint8Array.from(atob(response.data), (character) => character.charCodeAt(0)).buffer
+        : new ArrayBuffer(0);
     } else {
-      console.log("[getServerList] Unknown encryption format, expected 'px' (112, 120)");
+      const response = await axios.post<ArrayBuffer>(url, arrayBuffer, {
+        headers,
+        responseType: "arraybuffer",
+        timeout: 30000,
+        validateStatus: () => true,
+      });
+      status = response.status;
+      responseData = response.data;
     }
-    
-    const msg = g_utils.parse(responseData);
-    console.log("[getServerList] Parsed msg:", msg);
-    console.log("[getServerList] msg._raw:", msg._raw);
-    console.log("[getServerList] msg.body:", msg.body);
-    
-    const data = msg.getData();
-    console.log("[getServerList] 数据内容:", data);
-    return JSON.stringify({
-      ...data.roles,
-    });
-  } catch (parseError: any) {
-    console.error("[getServerList] 解析响应数据失败:", parseError);
-    console.error("[getServerList] 解析错误详情:", parseError.message);
-    console.error("[getServerList] 解析错误堆栈:", parseError.stack);
-    throw new Error(`解析服务器列表失败: ${parseError.message}`);
+  } catch {
+    throw new Error("无法请求角色列表，请检查网络后重新选择文件");
   }
+
+  if (status === 429) throw new Error("查询过于频繁，请稍后重试（HTTP 429）");
+  if (status !== 200) throw new Error(`角色列表请求失败，请稍后重试（HTTP ${status}）`);
+
+  let roles: unknown;
+  const messageFormatError = "角色列表响应无法读取，请稍后重试";
+  let message;
+  try {
+    message = g_utils.parse(responseData);
+  } catch {
+    throw new Error(messageFormatError);
+  }
+  if (message.code || message.error) {
+    const code = message.code ? `（错误码：${message.code}）` : "";
+    throw new Error(`服务端拒绝读取角色列表，请检查 BIN 是否有效${code}`);
+  }
+  try {
+    roles = message.getData()?.roles;
+  } catch {
+    throw new Error(messageFormatError);
+  }
+  if (!roles || typeof roles !== "object") throw new Error(messageFormatError);
+  return JSON.stringify({ ...roles });
 };

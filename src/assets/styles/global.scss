@@ -665,7 +665,7 @@ body {
   // 禁用hover效果（移动端无hover）
   .hover-effect,
   .n-button:not(:disabled),
-  .n-card {
+  .n-card:not(.n-modal) {
     &:hover {
       transform: none !important;
       box-shadow: none !important;
