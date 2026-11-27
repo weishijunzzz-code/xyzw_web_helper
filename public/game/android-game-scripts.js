@@ -46,6 +46,11 @@
           report(script.id, 'unsupported', 'external-script-dependency');
           continue;
         }
+        const failed = (error) => {
+          const code = error?.name === 'SyntaxError' ? 'script-syntax-error'
+            : error?.name === 'ReferenceError' ? 'script-reference-error' : 'script-runtime-error';
+          report(script.id, 'failed', code);
+        };
         try {
           const apis = scopedApis(script, account);
           // eslint-disable-next-line no-new-func -- Runs explicitly enabled code only in the isolated game document.
@@ -54,13 +59,13 @@
           if (returned && typeof returned.then === 'function') {
             Promise.resolve(returned).then(
               () => report(script.id, 'loaded'),
-              () => report(script.id, 'failed', 'script-runtime-error'),
+              failed,
             );
           } else {
             report(script.id, 'loaded');
           }
         } catch (error) {
-          report(script.id, 'failed', error?.name === 'SyntaxError' ? 'script-syntax-error' : 'script-runtime-error');
+          failed(error);
         }
       }
     };

@@ -49,9 +49,18 @@ final class IOSGameSurface: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        if bounds.height > bounds.width {
+            game?.frame = bounds.inset(by: safeAreaInsets)
+            return
+        }
         let width = min(bounds.width, bounds.height * 9 / 16)
         let height = min(bounds.height, bounds.width * 16 / 9)
         game?.frame = CGRect(x: (bounds.width - width) / 2, y: (bounds.height - height) / 2, width: width, height: height)
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        setNeedsLayout()
     }
 }
 
@@ -191,6 +200,7 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
             surface.addSubview(game)
             surface.isHidden = false
             surface.setNeedsLayout()
+            surface.layoutIfNeeded()
             self.setPresentation(visible: false, region: nil)
             game.load(URLRequest(url: url))
             call.resolve()
@@ -321,6 +331,10 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
                   let status = data["status"] as? String, ["loaded", "failed", "unsupported"].contains(status) else { return }
             event["id"] = id
             event["status"] = status
+            if let code = data["code"] as? String,
+               ["external-script-dependency", "script-syntax-error", "script-reference-error", "script-runtime-error"].contains(code) {
+                event["code"] = code
+            }
         case "ready":
             guard staged == nil, !ready else { return }
             ready = true

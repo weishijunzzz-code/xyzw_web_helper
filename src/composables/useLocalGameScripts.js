@@ -52,6 +52,7 @@ export function useLocalGameScripts() {
     importFile: file => edit(() => database.importFile(file)),
     setLibraryEnabled: enabled => edit(() => database.updateSettings(settings => ({ ...settings, enabled })), true),
     setScriptEnabled: (id, enabled) => edit(() => database.updateScript(id, script => ({ ...script, enabled })), true),
+    setWaitForGame: (id, waitForGame) => edit(() => database.updateScript(id, script => ({ ...script, waitForGame })), true),
     moveScript: (id, group) => edit(() => database.updateScript(id, script => ({ ...script, group }))),
     deleteScript: script => edit(() => database.deleteScript(script.id), script.enabled),
     addGroup,

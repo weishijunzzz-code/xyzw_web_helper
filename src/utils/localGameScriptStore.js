@@ -46,7 +46,7 @@ export async function readGameScriptFile(file) {
     fileName: file.name.slice(0, 255),
     version: (metadata.version || '').slice(0, 40),
     size: bytes.byteLength,
-    runAt: metadata['run-at'] === 'document-start' ? 'document-start' : 'document-end',
+    runAt: ['document-start', 'document-idle'].includes(metadata['run-at']) ? metadata['run-at'] : 'document-end',
     hasExternalDependencies: Boolean(metadata.require || metadata.resource),
     importedAt: Date.now(),
   }
@@ -148,10 +148,13 @@ export function createLocalGameScriptStore(name = databaseName) {
         const sources = transaction.objectStore('sources')
         for (const script of await transaction.objectStore('scripts').index('order').getAll()) {
           if (!script.enabled) continue
-          const { id, name, runAt } = script
+          const { id, name, version } = script
           const code = await sources.get(id)
           if (typeof code !== 'string') throw new Error(`无法读取脚本「${name}」`)
-          snapshot.push({ id, name, runAt, code })
+          // Older imports normalized document-idle to document-end. Honor their source without requiring a new import.
+          const runAt = script.waitForGame || readUserscriptMetadata(code)['run-at'] === 'document-idle'
+            ? 'document-idle' : script.runAt
+          snapshot.push({ id, name, version, runAt, code })
         }
       }
       await transaction.done

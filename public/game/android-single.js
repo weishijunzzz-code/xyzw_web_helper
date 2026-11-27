@@ -361,6 +361,39 @@
     });
   }
 
+  function adaptGameCanvas() {
+    const cc = root.cc;
+    if (!cc?.Canvas || !cc.view || !cc.ResolutionPolicy) return;
+
+    const view = cc.view;
+    let adapted;
+    function fitPortrait() {
+      const canvas = cc.Canvas.instance;
+      if (!canvas) return;
+      const design = canvas.designResolution;
+      const frame = view.getFrameSize();
+      const needsFit = frame.height > frame.width && design?.width > 0 && design.height > 0
+        && frame.height > frame.width * design.height / design.width + 1;
+
+      if (adapted?.canvas !== canvas) adapted = undefined;
+      if (!needsFit) {
+        if (adapted) {
+          view.setDesignResolutionSize(design.width, design.height, adapted.policy);
+          adapted = undefined;
+        }
+        return;
+      }
+
+      adapted ??= { canvas, policy: view.getResolutionPolicy() };
+      view.setDesignResolutionSize(design.width, design.height, cc.ResolutionPolicy.FIXED_WIDTH);
+    }
+
+    // Cocos recalculates its frame and input bounds on browser resize before this callback.
+    root.addEventListener('resize', fitPortrait);
+    cc.director.on(cc.Director.EVENT_AFTER_SCENE_LAUNCH, fitPortrait);
+    fitPortrait();
+  }
+
   function waitForInteractive(start, runScripts, assetTime) {
     if (settled) return;
     const cc = root.cc;
@@ -406,6 +439,7 @@
     await root.boot({
       autoFullscreen: false,
       onReady() {
+        adaptGameCanvas();
         splash.style.display = 'none';
         progress('launcher', openedAt);
         waitForInteractive(openedAt, runScripts, assetTime);

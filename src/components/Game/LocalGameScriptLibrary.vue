@@ -56,6 +56,7 @@
                 <div class="script-file-info">
                   <strong :title="script.name">{{ script.name }}</strong>
                   <span>{{ formatScriptInfo(script) }}</span>
+                  <span v-if="script.waitForGame || script.runAt === 'document-idle'">游戏就绪后执行</span>
                   <span v-if="script.hasExternalDependencies" class="script-compatibility">外部依赖需包含在脚本文件中</span>
                 </div>
                 <n-switch :value="script.enabled" :disabled="busy" :aria-label="`启用 ${script.name}`" @update:value="value => updateScriptEnabled(script, value)" />
@@ -85,7 +86,7 @@ import { collectNativeGameScripts, hasNativeGameScriptPicker, MAX_GAME_SCRIPT_FI
 
 const {
   addGroup, close, deleteGroup, deleteScript, importFile, library,
-  load, moveScript, setLibraryEnabled, setScriptEnabled, visible,
+  load, moveScript, setLibraryEnabled, setScriptEnabled, setWaitForGame, visible,
 } = useLocalGameScripts()
 const dialogs = useDialog()
 const message = useMessage()
@@ -215,6 +216,9 @@ async function createGroup() {
 
 function scriptMenu(script) {
   return [
+    ...(script.runAt === 'document-start' || script.runAt === 'document-idle' ? [] : [{
+      label: script.waitForGame ? '恢复默认执行时机' : '游戏就绪后执行', key: 'toggle-wait-for-game',
+    }]),
     {
       label: '移动至分组', key: 'move',
       children: ['', ...library.value.groups].map(name => ({
@@ -226,6 +230,7 @@ function scriptMenu(script) {
 }
 
 function selectScriptMenu(script, key) {
+  if (key === 'toggle-wait-for-game') return save(() => setWaitForGame(script.id, !script.waitForGame))
   if (key.startsWith('group:')) return save(() => moveScript(script.id, key.slice(6)))
   dialogs.warning({
     title: `删除「${script.name}」`,

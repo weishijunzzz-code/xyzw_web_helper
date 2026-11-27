@@ -20,9 +20,14 @@
           <p v-if="!singleGameSession.isolated">{{ SCRIPT_LIBRARY_UNAVAILABLE }}</p>
           <p v-if="settingsChanged">脚本设置将在下次启动生效</p>
           <p v-if="scriptWarning">{{ scriptWarning }}</p>
-          <ul v-if="failedScriptRows.length" class="game-script-errors">
-            <li v-for="script in failedScriptRows" :key="script.id">{{ script.name }} · {{ script.status === 'unsupported' ? '不兼容' : '加载失败' }}</li>
-          </ul>
+          <details v-if="scriptRows.length" :open="hasScriptIssue">
+            <summary class="game-script-summary">本轮脚本执行状态（{{ scriptRows.length }}）</summary>
+            <ul class="game-script-results">
+              <li v-for="script in scriptRows" :key="script.id">
+                {{ script.name }} · {{ script.statusLabel }}<span v-if="script.reason">（{{ script.reason }}）</span>
+              </li>
+            </ul>
+          </details>
           <div class="game-session-secondary">
             <NButton @click="selectGearAction(() => confirmReload(false))">{{ settingsChanged ? '重载并应用脚本' : '重启游戏' }}</NButton>
             <NButton v-if="singleGameSession.scripts.length || singleGameSession.scriptError" @click="selectGearAction(() => confirmReload(true))">无脚本重试</NButton>
@@ -40,6 +45,7 @@
         :src="activeSrc"
         title="游戏窗口"
         class="game-iframe"
+        :class="{ 'native-portrait-game': nativeAndroidSurface }"
         :allow="retained ? retainedGamePermissions : 'fullscreen; autoplay'"
         :tabindex="retained && (!workspaceActive || routeProblem || showSwitchStatus) ? -1 : undefined"
         :sandbox.attr="retained && singleGameSession?.isolated ? 'allow-scripts allow-same-origin' : undefined"
@@ -113,7 +119,7 @@ import { useTokenStore } from '@/stores/tokenStore';
 import { ANDROID_GAME_CHANNEL, ANDROID_GAME_ORIGIN, ANDROID_GAME_VERSION, handleAndroidGameRequest, isAndroidGameMessage } from '@/utils/androidGameBridge';
 import { recordGameStartupTiming } from '@/utils/gameStartupTimings';
 import { IOSGame } from '@/utils/iosGameBridge';
-import { isIOSApp } from '@/utils/runtimePlatform';
+import { isAndroidApp, isIOSApp } from '@/utils/runtimePlatform';
 
 const props = defineProps({ binId: String, retained: Boolean, workspaceActive: Boolean });
 const retainedGamePermissions = "autoplay; fullscreen 'none'";
@@ -144,6 +150,7 @@ const showGameGear = computed(() => {
   return props.retained && usableSurface && !routeProblem.value && !showSwitchStatus.value;
 });
 const showIOSSurface = computed(() => Boolean(props.workspaceActive && showGameGear.value && singleGameSession.value?.nativeIOS));
+const nativeAndroidSurface = computed(() => props.retained && isAndroidApp() && singleGameSession.value?.isolated);
 const switchStageLabel = computed(() => {
   const attempt = switchState.value;
   const session = singleGameSession.value;
@@ -183,18 +190,23 @@ const timingRows = computed(() => Object.entries(singleGameSession.value?.timing
   .map(([key, duration]) => [key, knownPhases[key], duration]));
 const settingsChanged = computed(() => singleGameSession.value?.isolated
   && singleGameSession.value.scriptRevision !== scriptLibrary.revision.value);
-const failedScriptRows = computed(() => {
+const scriptStatusLabels = { pending: '待执行', loaded: '已执行', failed: '执行失败', unsupported: '不兼容' };
+const scriptResultReasons = {
+  'external-script-dependency': '脚本依赖外部文件，请使用独立版本',
+  'script-syntax-error': 'JavaScript 语法错误',
+  'script-reference-error': '引用的变量或接口不存在',
+  'script-runtime-error': '脚本执行时发生异常',
+};
+const scriptRows = computed(() => {
   const session = singleGameSession.value;
-  return (session?.scripts || []).flatMap(script => {
+  return (session?.scripts || []).map(script => {
     const result = session.scriptResults[script.id];
-    return result && result.status !== 'loaded' ? [{ id: script.id, name: script.name, status: result.status }] : [];
+    const status = result?.status ?? 'pending';
+    return { id: script.id, name: script.name, status, statusLabel: scriptStatusLabels[status], reason: scriptResultReasons[result?.code] };
   });
 });
-const scriptWarning = computed(() => {
-  if (singleGameSession.value?.scriptError) return '读取脚本失败，本次已跳过';
-  const failed = failedScriptRows.value.length;
-  return failed ? `${failed} 项脚本加载失败或不兼容` : '';
-});
+const hasScriptIssue = computed(() => scriptRows.value.some(({ status }) => status === 'failed' || status === 'unsupported'));
+const scriptWarning = computed(() => singleGameSession.value?.scriptError ? '读取脚本失败，本次已跳过' : '');
 let loadTimer;
 let initializedSession;
 let requestEpoch = 0;
@@ -308,7 +320,9 @@ function applyNativeGameStatus(session, data) {
     reportFailure(known ? `${startupFailures[data.code]}${status}` : '游戏资源加载失败，请检查网络后重试。');
   } else if (data.type === 'script-result' && session.scripts.some(script => script.id === data.id)
     && ['loaded', 'failed', 'unsupported'].includes(data.status)) {
-    updateSingleGame(session.id, { scriptResults: { ...session.scriptResults, [data.id]: { status: data.status } } });
+    const code = typeof data.code === 'string' && Object.prototype.hasOwnProperty.call(scriptResultReasons, data.code)
+      ? data.code : undefined;
+    updateSingleGame(session.id, { scriptResults: { ...session.scriptResults, [data.id]: { status: data.status, code } } });
   }
 }
 
@@ -545,7 +559,8 @@ onUnmounted(() => {
 
 .game-primary-actions > button, .game-session-secondary > button { min-height: 48px; }
 .game-session-actions p { margin: 0; }
-.game-script-errors { margin: 0; padding-left: 17px; overflow-wrap: anywhere; }
+.game-script-summary { display: list-item; min-height: 44px; align-content: center; cursor: pointer; }
+.game-script-results { margin: 0; padding-inline-start: 17px; overflow-wrap: anywhere; }
 .game-timings { padding: 8px 12px; border-radius: 12px; background: var(--bg-secondary); }
 .game-timings dl { margin: 4px 0 0; }
 .game-timings dl div { display: flex; justify-content: space-between; gap: 12px; }
@@ -571,6 +586,20 @@ onUnmounted(() => {
   max-height: 100%;
   border: none;
   display: block;
+}
+
+@media (orientation: portrait) {
+  .game-iframe.native-portrait-game {
+    --game-safe-top: var(--mobile-safe-top, env(safe-area-inset-top, 0px));
+    --game-safe-right: var(--mobile-safe-right, env(safe-area-inset-right, 0px));
+    --game-safe-bottom: var(--mobile-safe-bottom, env(safe-area-inset-bottom, 0px));
+    --game-safe-left: var(--mobile-safe-left, env(safe-area-inset-left, 0px));
+    position: absolute;
+    inset: var(--game-safe-top) var(--game-safe-right) var(--game-safe-bottom) var(--game-safe-left);
+    width: calc(100% - var(--game-safe-left) - var(--game-safe-right));
+    height: calc(100% - var(--game-safe-top) - var(--game-safe-bottom));
+    aspect-ratio: auto;
+  }
 }
 
 .back-btn {
