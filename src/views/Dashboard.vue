@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-page">
+  <div class="dashboard-page" :class="{ 'mobile-dashboard-page': isMobileDashboard }">
     <!-- 主要内容 -->
     <main class="dashboard-main">
       <div class="main-container">
@@ -30,18 +30,18 @@
                 <h1>
                   欢迎回来，{{ tokenStore.selectedToken?.name || "游戏玩家" }}！
                 </h1>
-                <p>今天是 {{ currentDate }}，继续您的游戏管理之旅吧</p>
+                <p>{{ isMobileDashboard ? currentDate : `今天是 ${currentDate}，继续您的游戏管理之旅吧` }}</p>
               </div>
               <div class="welcome-actions">
                 <n-button
                   type="primary"
                   size="large"
-                  @click="router.push('/admin/game-features')"
+                  @click="openGameFeatures"
                 >
                   进入游戏功能
                 </n-button>
                 <n-button size="large" @click="handleManageTokens">
-                  管理Token
+                  {{ isMobileDashboard ? '管理账号' : '管理Token' }}
                 </n-button>
               </div>
             </div>
@@ -58,7 +58,7 @@
                 <div class="stat-number">
                   <AnimatedNumber :value="tokenCount" :duration="1000" />
                 </div>
-                <div class="stat-label">已添加Token</div>
+                <div class="stat-label">{{ isMobileDashboard ? '本地账号' : '已添加Token' }}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-icon">
@@ -74,9 +74,9 @@
                   <Time />
                 </div>
                 <div class="stat-number">
-                  <AnimatedNumber :value="todayTasks" :duration="1000" />
+                  <AnimatedNumber :value="isMobileDashboard ? tokenCount - connectedCount : todayTasks" :duration="1000" />
                 </div>
-                <div class="stat-label">今日任务</div>
+                <div class="stat-label">{{ isMobileDashboard ? '未连接' : '今日任务' }}</div>
               </div>
             </div>
           </section>
@@ -85,20 +85,21 @@
           <section class="quick-actions-section">
             <h2 class="section-title">快速操作</h2>
             <div class="actions-grid">
-              <div
+              <button
                 v-for="action in quickActions"
                 :key="action.id"
                 class="action-card"
+                type="button"
                 @click="handleQuickAction(action)"
               >
-                <div class="action-icon">
+                <span class="action-icon" aria-hidden="true">
                   <component :is="action.icon" />
-                </div>
-                <div class="action-content">
-                  <h3>{{ action.title }}</h3>
-                  <p>{{ action.description }}</p>
-                </div>
-              </div>
+                </span>
+                <span class="action-content">
+                  <strong>{{ action.title }}</strong>
+                  <span>{{ action.description }}</span>
+                </span>
+              </button>
             </div>
           </section>
         </template>
@@ -117,16 +118,19 @@ import {
   Cube,
   GameController,
   PersonCircle,
+  SettingsOutline,
   Time,
 } from "@vicons/ionicons5";
 import { prepareSingleGameLaunch } from "@/utils/gameLauncher.js";
 import { useMessage } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
 
 const router = useRouter();
+const route = useRoute();
+const isMobileDashboard = computed(() => route.name === "MobileDashboard");
 const message = useMessage();
 const tokenStore = useTokenStore();
 const { getArrayBuffer } = useIndexedDB();
@@ -157,14 +161,10 @@ const currentDate = computed(() => {
 });
 
 // 统计数据
-const tokenCount = computed(() => {
-  return Object.keys(tokenStore.gameTokens || {}).length;
-});
+const tokenCount = computed(() => tokenStore.gameTokens.length);
 
 const connectedCount = computed(() => {
-  return Object.keys(tokenStore.gameTokens || {}).filter(id => {
-    return tokenStore.getWebSocketStatus?.(id) === 'connected';
-  }).length;
+  return tokenStore.gameTokens.filter(({ id }) => tokenStore.getWebSocketStatus(id) === "connected").length;
 });
 
 const todayTasks = computed(() => {
@@ -172,7 +172,7 @@ const todayTasks = computed(() => {
   return Math.floor(Math.random() * 10) + 5; // 示例数据
 });
 
-const quickActions = ref([
+const desktopQuickActions = [
   {
     id: 1,
     icon: GameController,
@@ -208,7 +208,17 @@ const quickActions = ref([
     description: "测试WebSocket连接和游戏命令",
     action: "websocket-test",
   },
-]);
+];
+
+const quickActions = computed(() => isMobileDashboard.value ? [
+  ...desktopQuickActions.slice(0, 4).map((action) => action.action === "add-token"
+    ? { ...action, title: "添加账号", description: "导入游戏账号" }
+    : action),
+  { id: 5, icon: SettingsOutline, title: "个人设置", description: "主题与偏好", action: "open-settings" },
+  { id: 6, icon: Cloud, title: "备份恢复", description: "迁移账号与配置", action: "backup" },
+] : desktopQuickActions);
+
+const openGameFeatures = () => router.push({ name: isMobileDashboard.value ? "MobileGameFeatures" : "GameFeatures" });
 
 const handleManageTokens = () => {
   // 降噪
@@ -219,7 +229,7 @@ const handleManageTokens = () => {
   */
 
   try {
-    router.push("/tokens");
+    router.push({ name: isMobileDashboard.value ? "MobileTokens" : "TokenImport" });
     // 降噪
   } catch (error) {
     console.error("❌ 导航失败:", error);
@@ -233,22 +243,25 @@ const handleQuickAction = (action) => {
       openGame();
       break;
     case "game-features":
-      router.push("/admin/game-features");
+      openGameFeatures();
       break;
     case "add-token":
       handleManageTokens();
       break;
     case "execute-tasks":
-      router.push("/admin/game-features");
+      openGameFeatures();
       break;
     case "websocket-test":
       router.push("/websocket-test");
       break;
     case "open-settings":
-      router.push("/admin/profile");
+      router.push({ name: isMobileDashboard.value ? "MobileProfile" : "Profile" });
       break;
     case "batch-daily-tasks":
-      router.push("/admin/batch-daily-tasks");
+      router.push({ name: isMobileDashboard.value ? "MobileBatchDailyTasks" : "BatchDailyTasks" });
+      break;
+    case "backup":
+      router.push({ name: "MobileBackupRestore" });
       break;
   }
 };
@@ -293,7 +306,7 @@ onMounted(async () => {
 
   // 确保有Token
   if (!tokenStore.hasTokens) {
-    router.push("/tokens");
+    handleManageTokens();
     return;
   }
 
@@ -437,6 +450,9 @@ onMounted(async () => {
   border-radius: var(--border-radius-large);
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-light);
+  border: 0;
+  font: inherit;
+  text-align: start;
   cursor: pointer;
   transition: all var(--transition-normal);
 
@@ -447,6 +463,7 @@ onMounted(async () => {
 }
 
 .action-icon {
+  display: block;
   width: 40px;
   height: 40px;
   color: var(--primary-color);
@@ -459,18 +476,40 @@ onMounted(async () => {
 }
 
 .action-content {
-  h3 {
+  strong {
+    display: block;
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
     margin-bottom: var(--spacing-xs);
   }
 
-  p {
+  > span {
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
     margin: 0;
   }
+}
+
+.mobile-dashboard-page {
+  min-height: 0;
+
+  .dashboard-main { padding: var(--mobile-page-gutter, 12px); }
+  .welcome-section { padding: var(--spacing-md); margin-bottom: var(--spacing-lg); }
+  .welcome-content { flex-direction: column; align-items: stretch; text-align: start; gap: var(--spacing-sm); }
+  .welcome-text h1 { font-size: var(--font-size-xl); overflow-wrap: anywhere; margin: 0 0 var(--spacing-xs); }
+  .welcome-text p { font-size: var(--font-size-sm); color: var(--text-secondary); }
+  .welcome-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-sm); }
+  .welcome-actions :deep(.n-button) { min-height: var(--mobile-touch-target, 44px); padding-inline: 4px; }
+  .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--spacing-sm); }
+  .stat-card { padding: var(--spacing-sm); min-width: 0; }
+  .stat-icon { width: 24px; height: 24px; margin-bottom: var(--spacing-xs); }
+  .stat-number { font-size: var(--font-size-lg); }
+  .section-title { margin-bottom: var(--spacing-sm); }
+  .actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-sm); }
+  .action-card { display: flex; align-items: center; gap: var(--spacing-sm); min-height: 64px; padding: var(--spacing-sm); min-width: 0; }
+  .action-icon { width: 24px; height: 24px; flex: none; margin: 0; }
+  .action-content { min-width: 0; overflow-wrap: anywhere; }
 }
 
 // 最近活动区域

@@ -1,5 +1,5 @@
 <template>
-  <n-button class="activity-calendar-btn" @click="showModal = true">
+  <n-button class="activity-calendar-btn" aria-label="活动日历" @click="showModal = true">
     <template #icon>
       <n-icon :component="CalendarOutline" />
     </template>

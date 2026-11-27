@@ -8,7 +8,14 @@
               <ErrorBoundary>
                 <router-view />
               </ErrorBoundary>
+              <GamePlayer
+                v-if="nativeGame && (singleGameActive || singleGameSession)"
+                :bin-id="singleGameRouteId"
+                :workspace-active="singleGameActive"
+                retained
+              />
               <GameWorkspace v-if="gameWorkspaceMounted" v-show="gameWorkspaceActive" :workspace-active="gameWorkspaceActive" />
+              <LocalGameScriptLibrary v-if="nativeGame" />
               <GlobalLoading />
               <BackToTop />
               <SuccessAnimation
@@ -29,7 +36,7 @@
 <script setup>
 import { darkTheme } from "naive-ui";
 import { computed, defineAsyncComponent, onMounted, onUnmounted, provide, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import BackToTop from "@/components/Common/BackToTop.vue";
 import CommandPalette from "@/components/Common/CommandPalette.vue";
 import ErrorBoundary from "@/components/Common/ErrorBoundary.vue";
@@ -37,11 +44,29 @@ import GlobalLoading from "@/components/Common/GlobalLoading.vue";
 import SuccessAnimation from "@/components/Common/SuccessAnimation.vue";
 import DebugPanel from "@/components/DebugPanel.vue";
 import { useCompactMode } from "@/composables/useCompactMode";
+import { closeSingleGame, leaveSingleGame, singleGameSession } from "@/composables/useSingleGameSession";
 import { useTheme } from "@/composables/useTheme";
+import { useTokenStore } from "@/stores/tokenStore";
+import { initNativeUi } from "@/utils/androidUi";
 import { initCapacitor, isNativePlatform } from "@/utils/capacitor";
 import { initUpdateChecker } from "@/utils/updateChecker";
+import { isNativeGameApp } from "@/utils/runtimePlatform";
 
 const route = useRoute();
+const router = useRouter();
+const tokenStore = useTokenStore();
+const nativeGame = isNativeGameApp();
+let disposeNativeUi;
+const GamePlayer = defineAsyncComponent(() => import("@/views/GamePlayer.vue"));
+const LocalGameScriptLibrary = defineAsyncComponent(() => import("@/components/Game/LocalGameScriptLibrary.vue"));
+const singleGameActive = computed(() => route.name === "GamePlayer");
+const singleGameRouteId = computed(() => typeof route.query.bin_id === "string" ? route.query.bin_id : route.query.bin_id === undefined ? undefined : "");
+watch(() => tokenStore.gameTokens.map(token => token.id), async (ids) => {
+  const accountId = singleGameSession.value?.accountId;
+  if (!accountId || ids.includes(accountId)) return;
+  await closeSingleGame(accountId);
+  if (singleGameActive.value) await router.replace('/mobile/tokens');
+}, { flush: 'sync' });
 const GameWorkspace = defineAsyncComponent(() => import("@/views/GameMultiPlayer.vue"));
 const gameWorkspaceActive = computed(() => route.name === "GameMultiPlayer");
 const gameWorkspaceMounted = ref(false);
@@ -193,6 +218,7 @@ onMounted(() => {
 
   // 初始化 Capacitor（仅在原生应用中生效）
   initCapacitor();
+  disposeNativeUi = initNativeUi(router, () => tokenStore.hasTokens ? '/mobile/dashboard' : '/mobile/tokens', () => leaveSingleGame(router));
 
   // 初始化热更新检查（仅在原生应用中生效）
   initUpdateChecker();
@@ -200,6 +226,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   accentObserver?.disconnect();
+  disposeNativeUi?.();
+  void closeSingleGame();
   window.removeEventListener("theme-change", handleThemeChange);
 });
 </script>

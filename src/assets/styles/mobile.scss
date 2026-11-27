@@ -155,12 +155,12 @@ $tablet-breakpoint: 1024px;
 // ============================================
 
 @media (max-width: $mobile-breakpoint) {
-  .n-modal {
+  :where(:root:not([data-mobile-shell])) .n-modal {
     width: 90vw !important;
     max-width: 90vw !important;
   }
 
-  .n-drawer {
+  :where(:root:not([data-mobile-shell])) .n-drawer {
     width: 80vw !important;
   }
 }

@@ -52,9 +52,9 @@
       </div>
 
       <div class="cloud-summary" aria-label="云端统计">
-        <span>云端账号 <strong>{{ cloudTokens.length }}</strong></span>
+        <span class="cloud-summary-total">云端账号 <strong>{{ cloudTokens.length }}</strong></span>
         <span>已连接 <strong>{{ connectedCount }}</strong></span>
-        <span>定时任务 <strong>{{ scheduledTasks.length }}</strong></span>
+        <span class="cloud-summary-total">定时任务 <strong>{{ scheduledTasks.length }}</strong></span>
         <span>已启用 <strong>{{ enabledTaskCount }}</strong></span>
       </div>
 
@@ -73,7 +73,11 @@
               <NButton size="small" :loading="loadingCloud" @click="refreshCloudTokens">刷新</NButton>
             </div>
           </div>
-          <NAlert v-if="syncResult" :type="syncResult.type" class="cloud-notice" closable @close="syncResult = null">{{ syncResult.message }}</NAlert>
+          <NAlert v-if="accountReadError" type="error" class="cloud-notice" role="alert">{{ accountReadError }}</NAlert>
+          <NAlert v-if="syncResult" :type="syncResult.type" class="cloud-notice" closable @close="syncResult = null">
+            {{ syncResult.message }}
+            <div v-for="detail in syncResult.details" :key="detail" class="cloud-failures">{{ detail }}</div>
+          </NAlert>
           <div v-if="filteredCloudTokens.length" class="cloud-card-grid">
             <article v-for="t in filteredCloudTokens" :key="t.id" class="cloud-account-card">
               <div class="cloud-account-heading">
@@ -95,18 +99,24 @@
               </div>
             </article>
           </div>
-          <NEmpty v-else :description="cloudTokens.length ? '没有匹配的账号' : '云端还没有账号，可从本地全部同步'" class="cloud-empty" />
+          <NEmpty v-else-if="!accountReadError && !loadingCloud" :description="cloudTokens.length ? '没有匹配的账号' : '云端还没有账号，可从本地全部同步'" class="cloud-empty" />
         </section>
         <section v-show="activeCloudTab === 'schedules'" id="cloud-panel-schedules" role="tabpanel" aria-labelledby="cloud-tab-schedules">
-          <div class="cloud-toolbar">
-            <span class="cloud-muted">Asia/Shanghai · 停用后不再定时触发</span>
-            <div class="cloud-toolbar-actions">
+          <div class="cloud-toolbar cloud-plan-toolbar">
+            <NInput v-model:value="planSearch" :input-props="{ 'aria-label': '搜索计划' }" size="small" placeholder="搜索计划" clearable class="cloud-plan-search">
+              <template #prefix><NIcon size="14"><Search /></NIcon></template>
+            </NInput>
+            <NButton size="small" :aria-pressed="pendingPlansOnly" :type="pendingPlansOnly ? 'primary' : 'default'" :secondary="pendingPlansOnly" @click="pendingPlansOnly = !pendingPlansOnly">
+              待处理 ({{ pendingPlanCount }})
+            </NButton>
+            <div class="cloud-toolbar-actions cloud-plan-toolbar-actions">
               <NDropdown trigger="click" :options="bulkOptions" :disabled="tasksLocked || !scheduledTasks.length" @select="requestBulkToggle">
                 <NButton size="small" :loading="bulkBusy" :disabled="tasksLocked || !scheduledTasks.length">批量开关</NButton>
               </NDropdown>
               <NButton size="small" type="primary" :disabled="tasksLocked" @click="openCreate">新建任务</NButton>
-              <NButton size="small" @click="exportTasks">导出</NButton>
-              <NButton size="small" :disabled="tasksLocked" @click="fileInput?.click()">导入</NButton>
+              <NDropdown trigger="click" :options="planToolOptions" @select="selectPlanTool">
+                <NButton size="small" aria-label="计划工具">更多</NButton>
+              </NDropdown>
               <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onImportFile" />
             </div>
           </div>
@@ -119,8 +129,14 @@
             </template>
           </NAlert>
           <NAlert v-if="taskActionError" type="error" closable class="cloud-notice" @close="taskActionError = ''">{{ taskActionError }}</NAlert>
-          <div v-if="scheduledTasks.length" class="cloud-card-grid">
-            <article v-for="t in scheduledTasks" :key="t.id" class="cloud-schedule-card" :class="{ 'cloud-schedule-disabled': t.enabled === false }">
+          <NAlert v-if="taskReadError" type="error" class="cloud-notice" role="alert">
+            {{ taskReadError }}
+            <div class="cloud-failures">
+              <NButton size="small" :loading="loadingTaskList" @click="refreshTasks()">重新读取计划</NButton>
+            </div>
+          </NAlert>
+          <div v-if="visiblePlans.length" class="cloud-card-grid">
+            <article v-for="t in visiblePlans" :key="t.id" class="cloud-schedule-card" :class="{ 'cloud-schedule-disabled': t.enabled === false }">
               <div class="cloud-task-heading">
                 <h3 class="cloud-card-title" :title="t.name || t.id">{{ t.name || t.id }}</h3>
                 <div class="cloud-task-toggle">
@@ -128,74 +144,101 @@
                   <NSwitch :value="t.enabled !== false" :loading="pendingTaskId === t.id" :disabled="tasksLocked" :aria-label="`${t.name || t.id}定时开关`" @update:value="value => toggleTask(t, value)" />
                 </div>
               </div>
-              <p class="cloud-card-description" :title="taskAccountSummary(t)">{{ taskAccountSummary(t) }}</p>
-              <p class="cloud-card-description" :title="taskSelectionSummary(t)">{{ taskSelectionSummary(t) }}</p>
-              <code class="cloud-task-cron">{{ t.cron }}</code>
+              <p class="cloud-card-description" :title="`${taskAccountSummary(t)} · ${taskSelectionSummary(t)}`">
+                {{ (t.tokenIds || []).length }} 个账号 · {{ (t.settings?.selectedTasks || []).length }} 项任务
+              </p>
               <div class="cloud-task-result">
-                <template v-if="t.lastRun"><span>上次 {{ formatTime(t.lastRun) }}</span><NTag size="tiny" :type="executionStatus(t.lastResult).type" :bordered="false">{{ executionStatus(t.lastResult).label }}</NTag></template>
+                <NTag v-if="t.activeRunId" size="tiny" type="info" :bordered="false">运行中</NTag>
+                <template v-else-if="t.lastRun"><span>上次 {{ formatTime(t.lastRun) }}</span><NTag size="tiny" :type="executionStatus(t.lastResult).type" :bordered="false">{{ executionStatus(t.lastResult).label }}</NTag></template>
                 <span v-else>尚未执行</span>
               </div>
               <div class="cloud-next-run">下次运行：{{ nextRunLabel(t) }}</div>
               <div class="cloud-card-actions">
-                <NButton v-if="t.lastResult" size="small" quaternary @click="openExecutionDetail(t)">执行详情</NButton>
-                <NButton size="small" quaternary @click="openExecutionDetail(t, true)">执行记录</NButton>
-                <NButton size="small" type="primary" secondary :disabled="tasksLocked" @click="runTaskNow(t)">立即执行</NButton>
-                <NButton size="small" quaternary :disabled="tasksLocked" @click="startEditTask(t)">编辑</NButton>
-                <NPopconfirm :disabled="tasksLocked" @positive-click="removeTask(t)">
-                  <template #trigger><NButton size="small" type="error" quaternary :disabled="tasksLocked">删除</NButton></template>
-                  确定删除该定时任务？
-                </NPopconfirm>
+                <NButton v-if="t.activeRunId" size="small" type="primary" secondary @click="openExecutionDetail(t, t.activeRunId)">查看运行</NButton>
+                <NButton v-else size="small" type="primary" secondary aria-label="立即执行" :loading="startingTasks.has(t.id)" :disabled="tasksLocked || startingTasks.has(t.id)" @click="runTaskNow(t)">立即执行</NButton>
+                <NButton size="small" quaternary aria-label="执行记录" @click="openExecutionDetail(t)">记录</NButton>
+                <NDropdown trigger="click" :options="planActionOptions" :disabled="tasksLocked" @select="key => selectPlanAction(key, t)">
+                  <NButton size="small" quaternary aria-label="计划操作" :disabled="tasksLocked">更多</NButton>
+                </NDropdown>
               </div>
             </article>
           </div>
-          <NEmpty v-else description="还没有定时任务，点击上方「新建任务」创建" class="cloud-empty" />
+          <NEmpty v-else-if="!taskReadError && !loadingTaskList" :description="planEmptyText" class="cloud-empty">
+            <template v-if="planSearch || pendingPlansOnly" #extra>
+              <NButton size="small" @click="clearPlanFilters">清除筛选</NButton>
+            </template>
+          </NEmpty>
         </section>
       </div>
 
-      <NModal :show="!!executionDetail" preset="card" title="执行详情" class="cloud-execution-modal" :style="{ width: '92vw', maxWidth: '720px' }" @update:show="value => { if (!value) executionDetail = null; }">
-        <template v-if="executionDetail">
-          <p>{{ executionDetail.name }} · {{ currentRun?.state === 'running' ? '执行中／等待账号队列' : executionStatus(executionDetail.lastResult).label }}</p>
+      <NModal :show="!!executionDetail" preset="card" title="执行详情" aria-label="执行详情" class="cloud-execution-modal" :style="{ width: '92vw', maxWidth: '720px' }" @update:show="value => { if (!value) closeExecutionDetail(); }">
+        <div v-if="executionDetail" class="cloud-execution-body">
+          <div class="cloud-execution-heading">
+            <strong>{{ executionDetail.name || executionDetail.id }}</strong>
+            <NTag size="small" :bordered="false" :type="currentRun?.state === 'running' ? 'info' : executionStatus(executionDetail.lastResult).type">
+              {{ currentRun?.state === 'running' ? '执行中／等待账号队列' : executionStatus(executionDetail.lastResult).label }}
+            </NTag>
+          </div>
+          <p v-if="executionDetail.cron" class="cloud-muted">当前调度 <code>{{ executionDetail.cron }}</code> · Asia/Shanghai</p>
           <NAlert v-if="runError" type="error" class="cloud-notice">{{ runError }}</NAlert>
-          <NSpace v-if="historyEnabled" vertical class="cloud-notice">
-            <NSelect :value="currentRun?.id" :options="runOptions" :loading="recordBusy" placeholder="选择执行记录" @update:value="selectRun" />
+          <div v-if="recordBusy || runOptions.length || runError" class="cloud-execution-history">
+            <NSelect :value="currentRun?.id" :options="runOptions" :loading="recordBusy" :disabled="recordBusy || retrySubmitting" placeholder="选择执行记录" aria-label="选择执行记录" @update:value="selectRun" />
             <NButton v-if="canLoadMoreRuns" size="small" :loading="recordBusy" @click="loadMoreRuns">加载更早记录</NButton>
-            <span v-if="currentRun?.parentRunId" class="cloud-muted">本次为补跑，原记录：{{ currentRun.parentRunId }}</span>
-          </NSpace>
+            <NButton v-if="runError" size="small" :loading="recordBusy" @click="refreshExecutionHistory()">重新读取记录</NButton>
+          </div>
+          <p v-if="currentRun?.parentRunId" class="cloud-execution-origin cloud-muted">
+            本次为补跑 <NButton size="small" text type="primary" :disabled="recordBusy || retrySubmitting" @click="selectRun(currentRun.parentRunId)">查看原记录</NButton>
+          </p>
           <NAlert v-if="executionDetail.lastResult && executionDetail.lastResult.version !== 2" type="warning">旧版记录：使用旧成功判定，无法确认各账号实际完成情况。</NAlert>
-          <p v-if="historyEnabled && !recordBusy && !runRows.length" class="cloud-muted">暂无独立执行记录；旧记录不能按账号失败项补跑。</p>
-          <p class="cloud-muted">此处展示执行反馈，不代表已独立核验游戏中的最终状态。</p>
+          <p v-if="!recordBusy && !runError && !runRows.length && !currentRun" class="cloud-muted">暂无独立执行记录。</p>
+          <div v-if="executionRows.length" class="cloud-execution-totals" aria-label="账号与子任务结果汇总">
+            <span v-for="total in executionTotals" :key="total.label">{{ total.label }} <strong>{{ total.count }}</strong></span>
+          </div>
+          <p v-if="executionRows.length" class="cloud-muted">结果来自执行器反馈。游戏内状态需另行核对。</p>
           <p v-if="executionDetail.lastResult?.error">{{ executionDetail.lastResult?.error }}</p>
           <p v-if="executionDetail.lastResult?.summary?.reason">{{ executionDetail.lastResult?.summary.reason }}</p>
-          <div v-if="retryCandidates.length && currentRun?.state === 'finished'" class="cloud-retry-options">
-            <h3>失败账号与子任务</h3>
-            <p class="cloud-muted">已成功项目不会补跑。已提交或结果不明确的项目默认不选中；补跑可能重复消耗资源。</p>
-            <NCheckboxGroup v-model:value="selectedRetryKeys">
-              <NSpace vertical><NCheckbox v-for="item in retryCandidates" :key="item.key" :value="item.key">{{ item.label }}</NCheckbox></NSpace>
-            </NCheckboxGroup>
-            <NButton size="small" :disabled="!selectedRetryKeys.length || retrySubmitting || currentRun?.state !== 'finished'" @click="showRetryConfirm = true">补跑失败项 ({{ selectedRetryKeys.length }})</NButton>
-          </div>
-          <section v-for="(result, index) in executionDetail.lastResult?.summary?.results || []" :key="index" class="cloud-result-section">
-            <h3>{{ TASK_LABELS[result.task] || result.task }} · {{ outcomeLabels[result.status] || '未确认' }}</h3>
-            <p v-if="result.error || result.reason">{{ result.error || result.reason }}</p>
-            <div v-for="account in result.accounts?.details || []" :key="account.id" class="cloud-account-result">
-              <strong>{{ account.name }} · {{ outcomeLabels[account.status] || '未确认' }}</strong>
-              <p v-if="account.reason">{{ account.reason }}</p>
-              <div v-if="account.camp" class="cloud-camp-summary">
-                <p>营地次数：开始已用 {{ account.camp.initialUsed ?? '未知' }} · 结束已用 {{ account.camp.finalUsed ?? '未知' }} · 剩余 {{ account.camp.remaining ?? '未知' }}</p>
-                <p>本轮胜利 {{ account.camp.wins }} · 失败 {{ account.camp.losses }} · 结果不明 {{ account.camp.unknown }}</p>
-                <ul v-if="account.camp.battles?.length"><li v-for="(battle, battleIndex) in account.camp.battles" :key="battleIndex">区域{{ Math.ceil(battle.nodeId / 10) }} {{ battle.name }}：{{ outcomeLabels[battle.status] || '未确认' }}（模拟 {{ battle.simulatedWins }}/3 胜）</li></ul>
+          <p v-for="(issue, index) in executionIssues" :key="index">{{ issue }}</p>
+          <section v-for="group in executionGroups" :key="group.key" class="cloud-result-section">
+            <h3 v-if="group.key === 'attention'">待处理 ({{ group.rows.length }})</h3>
+            <NButton v-else size="small" quaternary :aria-expanded="showCompletedRows" @click="showCompletedRows = !showCompletedRows">已完成和跳过 ({{ group.rows.length }})</NButton>
+            <template v-if="group.key === 'attention' || showCompletedRows">
+              <div v-for="{ key, taskLabel, account } in group.rows" :key="key" class="cloud-account-result">
+                <div class="cloud-result-heading">
+                  <NCheckbox v-if="retryCandidateKeys.has(key)" :checked="selectedRetryKeys.includes(key)" :disabled="retrySubmitting" :aria-label="`补跑 ${account.name || account.id} ${taskLabel}`" @update:checked="checked => setRetrySelected(key, checked)" />
+                  <div>
+                    <div class="cloud-result-account">
+                      <strong>{{ account.name || account.id }}</strong>
+                      <NTag size="tiny" :type="executionStatus({ version: 2, status: account.status }).type" :bordered="false">{{ outcomeLabels[account.status] || '未确认' }}</NTag>
+                    </div>
+                    <p>{{ taskLabel }}<span v-if="account.reason"> · {{ account.reason }}</span></p>
+                  </div>
+                </div>
+                <div v-if="account.camp" class="cloud-camp-summary">
+                  <p>营地次数：开始已用 {{ account.camp.initialUsed ?? '未知' }} · 结束已用 {{ account.camp.finalUsed ?? '未知' }} · 剩余 {{ account.camp.remaining ?? '未知' }}</p>
+                  <p>本轮胜利 {{ account.camp.wins }} · 失败 {{ account.camp.losses }} · 结果不明 {{ account.camp.unknown }}</p>
+                  <ul v-if="account.camp.battles?.length"><li v-for="(battle, battleIndex) in account.camp.battles" :key="battleIndex">区域{{ Math.ceil(battle.nodeId / 10) }} {{ battle.name }}：{{ outcomeLabels[battle.status] || '未确认' }}（模拟 {{ battle.simulatedWins }}/3 胜）</li></ul>
+                </div>
+                <p v-if="account.attempts?.length">连接尝试 {{ account.attempts.length }} 次 · {{ account.submitted ? '已提交过业务命令' : '未提交业务命令' }}</p>
+                <ul v-if="account.attempts?.length"><li v-for="attempt in account.attempts" :key="attempt.attempt">第 {{ attempt.attempt }} 次：{{ attempt.status === 'ok' ? '就绪' : attempt.reason }}</li></ul>
+                <ul v-if="account.steps?.length"><li v-for="(step, stepIndex) in account.steps" :key="stepIndex">{{ step.name }}：{{ outcomeLabels[step.status] || '未确认' }}<span v-if="step.reason"> · {{ step.reason }}</span></li></ul>
               </div>
-              <p v-if="account.attempts?.length">连接尝试 {{ account.attempts.length }} 次 · {{ account.submitted ? '已提交过业务命令' : '未提交业务命令' }}</p>
-              <ul v-if="account.attempts?.length"><li v-for="attempt in account.attempts" :key="attempt.attempt">第 {{ attempt.attempt }} 次：{{ attempt.status === 'ok' ? '就绪' : attempt.reason }}</li></ul>
-              <ul v-if="account.steps?.length"><li v-for="(step, stepIndex) in account.steps" :key="stepIndex">{{ step.name }}：{{ outcomeLabels[step.status] || '未确认' }}<span v-if="step.reason"> · {{ step.reason }}</span></li></ul>
-            </div>
+            </template>
           </section>
+        </div>
+        <template v-if="retryCandidates.length" #footer>
+          <div class="cloud-execution-footer">
+            <span class="cloud-muted">已提交或结果不明确的项目默认不选中</span>
+            <NButton type="primary" :disabled="!selectedRetryKeys.length || retrySubmitting" @click="showRetryConfirm = true">补跑所选项 ({{ selectedRetryKeys.length }})</NButton>
+          </div>
         </template>
       </NModal>
 
-      <NModal v-model:show="showRetryConfirm" preset="dialog" title="确认补跑失败项" positive-text="确认补跑" negative-text="取消" :loading="retrySubmitting" @positive-click="submitFailedRetry">
+      <NModal v-model:show="showRetryConfirm" preset="dialog" class="cloud-retry-confirm" title="确认补跑失败项" positive-text="确认补跑" negative-text="取消" :loading="retrySubmitting" @positive-click="submitFailedRetry">
         将补跑以下 {{ selectedRetryKeys.length }} 个账号子任务。已提交或结果不明确的操作可能实际已成功，再次执行可能重复购买或消耗。
-        <ul><li v-for="item in retryCandidates.filter(item => selectedRetryKeys.includes(item.key))" :key="item.key">{{ item.label }}</li></ul>
+        <ul class="cloud-retry-review"><li v-for="item in retryCandidates.filter(item => selectedRetryKeys.includes(item.key))" :key="item.key">{{ item.label }}</li></ul>
+      </NModal>
+      <NModal :show="!!deletePlanTarget" preset="dialog" type="warning" title="删除定时计划" positive-text="删除" negative-text="取消" @update:show="value => { if (!value) deletePlanTarget = null; }" @positive-click="confirmDeletePlan">
+        确定删除「{{ deletePlanTarget?.name || deletePlanTarget?.id }}」？
       </NModal>
       <NModal v-model:show="showBulkConfirm" preset="dialog" :title="bulkTarget ? '全部启用定时任务' : '全部停用定时任务'" positive-text="确认" negative-text="取消" @positive-click="executeBulkToggle">
         将{{ bulkTarget ? '启用' : '停用' }} {{ bulkCandidates.length }} 个任务。{{ bulkTarget ? '启用仅恢复定时触发，不会立即执行。' : '停用仅停止后续定时触发，不中断正在执行的任务。' }}
@@ -317,7 +360,15 @@
       style="width: 90%; max-width: 400px"
     >
       <div class="settings-content">
-        <div class="settings-grid">
+        <p v-if="loadingAccountSettings" class="cloud-muted" role="status">正在读取账号设置…</p>
+        <NAlert v-if="accountSettingsReadError" type="error" class="cloud-notice" role="alert">
+          {{ accountSettingsReadError }}
+          <div class="cloud-failures">
+            <NButton size="small" :loading="loadingAccountSettings" @click="loadAccountSettings()">重试读取</NButton>
+          </div>
+        </NAlert>
+        <NAlert v-if="accountSettingsSaveError" type="error" class="cloud-notice" role="alert">{{ accountSettingsSaveError }}</NAlert>
+        <div v-if="accountSettingsReady" class="settings-grid">
           <div class="setting-item">
             <label class="setting-label">竞技场阵容</label>
             <NSelect
@@ -383,7 +434,7 @@
         </div>
         <NSpace justify="end" style="margin-top: 20px" :size="8">
           <NButton :disabled="savingAccountSettings" @click="showAccountSettings = false">取消</NButton>
-          <NButton type="primary" :loading="savingAccountSettings" @click="saveAccountSettings">
+          <NButton type="primary" :loading="savingAccountSettings" :disabled="!accountSettingsReady || loadingAccountSettings" @click="saveAccountSettings">
             保存设置
           </NButton>
         </NSpace>
@@ -400,7 +451,6 @@ import {
   NButton,
   NCard,
   NCheckbox,
-  NCheckboxGroup,
   NDrawer,
   NDrawerContent,
   NDropdown,
@@ -416,7 +466,7 @@ import {
   NSwitch,
   NTag,
 } from "naive-ui";
-import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import {
   scheduledTasksApi,
   ServerPushClient,
@@ -449,6 +499,7 @@ function toggleAuthMode() {
 }
 
 async function submitAuth() {
+  if (authLoading.value) return;
   authError.value = "";
   if (!authForm.username || !authForm.password) {
     authError.value = "请输入用户名和密码";
@@ -465,18 +516,22 @@ async function submitAuth() {
     } else {
       await register(authForm.username, authForm.password);
     }
+    authForm.password = "";
   } catch (e) {
     authError.value = e.response?.data?.error || "请求失败，请检查后端服务是否可用";
   } finally {
     authLoading.value = false;
-    if (isLoggedIn.value) onAuthReady();
   }
 }
+
+const activeCloudUser = computed(() => isLoggedIn.value ? user.value : null);
+const isCurrentCloudUser = owner => !cloudPageDisposed && !!owner && activeCloudUser.value === owner;
 
 /* ---------- Token 同步 ---------- */
 const localTokens = computed(() => tokenStore.gameTokens || []);
 const cloudTokens = ref([]);
 const loadingCloud = ref(false);
+const accountReadError = ref("");
 const syncing = ref(false);
 const syncResult = ref(null);
 const connStatus = ref({});
@@ -506,41 +561,42 @@ function avatarChar(name) {
 }
 
 async function refreshCloudTokens() {
+  const owner = activeCloudUser.value;
+  if (!owner || loadingCloud.value) return;
   loadingCloud.value = true;
   try {
-    cloudTokens.value = await tokenApi.getAll();
+    const tokens = await tokenApi.getAll();
+    if (!isCurrentCloudUser(owner)) return;
+    cloudTokens.value = tokens;
+    accountReadError.value = "";
     const status = await statusApi.getAll().catch(() => ({}));
+    if (!isCurrentCloudUser(owner)) return;
     connStatus.value = Array.isArray(status) ? Object.fromEntries(status.filter(item => item?.id).map(item => [item.id, item.status || "disconnected"])) : status || {};
   } catch (e) {
-    syncResult.value = {
-      type: "error",
-      message: `读取云端列表失败: ${e.response?.data?.error || e.message}`,
-    };
+    if (isCurrentCloudUser(owner)) accountReadError.value = `读取云端账号失败，请点击刷新。${e.response?.data?.error || e.message}`;
   } finally {
-    loadingCloud.value = false;
+    if (isCurrentCloudUser(owner)) loadingCloud.value = false;
   }
 }
 
 async function syncAllTokens() {
+  const owner = activeCloudUser.value;
+  if (!owner || syncing.value) return;
+  const accounts = [...localTokens.value];
   syncing.value = true;
   syncResult.value = null;
-  let ok = 0;
-  let fail = 0;
+  let accountSynced = 0;
+  let accountFailed = 0;
+  let binUploaded = 0;
+  let binFailed = 0;
+  let noBin = 0;
   let seeded = 0;
+  const details = [];
   try {
-    // 批量读云端已有的账号设置 key（已有则不覆盖，云端编辑为准）
-    let existingSettings = {};
-    try {
-      existingSettings =
-        (await settingsApi.batchGet(
-          localTokens.value.map((t) => `daily-settings:${t.id}`),
-        )) || {};
-    } catch {
-      /* 读失败则当作全缺失，按本地值补种 */
-    }
-    for (const t of localTokens.value) {
+    for (const t of accounts) {
+      if (!isCurrentCloudUser(owner)) return;
       try {
-        await tokenApi.importTokens([
+        const result = await tokenApi.importTokens([
           {
             id: t.id,
             name: t.name,
@@ -553,38 +609,60 @@ async function syncAllTokens() {
             avatar: t.avatar || "",
           },
         ]);
-        // 本地任务设置补种（云端缺失才推，含竞技场阵容等）
-        const settingsKey = `daily-settings:${t.id}`;
-        if (existingSettings[settingsKey] == null) {
-          const localRaw = localStorage.getItem(settingsKey);
-          if (localRaw) {
-            try {
-              await settingsApi.put(settingsKey, JSON.parse(localRaw));
-              seeded++;
-            } catch {
-              /* 设置补种失败不影响 token 同步 */
-            }
-          }
+        const entry = result.results?.find(entry => entry.id === t.id);
+        const synced = entry ? ["created", "updated"].includes(entry.status) : result.imported === 1;
+        if (!synced) {
+          accountFailed++;
+          details.push(`${t.name || t.id}：账号同步失败${entry?.error ? `（${entry.error}）` : ""}`);
+          continue;
         }
-        // BIN 数据（有才传；游戏连接解密需要）
-        try {
-          const bin = await getArrayBuffer(t.id);
-          if (bin) await tokenApi.uploadBin(t.id, bin);
-        } catch {
-          /* 无 BIN 也能连接部分账号，忽略 */
-        }
-        ok++;
+        accountSynced++;
       } catch {
-        fail++;
+        accountFailed++;
+        details.push(`${t.name || t.id}：账号同步失败`);
+        continue;
+      }
+
+      if (!isCurrentCloudUser(owner)) return;
+      try {
+        const bin = await getArrayBuffer(t.id);
+        if (!isCurrentCloudUser(owner)) return;
+        if (bin?.byteLength) {
+          await tokenApi.uploadBin(t.id, bin);
+          binUploaded++;
+        } else if (["bin", "wxQrcode", "mobile", "wxForceLogout"].includes(t.importMethod)) {
+          binFailed++;
+          details.push(`${t.name || t.id}：本机未找到可上传的 BIN`);
+        } else {
+          noBin++;
+        }
+      } catch {
+        binFailed++;
+        details.push(`${t.name || t.id}：BIN 上传失败，可重新同步`);
+      }
+
+      if (!isCurrentCloudUser(owner)) return;
+      const settingsKey = `daily-settings:${t.id}`;
+      const localRaw = localStorage.getItem(settingsKey);
+      if (localRaw) {
+        try {
+          const result = await settingsApi.seed(settingsKey, JSON.parse(localRaw));
+          if (result.created) seeded++;
+        } catch {
+          details.push(`${t.name || t.id}：本地任务设置补充失败`);
+        }
       }
     }
-    syncResult.value = {
-      type: fail ? "warning" : "success",
-      message: `同步完成：成功 ${ok} 个${fail ? `，失败 ${fail} 个` : ""}${seeded ? `，补种设置 ${seeded} 个` : ""}`,
-    };
-    await refreshCloudTokens();
+    if (isCurrentCloudUser(owner)) {
+      syncResult.value = {
+        type: details.length ? "warning" : "success",
+        message: `账号同步 ${accountSynced} 个，失败 ${accountFailed} 个。BIN 上传 ${binUploaded} 个，失败或缺失 ${binFailed} 个${noBin ? `，无 BIN ${noBin} 个` : ""}。${seeded ? `补充任务设置 ${seeded} 个。` : ""}`,
+        details,
+      };
+      await refreshCloudTokens();
+    }
   } finally {
-    syncing.value = false;
+    if (isCurrentCloudUser(owner)) syncing.value = false;
   }
 }
 
@@ -604,65 +682,92 @@ const DEFAULT_ACCOUNT_SETTINGS = {
   freeGachaEnable: true,
 };
 const showAccountSettings = ref(false);
+const loadingAccountSettings = ref(false);
 const savingAccountSettings = ref(false);
+const accountSettingsReady = ref(false);
+const accountSettingsReadError = ref("");
+const accountSettingsSaveError = ref("");
 const settingsToken = ref(null);
 const accountSettings = ref({ ...DEFAULT_ACCOUNT_SETTINGS });
+let settingsReadVersion = 0;
 
-async function openAccountSettings(t) {
+function openAccountSettings(t) {
   settingsToken.value = t;
   showAccountSettings.value = true;
-  savingAccountSettings.value = true;
+  accountSettingsSaveError.value = "";
+  loadAccountSettings();
+}
+
+async function loadAccountSettings() {
+  const owner = activeCloudUser.value;
+  const tokenId = settingsToken.value?.id;
+  if (!owner || !tokenId) return;
+  const request = ++settingsReadVersion;
+  accountSettingsReady.value = false;
+  accountSettingsReadError.value = "";
+  loadingAccountSettings.value = true;
   try {
-    const value = await settingsApi.get(`daily-settings:${t.id}`);
+    const value = await settingsApi.get(`daily-settings:${tokenId}`);
+    if (request !== settingsReadVersion || !isCurrentCloudUser(owner)) return;
     accountSettings.value = { ...DEFAULT_ACCOUNT_SETTINGS, ...(value || {}) };
+    accountSettingsReady.value = true;
   } catch (e) {
-    accountSettings.value = { ...DEFAULT_ACCOUNT_SETTINGS };
-    pushLog("error", `读取账号设置失败: ${e.response?.data?.error || e.message}`);
+    if (request !== settingsReadVersion || !isCurrentCloudUser(owner)) return;
+    accountSettingsReadError.value = `读取账号设置失败：${e.response?.data?.error || e.message}`;
   } finally {
-    savingAccountSettings.value = false;
+    if (request === settingsReadVersion && isCurrentCloudUser(owner)) loadingAccountSettings.value = false;
   }
 }
 
 async function saveAccountSettings() {
-  if (!settingsToken.value) return;
+  const owner = activeCloudUser.value;
+  const token = settingsToken.value;
+  if (!owner || !token || !accountSettingsReady.value || savingAccountSettings.value) return;
+  const settings = { ...accountSettings.value };
+  const request = settingsReadVersion;
+  accountSettingsSaveError.value = "";
   savingAccountSettings.value = true;
   try {
-    await settingsApi.put(
-      `daily-settings:${settingsToken.value.id}`,
-      accountSettings.value,
-    );
+    await settingsApi.put(`daily-settings:${token.id}`, settings);
+    if (request !== settingsReadVersion || !isCurrentCloudUser(owner)) return;
     pushLog(
       "success",
-      `账号「${settingsToken.value.name}」任务设置已保存（竞技场阵容${accountSettings.value.arenaFormation}），下次云端执行生效`,
+      `账号「${token.name}」任务设置已保存（竞技场阵容${settings.arenaFormation}），下次云端执行生效`,
     );
     showAccountSettings.value = false;
   } catch (e) {
-    pushLog("error", `保存账号设置失败: ${e.response?.data?.error || e.message}`);
+    if (request === settingsReadVersion && isCurrentCloudUser(owner)) accountSettingsSaveError.value = `保存账号设置失败：${e.response?.data?.error || e.message}`;
   } finally {
-    savingAccountSettings.value = false;
+    if (isCurrentCloudUser(owner)) savingAccountSettings.value = false;
   }
 }
 
 async function toggleConnect(t) {
+  const owner = activeCloudUser.value;
+  if (!owner) return;
   try {
     if (connStatus.value[t.id] === "connected") {
       await tokenApi.disconnect(t.id);
-      connStatus.value[t.id] = "disconnected";
+      if (isCurrentCloudUser(owner)) connStatus.value[t.id] = "disconnected";
     } else {
       await tokenApi.connect(t.id);
-      connStatus.value[t.id] = "connecting";
+      if (isCurrentCloudUser(owner)) connStatus.value[t.id] = "connecting";
     }
   } catch (e) {
-    pushLog("error", `连接操作失败: ${e.response?.data?.error || e.message}`);
+    if (isCurrentCloudUser(owner)) pushLog("error", `连接操作失败: ${e.response?.data?.error || e.message}`);
   }
 }
 
 async function removeCloudToken(t) {
+  const owner = activeCloudUser.value;
+  if (!owner) return;
   try {
     await tokenApi.remove(t.id);
+    if (!isCurrentCloudUser(owner)) return;
     cloudTokens.value = cloudTokens.value.filter((x) => x.id !== t.id);
+    delete connStatus.value[t.id];
   } catch (e) {
-    pushLog("error", `删除失败: ${e.response?.data?.error || e.message}`);
+    if (isCurrentCloudUser(owner)) pushLog("error", `删除失败: ${e.response?.data?.error || e.message}`);
   }
 }
 
@@ -756,16 +861,36 @@ const taskOptions = Object.entries(TASK_LABELS).filter(([value]) => !isRetiredTr
 }));
 
 let tasksRefreshPromise = null;
-async function refreshTasks() {
-  if (tasksRefreshPromise) return tasksRefreshPromise;
-  tasksRefreshPromise = loadScheduledTasks();
-  try { await tasksRefreshPromise; } finally { tasksRefreshPromise = null; }
-}
-async function loadScheduledTasks() {
+let taskReadVersion = 0;
+const taskReadError = ref("");
+const loadingTaskList = ref(false);
+
+async function refreshTasks({ force = false } = {}) {
+  const owner = activeCloudUser.value;
+  if (!owner) return;
+  if (tasksRefreshPromise && !force) return tasksRefreshPromise;
+  const request = ++taskReadVersion;
+  loadingTaskList.value = true;
+  tasksRefreshPromise = loadScheduledTasks(owner, request);
   try {
-    scheduledTasks.value = await scheduledTasksApi.getAll();
-  } catch {
-    /* 未登录时静默 */
+    await tasksRefreshPromise;
+  } finally {
+    if (request === taskReadVersion) {
+      tasksRefreshPromise = null;
+      loadingTaskList.value = false;
+    }
+  }
+}
+
+async function loadScheduledTasks(owner, request) {
+  try {
+    const tasks = await scheduledTasksApi.getAll();
+    if (request !== taskReadVersion || !isCurrentCloudUser(owner)) return;
+    scheduledTasks.value = tasks;
+    taskReadError.value = "";
+  } catch (error) {
+    if (request !== taskReadVersion || !isCurrentCloudUser(owner)) return;
+    taskReadError.value = `读取定时任务失败：${error.response?.data?.error || error.message}`;
   }
 }
 
@@ -833,6 +958,8 @@ function startEditTask(t) {
 }
 
 async function submitTask() {
+  const owner = activeCloudUser.value;
+  if (!owner || saving.value) return;
   formError.value = "";
   if (!taskForm.name?.trim()) {
     formError.value = "请填写任务名称";
@@ -872,42 +999,103 @@ async function submitTask() {
   const taskName = taskForm.name.trim();
   saving.value = true;
   try {
-    if (editingTaskId.value) {
-      await scheduledTasksApi.update(editingTaskId.value, payload);
-      pushLog("success", `定时任务「${taskName}」已更新`);
+    const editingId = editingTaskId.value;
+    if (editingId) {
+      await scheduledTasksApi.update(editingId, payload);
     } else {
       await scheduledTasksApi.create(payload);
-      pushLog("success", `定时任务「${taskName}」已创建`);
     }
+    if (!isCurrentCloudUser(owner)) return;
+    pushLog("success", `定时任务「${taskName}」已${editingId ? "更新" : "创建"}`);
     resetTaskForm();
     showTaskModal.value = false;
-    await refreshTasks();
+    await refreshTasks({ force: true });
   } catch (e) {
+    if (!isCurrentCloudUser(owner)) return;
     const msg = e.response?.data?.error || e.message;
     formError.value = `${editingTaskId.value ? "更新" : "创建"}失败：${msg}`;
     pushLog("error", `${editingTaskId.value ? "更新" : "创建"}失败: ${msg}`);
   } finally {
-    saving.value = false;
+    if (isCurrentCloudUser(owner)) saving.value = false;
   }
 }
 
 async function runTaskNow(t) {
-  if (tasksLocked.value) return;
+  const owner = activeCloudUser.value;
+  if (!owner || tasksLocked.value || startingTasks.has(t.id)) return;
+  if (t.activeRunId) return openExecutionDetail(t, t.activeRunId);
+  startingTasks.add(t.id);
+  taskActionError.value = "";
   pushLog("info", `手动执行「${t.name || t.id}」...`);
   try {
     const result = await scheduledTasksApi.run(t.id);
+    if (!isCurrentCloudUser(owner)) return;
+    if (result?.runId && ["started", "already_running"].includes(result.status)) {
+      const task = scheduledTasks.value.find(task => task.id === t.id);
+      if (task) task.activeRunId = result.runId;
+    }
     if (result?.status === "started") {
       pushLog("info", `「${t.name || t.id}」已在后台开始执行，进度见实时日志，结果稍后写入任务列表`);
+    } else if (result?.status === "already_running") {
+      pushLog("info", `「${t.name || t.id}」正在执行，已打开当前运行记录`);
+      await openExecutionDetail(t, result.runId);
     } else {
       pushLog("success", `执行完成: ${JSON.stringify(result).slice(0, 200)}`);
     }
-    await refreshTasks();
+    await refreshTasks({ force: true });
   } catch (e) {
-    pushLog("error", `执行失败: ${e.response?.data?.error || e.message}`);
+    if (!isCurrentCloudUser(owner)) return;
+    taskActionError.value = `执行失败：${e.response?.data?.error || e.message}`;
+    pushLog("error", taskActionError.value);
+  } finally {
+    if (isCurrentCloudUser(owner)) startingTasks.delete(t.id);
   }
 }
 
 const activeCloudTab = ref("accounts");
+const planSearch = ref("");
+const pendingPlansOnly = ref(false);
+const attentionStatuses = new Set(["error", "partial", "unverified", "incomplete"]);
+const pendingPlanCount = computed(() => scheduledTasks.value.filter(task => attentionStatuses.has(task.lastResult?.status)).length);
+const visiblePlans = computed(() => {
+  const query = planSearch.value.trim().toLowerCase();
+  return scheduledTasks.value.filter(task =>
+    (!pendingPlansOnly.value || attentionStatuses.has(task.lastResult?.status)) &&
+    (task.name || task.id).toLowerCase().includes(query),
+  );
+});
+const planEmptyText = computed(() => {
+  if (!scheduledTasks.value.length) return "暂无定时任务";
+  if (planSearch.value.trim()) return "没有匹配的计划";
+  return "暂无待处理计划";
+});
+function clearPlanFilters() {
+  planSearch.value = "";
+  pendingPlansOnly.value = false;
+}
+
+const planToolOptions = computed(() => [
+  { key: "import", label: "导入", disabled: tasksLocked.value },
+  { key: "export", label: "导出" },
+]);
+function selectPlanTool(key) {
+  if (key === "import" && !tasksLocked.value) fileInput.value?.click();
+  if (key === "export") exportTasks();
+}
+
+const planActionOptions = [{ key: "edit", label: "编辑" }, { key: "delete", label: "删除" }];
+const deletePlanTarget = ref(null);
+function selectPlanAction(key, task) {
+  if (tasksLocked.value) return;
+  if (key === "edit") startEditTask(task);
+  if (key === "delete") deletePlanTarget.value = task;
+}
+async function confirmDeletePlan() {
+  const task = deletePlanTarget.value;
+  deletePlanTarget.value = null;
+  if (task) await removeTask(task);
+}
+
 const cloudTabs = computed(() => [
   { key: "accounts", label: `云端账号 (${cloudTokens.value.length})` },
   { key: "schedules", label: `定时任务 (${scheduledTasks.value.length})` },
@@ -920,6 +1108,7 @@ function cloudTabKeydown(event) {
 }
 const showCloudLogs = ref(false);
 const pendingTaskId = ref(null);
+const startingTasks = reactive(new Set());
 const taskActionError = ref("");
 const bulkBusy = ref(false);
 const bulkTarget = ref(false);
@@ -959,7 +1148,8 @@ function retryBulkToggle() {
   if (bulkCandidates.value.length) showBulkConfirm.value = true;
 }
 async function executeBulkToggle() {
-  if (tasksLocked.value || !isLoggedIn.value || cloudPageDisposed) return;
+  const owner = activeCloudUser.value;
+  if (tasksLocked.value || !isCurrentCloudUser(owner)) return;
   showBulkConfirm.value = false;
   const target = bulkTarget.value;
   const candidates = [...bulkCandidates.value];
@@ -974,7 +1164,7 @@ async function executeBulkToggle() {
   const failed = [];
   async function worker() {
     while (next < candidates.length) {
-      if (expired || cloudPageDisposed || !isLoggedIn.value) break;
+      if (expired || !isCurrentCloudUser(owner)) break;
       const task = candidates[next++];
       try {
         await scheduledTasksApi.update(task.id, { enabled: target });
@@ -984,43 +1174,49 @@ async function executeBulkToggle() {
         failed.push(task);
         if (error.response?.status === 401) expired = true;
       } finally {
-        bulkProgress.value++;
+        if (isCurrentCloudUser(owner)) bulkProgress.value++;
       }
     }
   }
   try {
     await Promise.all(Array.from({ length: Math.min(3, candidates.length) }, worker));
+    if (!isCurrentCloudUser(owner)) return;
     failed.push(...candidates.slice(next));
-    if (!expired && !cloudPageDisposed && isLoggedIn.value) await refreshTasks();
+    if (!expired) await refreshTasks({ force: true });
+    if (!isCurrentCloudUser(owner)) return;
     bulkReport.value = { target, failed, message: `${target ? '启用' : '停用'}完成：成功 ${succeeded} 个，失败或未提交 ${failed.length} 个。` };
     pushLog(failed.length ? 'warning' : 'success', bulkReport.value.message);
   } finally {
-    bulkBusy.value = false;
+    if (isCurrentCloudUser(owner)) bulkBusy.value = false;
   }
 }
 async function toggleTask(t, enabled) {
-  if (tasksLocked.value) return;
+  const owner = activeCloudUser.value;
+  if (!owner || tasksLocked.value) return;
   pendingTaskId.value = t.id;
   taskActionError.value = "";
   try {
     await scheduledTasksApi.update(t.id, { enabled });
+    if (!isCurrentCloudUser(owner)) return;
     t.enabled = enabled;
-    await refreshTasks();
+    await refreshTasks({ force: true });
   } catch (e) {
+    if (!isCurrentCloudUser(owner)) return;
     taskActionError.value = `操作失败: ${e.response?.data?.error || e.message}`;
     pushLog("error", taskActionError.value);
   } finally {
-    pendingTaskId.value = null;
+    if (isCurrentCloudUser(owner)) pendingTaskId.value = null;
   }
 }
 
 async function removeTask(t) {
-  if (tasksLocked.value) return;
+  const owner = activeCloudUser.value;
+  if (!owner || tasksLocked.value) return;
   try {
     await scheduledTasksApi.remove(t.id);
-    await refreshTasks();
+    if (isCurrentCloudUser(owner)) await refreshTasks({ force: true });
   } catch (e) {
-    pushLog("error", `删除失败: ${e.response?.data?.error || e.message}`);
+    if (isCurrentCloudUser(owner)) pushLog("error", `删除失败: ${e.response?.data?.error || e.message}`);
   }
 }
 
@@ -1028,8 +1224,11 @@ async function removeTask(t) {
 const fileInput = ref(null);
 
 async function exportTasks() {
+  const owner = activeCloudUser.value;
+  if (!owner) return;
   try {
     const tasks = await scheduledTasksApi.getAll();
+    if (!isCurrentCloudUser(owner)) return;
     const payload = {
       type: "xyzw-scheduled-tasks",
       version: 1,
@@ -1055,12 +1254,13 @@ async function exportTasks() {
     URL.revokeObjectURL(url);
     pushLog("success", `已导出 ${payload.tasks.length} 条定时任务`);
   } catch (e) {
-    pushLog("error", `导出失败: ${e.response?.data?.error || e.message}`);
+    if (isCurrentCloudUser(owner)) pushLog("error", `导出失败: ${e.response?.data?.error || e.message}`);
   }
 }
 
 async function onImportFile(ev) {
-  if (tasksLocked.value) { ev.target.value = ""; return; }
+  const owner = activeCloudUser.value;
+  if (!owner || tasksLocked.value) { ev.target.value = ""; return; }
   importingTasks.value = true;
   try {
   const file = ev.target?.files?.[0];
@@ -1071,9 +1271,10 @@ async function onImportFile(ev) {
   try {
     data = JSON.parse(await file.text());
   } catch {
-    pushLog("error", "导入失败：文件不是合法的 JSON");
+    if (isCurrentCloudUser(owner)) pushLog("error", "导入失败：文件不是合法的 JSON");
     return;
   }
+  if (!isCurrentCloudUser(owner)) return;
   if (data?.type !== "xyzw-scheduled-tasks" || !Array.isArray(data.tasks)) {
     pushLog("error", "导入失败：文件格式不符（缺少 xyzw-scheduled-tasks 标识）");
     return;
@@ -1086,6 +1287,7 @@ async function onImportFile(ev) {
   let ok = 0;
   let fail = 0;
   for (const t of data.tasks) {
+    if (!isCurrentCloudUser(owner)) return;
     try {
       // tokenIds 固定传空：执行账号由导入方登录后用「编辑」自行选择
       await scheduledTasksApi.create({
@@ -1098,6 +1300,7 @@ async function onImportFile(ev) {
       });
       ok++;
     } catch (e) {
+      if (!isCurrentCloudUser(owner)) return;
       fail++;
       pushLog(
         "error",
@@ -1105,7 +1308,9 @@ async function onImportFile(ev) {
       );
     }
   }
-  await refreshTasks();
+  if (!isCurrentCloudUser(owner)) return;
+  await refreshTasks({ force: true });
+  if (!isCurrentCloudUser(owner)) return;
   if (ok > 0) {
     pushLog(
       "success",
@@ -1114,7 +1319,7 @@ async function onImportFile(ev) {
   } else if (fail > 0) {
     pushLog("error", `导入失败：${fail} 条任务全部未成功`);
   }
-  } finally { importingTasks.value = false; }
+  } finally { if (isCurrentCloudUser(owner)) importingTasks.value = false; }
 }
 
 /* ---------- 实时推送 ---------- */
@@ -1149,12 +1354,13 @@ function handlePush(raw) {
   } else if (msg.type === "taskProgress") {
     pushLog("info", `[进度] ${msg.message || JSON.stringify(msg).slice(0, 120)}`);
   } else if (msg.type === "taskComplete") {
-    if (msg.result?.persisted) { refreshTasks(); refreshExecutionHistory(); }
+    if (msg.result?.persisted) {
+      refreshTasks({ force: true });
+      refreshExecutionHistory(undefined, currentRun.value?.id === msg.result.runId);
+    }
     pushLog(msg.result?.status === "ok" ? "success" : "info", `[结束] ${msg.taskName || msg.message || ""}${msg.result?.status ? `：${outcomeLabels[msg.result.status] || "未确认"}` : ""}`);
   } else if (msg.type === "log") {
     pushLog(msg.level || "info", msg.message || "");
-  } else if (msg.type === "connected") {
-    pushConnected.value = true;
   }
 }
 
@@ -1171,72 +1377,172 @@ const executionModeOptions = [{ label: '按账号连续执行', value: 'account'
 const executionDetail = ref(null);
 const currentRun = ref(null);
 const runRows = ref([]);
-const historyEnabled = ref(false);
 const recordBusy = ref(false);
 const runError = ref("");
 const canLoadMoreRuns = ref(false);
+const showCompletedRows = ref(false);
 const selectedRetryKeys = ref([]);
 const retrySubmitting = ref(false);
 const showRetryConfirm = ref(false);
 let recordRequest = 0;
-const runOptions = computed(() => runRows.value.map(run => ({ value: run.id, label: `${formatTime(run.startedAt)} · ${run.parentRunId ? '补跑' : '执行'} · ${run.state === 'running' ? '执行中' : outcomeLabels[run.status] || '未确认'}` })));
-const retryCandidates = computed(() => (currentRun.value?.result?.summary?.results || []).flatMap(result => (result.accounts?.details || []).filter(account => ['error', 'partial', 'unverified', 'incomplete'].includes(account.status)).map(account => ({ key: JSON.stringify([account.id, result.task]), tokenId: account.id, task: result.task, label: `${account.name} · ${TASK_LABELS[result.task] || result.task} · ${account.reason || outcomeLabels[account.status]}`, safeDefault: account.status === 'error' && account.stage === 'preflight' && !account.submitted }))));
-async function openExecutionDetail(task, forceHistory = false) {
+const runOptions = computed(() => {
+  const current = currentRun.value;
+  const rows = current && !runRows.value.some(run => run.id === current.id) ? [current, ...runRows.value] : runRows.value;
+  return rows.map(run => ({ value: run.id, label: `${formatTime(run.startedAt)} · ${run.parentRunId ? '补跑' : '执行'} · ${run.state === 'running' ? '执行中' : outcomeLabels[run.status] || '未确认'}` }));
+});
+const taskResults = computed(() => executionDetail.value?.lastResult?.summary?.results || []);
+const executionRows = computed(() => taskResults.value.flatMap(result => (result.accounts?.details || []).map(account => ({
+  key: JSON.stringify([account.id, result.task]),
+  task: result.task,
+  taskLabel: TASK_LABELS[result.task] || result.task,
+  status: Object.hasOwn(outcomeLabels, account.status) ? account.status : 'unverified',
+  account,
+}))));
+const attentionRows = computed(() => executionRows.value.filter(row => attentionStatuses.has(row.status)));
+const executionGroups = computed(() => [
+  { key: 'attention', rows: attentionRows.value },
+  { key: 'completed', rows: executionRows.value.filter(row => !attentionStatuses.has(row.status)) },
+].filter(group => group.rows.length));
+const executionTotals = computed(() => {
+  const counts = { ok: 0, failure: 0, unverified: 0, skip: 0 };
+  for (const { status } of executionRows.value) {
+    counts[Object.hasOwn(counts, status) ? status : 'failure']++;
+  }
+  return [
+    { label: '成功', count: counts.ok },
+    { label: '失败或未完成', count: counts.failure },
+    { label: '未确认', count: counts.unverified },
+    { label: '跳过', count: counts.skip },
+  ];
+});
+const executionIssues = computed(() => taskResults.value.filter(result => result.error || result.reason)
+  .map(result => `${TASK_LABELS[result.task] || result.task} · ${result.error || result.reason}`));
+const retryCandidates = computed(() => {
+  if (currentRun.value?.state !== 'finished') return [];
+  return attentionRows.value.filter(({ account }) => account.id && attentionStatuses.has(account.status)).map(({ key, task, taskLabel, account }) => ({
+    key,
+    tokenId: account.id,
+    task,
+    label: `${account.name || account.id} · ${taskLabel} · ${account.reason || outcomeLabels[account.status]}`,
+    safeDefault: account.status === 'error' && account.stage === 'preflight' && !account.submitted,
+  }));
+});
+const retryCandidateKeys = computed(() => new Set(retryCandidates.value.map(item => item.key)));
+function setRetrySelected(key, checked) {
+  selectedRetryKeys.value = checked ? [...new Set([...selectedRetryKeys.value, key])] : selectedRetryKeys.value.filter(value => value !== key);
+}
+function closeExecutionDetail() {
   recordRequest++;
+  executionDetail.value = null;
+  currentRun.value = null;
+  runRows.value = [];
+  runError.value = '';
+  recordBusy.value = false;
+  canLoadMoreRuns.value = false;
+  selectedRetryKeys.value = [];
+  showCompletedRows.value = false;
+  showRetryConfirm.value = false;
+}
+async function openExecutionDetail(task, preferredRunId) {
+  closeExecutionDetail();
   executionDetail.value = task;
-  currentRun.value = null; runRows.value = []; runError.value = ''; selectedRetryKeys.value = [];
-  historyEnabled.value = forceHistory || !!task.lastResult?.runId;
-  if (historyEnabled.value) await refreshExecutionHistory(forceHistory ? undefined : task.lastResult?.runId, true);
+  await refreshExecutionHistory(preferredRunId);
 }
 async function refreshExecutionHistory(preferredId, force = false) {
-  if (!executionDetail.value || !historyEnabled.value || (recordBusy.value && !force)) return;
-  const id = executionDetail.value.id; const request = ++recordRequest;
+  if (!executionDetail.value || (recordBusy.value && !force)) return;
+  const id = executionDetail.value.id;
+  const request = ++recordRequest;
   recordBusy.value = true;
+  runError.value = '';
   try {
     const rows = await scheduledTasksApi.runs(id);
-    if (request !== recordRequest || executionDetail.value?.id !== id) return;
-    runRows.value = rows; canLoadMoreRuns.value = rows.length === 20;
-    const runId = preferredId || currentRun.value?.id || rows[0]?.id;
-    if (runId) await selectRun(runId, request);
-  } catch (error) { runError.value = `读取执行记录失败：${error.response?.data?.error || error.message}`; }
-  finally { recordBusy.value = false; }
+    if (request !== recordRequest) return;
+    runRows.value = rows;
+    canLoadMoreRuns.value = rows.length === 20;
+    const runId = preferredId || currentRun.value?.id || rows[0]?.id || executionDetail.value.lastResult?.runId;
+    if (runId) await readExecutionRun(id, runId, request);
+  } catch (error) {
+    if (request === recordRequest) runError.value = `读取执行记录失败：${error.response?.data?.error || error.message}`;
+  } finally {
+    if (request === recordRequest) recordBusy.value = false;
+  }
 }
-async function selectRun(runId, inheritedRequest) {
-  if (!executionDetail.value) return;
-  const request = typeof inheritedRequest === 'number' ? inheritedRequest : ++recordRequest;
-  const id = executionDetail.value.id;
+async function readExecutionRun(id, runId, request) {
+  const run = await scheduledTasksApi.getRun(id, runId);
+  if (request !== recordRequest) return;
+  const changed = currentRun.value?.id !== run.id || currentRun.value?.state !== run.state;
+  currentRun.value = run;
+  executionDetail.value = { ...executionDetail.value, lastResult: run.result || { version: 2, status: 'unverified' } };
+  if (changed) {
+    showCompletedRows.value = false;
+    selectedRetryKeys.value = retryCandidates.value.filter(item => item.safeDefault).map(item => item.key);
+  }
+}
+async function selectRun(runId) {
+  if (!executionDetail.value || recordBusy.value || !runId) return;
+  const request = ++recordRequest;
+  recordBusy.value = true;
+  runError.value = '';
   try {
-    const run = await scheduledTasksApi.getRun(id, runId);
-    if (request !== recordRequest || executionDetail.value?.id !== id) return;
-    const changed = currentRun.value?.id !== run.id;
-    currentRun.value = run;
-    executionDetail.value = { ...executionDetail.value, lastResult: run.result || { version: 2, status: 'unverified' } };
-    if (changed) selectedRetryKeys.value = retryCandidates.value.filter(item => item.safeDefault).map(item => item.key);
-  } catch (error) { runError.value = `读取执行详情失败：${error.response?.data?.error || error.message}`; }
+    await readExecutionRun(executionDetail.value.id, runId, request);
+  } catch (error) {
+    if (request === recordRequest) runError.value = `读取执行详情失败：${error.response?.data?.error || error.message}`;
+  } finally {
+    if (request === recordRequest) recordBusy.value = false;
+  }
 }
 async function loadMoreRuns() {
   if (recordBusy.value || !executionDetail.value) return;
+  const request = ++recordRequest;
   recordBusy.value = true;
+  runError.value = '';
   try {
     const rows = await scheduledTasksApi.runs(executionDetail.value.id, runRows.value.length);
-    runRows.value.push(...rows); canLoadMoreRuns.value = rows.length === 20;
-  } catch (error) { runError.value = error.message; }
-  finally { recordBusy.value = false; }
+    if (request !== recordRequest) return;
+    runRows.value.push(...rows);
+    canLoadMoreRuns.value = rows.length === 20;
+  } catch (error) {
+    if (request === recordRequest) runError.value = `读取更早记录失败：${error.response?.data?.error || error.message}`;
+  } finally {
+    if (request === recordRequest) recordBusy.value = false;
+  }
 }
 async function submitFailedRetry() {
   if (!executionDetail.value || !currentRun.value || retrySubmitting.value || !selectedRetryKeys.value.length) return false;
-  retrySubmitting.value = true; runError.value = '';
+  const owner = activeCloudUser.value;
+  const taskId = executionDetail.value.id;
+  const parentRunId = currentRun.value.id;
+  const ownsDialog = () => isCurrentCloudUser(owner) && executionDetail.value?.id === taskId && currentRun.value?.id === parentRunId;
+  const selection = retryCandidates.value.filter(item => selectedRetryKeys.value.includes(item.key)).map(({ tokenId, task }) => ({ tokenId, task }));
+  if (!owner || !selection.length) return false;
+  retrySubmitting.value = true;
+  runError.value = '';
   try {
-    const selection = retryCandidates.value.filter(item => selectedRetryKeys.value.includes(item.key)).map(({ tokenId, task }) => ({ tokenId, task }));
-    const result = await scheduledTasksApi.retry(executionDetail.value.id, currentRun.value.id, selection);
-    showRetryConfirm.value = false;
-    await refreshExecutionHistory(result.runId);
-  } catch (error) { runError.value = `补跑提交失败：${error.response?.data?.error || error.message}`; }
-  finally { retrySubmitting.value = false; }
+    const result = await scheduledTasksApi.retry(taskId, parentRunId, selection);
+    if (ownsDialog()) {
+      showRetryConfirm.value = false;
+      await refreshExecutionHistory(result.runId, true);
+    }
+    if (isCurrentCloudUser(owner)) await refreshTasks({ force: true });
+  } catch (error) {
+    if (!ownsDialog()) return false;
+    const activeRunId = error.response?.status === 409 && error.response.data?.runId;
+    if (activeRunId) {
+      showRetryConfirm.value = false;
+      await refreshExecutionHistory(activeRunId, true);
+      if (isCurrentCloudUser(owner) && executionDetail.value?.id === taskId && currentRun.value?.id === activeRunId) {
+        runError.value = '已有运行正在执行，请等待结束后再补跑。';
+      }
+    } else {
+      runError.value = `补跑提交失败：${error.response?.data?.error || error.message}`;
+    }
+  }
+  finally { if (isCurrentCloudUser(owner)) retrySubmitting.value = false; }
   return false;
 }
 const outcomeLabels = { ok: '成功', partial: '部分失败', error: '失败', skip: '跳过', unverified: '未确认', incomplete: '未完成' };
 function executionStatus(result) {
+  if (!result) return { label: '尚未执行', type: 'default' };
   if (result?.version !== 2) return { label: '旧版记录', type: 'default' };
   return { label: outcomeLabels[result.status] || '未确认', type: ({ ok: 'success', partial: 'warning', error: 'error', skip: 'default', unverified: 'warning', incomplete: 'warning' })[result.status] || 'warning' };
 }
@@ -1252,38 +1558,74 @@ let tasksRefreshTimer = null;
 function syncTaskRefresh() {
   clearInterval(tasksRefreshTimer);
   tasksRefreshTimer = null;
-  if (document.hidden || cloudPageDisposed) return;
-  if (isLoggedIn.value) refreshTasks();
+  if (document.hidden || cloudPageDisposed || !activeCloudUser.value) return;
+  refreshTasks();
   tasksRefreshTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden) { refreshTasks(); refreshExecutionHistory(); } }, 30000);
 }
 
 /* ---------- 生命周期 ---------- */
-function onAuthReady() {
+function syncCloudSession(owner) {
+  pushClient?.disconnect();
+  pushClient = null;
+  taskReadVersion++;
+  settingsReadVersion++;
+  closeExecutionDetail();
+  retrySubmitting.value = false;
+  tasksRefreshPromise = null;
+  loadingTaskList.value = false;
+  loadingCloud.value = false;
+  syncing.value = false;
+  savingAccountSettings.value = false;
+  loadingAccountSettings.value = false;
+  accountSettingsReady.value = false;
+  showAccountSettings.value = false;
+  showTaskModal.value = false;
+  showCloudLogs.value = false;
+  showRetryConfirm.value = false;
+  showBulkConfirm.value = false;
+  bulkBusy.value = false;
+  pendingTaskId.value = null;
+  saving.value = false;
+  importingTasks.value = false;
+  accountReadError.value = "";
+  taskReadError.value = "";
+  taskActionError.value = "";
+  syncResult.value = null;
+  cloudTokens.value = [];
+  scheduledTasks.value = [];
+  connStatus.value = {};
+  clearPlanFilters();
+  deletePlanTarget.value = null;
+  settingsToken.value = null;
+  bulkReport.value = null;
+  startingTasks.clear();
+  logs.value = [];
+  syncTaskRefresh();
+  if (!owner) return;
   authError.value = "";
   refreshCloudTokens();
-  refreshTasks();
-  // 初始化连接状态（页面刷新后从服务端恢复真实状态）
-  statusApi
-    .getAll()
-    .then((list) => {
-      for (const item of list || []) {
-        if (item?.id) {
-          connStatus.value[item.id] = item.status || "disconnected";
-        }
+  // 初次连接时读取由上面的初始化负责，重连后补上断开期间的变化。
+  let connectedBefore = false;
+  pushClient = new ServerPushClient(handlePush, connected => {
+    pushConnected.value = connected;
+    if (connected) {
+      if (connectedBefore) {
+        refreshCloudTokens();
+        refreshTasks({ force: true });
+        refreshExecutionHistory(undefined, true);
       }
-    })
-    .catch(() => {});
-  if (!pushClient) {
-    pushClient = new ServerPushClient(handlePush);
-    pushClient.connect();
-  }
+      connectedBefore = true;
+    }
+  });
+  pushClient.connect();
 }
 
 onMounted(() => {
   document.addEventListener("visibilitychange", syncTaskRefresh);
-  syncTaskRefresh();
-  if (isLoggedIn.value) onAuthReady();
+  syncCloudSession(activeCloudUser.value);
 });
+
+watch(activeCloudUser, syncCloudSession);
 
 onUnmounted(() => {
   cloudPageDisposed = true;
@@ -1311,6 +1653,7 @@ onUnmounted(() => {
 .cloud-toolbar { margin: 8px 0 16px; }
 .cloud-toolbar-actions { margin-left: auto; gap: 8px; }
 .cloud-search { width: 220px; max-width: 100%; }
+.cloud-plan-search { width: 200px; min-width: 0; }
 .cloud-notice { margin-bottom: 12px; }
 .cloud-failures { overflow-wrap: anywhere; margin: 4px 0; }
 .cloud-sections { container-type: inline-size; }
@@ -1334,16 +1677,31 @@ onUnmounted(() => {
 .cloud-account-status { color: var(--text-secondary); font-size: 12px; }
 .cloud-connected { color: var(--success-color); }
 .cloud-card-description { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.cloud-task-cron { color: var(--text-secondary); background: var(--bg-secondary); padding: 4px 8px; border-radius: 6px; font-size: 12px; overflow-wrap: anywhere; }
 .cloud-next-run { font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
-.cloud-retry-options { padding: 12px; background: var(--bg-secondary); border-radius: 12px; margin-bottom: 16px; }
-.cloud-retry-options h3 { font-size: 14px; }
-.cloud-retry-options :deep(.n-checkbox) { white-space: normal; }
+:global(.cloud-execution-modal.n-card) { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+:global(.cloud-execution-modal > .n-card__content) { min-height: 0; overflow-y: auto; }
+:global(.cloud-execution-modal > .n-card__footer) { flex-shrink: 0; border-top: 1px solid var(--border-light); padding-top: 12px; }
+.cloud-execution-body { min-width: 0; overflow-wrap: anywhere; }
+.cloud-execution-body > p { margin: 6px 0; }
+.cloud-execution-heading, .cloud-result-account, .cloud-execution-totals { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.cloud-execution-heading { color: var(--text-primary); }
+.cloud-execution-history { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.cloud-execution-history :deep(.n-select) { flex: 1 1 220px; min-width: 0; }
+.cloud-execution-origin { display: flex; align-items: center; gap: 8px; }
+.cloud-execution-totals { padding: 8px 12px; border-radius: var(--border-radius-md, 12px); background: var(--bg-secondary); color: var(--text-secondary); font-size: 12px; }
+.cloud-execution-totals strong { color: var(--text-primary); }
+.cloud-execution-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.cloud-execution-footer .n-button { margin-inline-start: auto; }
+.cloud-retry-review { max-height: 35vh; max-height: 35dvh; overflow: auto; overflow-wrap: anywhere; padding-inline-start: 20px; }
 .cloud-result-section { margin-top: 16px; overflow-wrap: anywhere; }
-.cloud-result-section h3 { font-size: 14px; }
+.cloud-result-section h3 { margin: 0; font-size: 14px; }
 .cloud-account-result { padding: 10px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
 .cloud-account-result p { margin: 4px 0; }
 .cloud-account-result ul { padding-left: 20px; }
+.cloud-result-heading { display: flex; align-items: flex-start; gap: 8px; }
+.cloud-result-heading > div { min-width: 0; }
+.cloud-result-heading :deep(.n-checkbox) { flex: 0 0 auto; }
+.cloud-result-account { gap: 4px 8px; }
 .cloud-task-result { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-top: auto; }
 .cloud-card-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; padding-top: 8px; margin-top: auto; border-top: 1px solid var(--border-light); }
 .cloud-schedule-disabled .cloud-card-title { color: var(--text-secondary); }
@@ -1358,11 +1716,35 @@ onUnmounted(() => {
 .auth-card { width: 100%; max-width: 380px; }
 @media (max-width: 768px) {
   :global(.cloud-log-drawer.n-drawer) { width: 100vw !important; max-width: 100vw !important; }
-  .cloud-tasks { padding: 12px; }
+  :global(.cloud-execution-modal.n-modal), :global(.cloud-retry-confirm.n-modal) {
+    width: 92vw !important;
+    max-width: 92vw !important;
+    inset-inline: auto !important;
+  }
+  .cloud-tasks { padding: 6px 12px 12px; }
+  .cloud-header { gap: 4px; margin-bottom: 0; }
+  .cloud-title { margin: 0; font-size: 16px; }
+  .cloud-sub, .cloud-summary-total { display: none; }
+  .cloud-summary { align-items: center; gap: 4px 16px; margin-bottom: 0; }
+  .cloud-tabs { margin-bottom: 8px; }
+  .cloud-tabs button { min-height: 44px; padding-block: 8px; }
+  .cloud-toolbar { margin: 0 0 8px; }
   .cloud-toolbar-actions { margin-left: 0; width: 100%; }
   .cloud-search { width: 100%; }
-  .cloud-header-actions { gap: 8px; }
-  .cloud-tasks :deep(.n-button) { min-height: 44px; }
+  .cloud-header-actions { margin-left: auto; gap: 2px; }
+  .cloud-header-actions .n-button { padding-inline: 7px; }
+  .push-pill { gap: 4px; }
+  .cloud-plan-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; }
+  .cloud-plan-toolbar-actions { grid-column: 1 / -1; }
+  .cloud-plan-search { width: 100%; min-height: 44px; }
+  .cloud-schedule-card { padding: 8px 12px; gap: 3px; }
+  .cloud-schedule-card .cloud-card-description { display: none; }
+  .cloud-schedule-card .cloud-card-actions { padding-top: 2px; }
+  .cloud-card-grid { gap: 8px; }
+  .cloud-tasks :deep(.n-button) { min-width: 44px; min-height: 44px; }
+  :global(.cloud-execution-modal .n-button), :global(.cloud-execution-modal .n-card-header__close), :global(.cloud-retry-confirm .n-button) { min-width: 44px; min-height: 44px; }
+  .cloud-result-heading :deep(.n-checkbox) { min-width: 44px; min-height: 44px; justify-content: center; }
+  .cloud-result-heading :deep(.n-checkbox) + div { padding-top: 3px; }
   .cloud-task-heading :deep(.n-switch) { min-height: 44px; }
 }
 .cron-row {

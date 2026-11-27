@@ -1,25 +1,21 @@
 <template>
-  <div class="token-import-page">
-    <div class="container">
+  <div class="token-import-page" :class="{ 'account-page-mobile': isMobile }">
+    <div class="account-page-content">
       <!-- 统计概览 -->
-      <div class="stats-row" :class="{ 'is-mobile': isMobile }">
-        <div class="stat-card">
-          <span class="stat-value">{{ tokenStore.gameTokens.length }}</span>
-          <span class="stat-label">本地账号</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value stat-on">{{ onlineCount }}</span>
-          <span class="stat-label">在线</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value">{{ offlineCount }}</span>
-          <span class="stat-label">离线</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value">{{ multiGameSelectedTokenIds.size }}</span>
-          <span class="stat-label">已选（批量进入游戏）</span>
-        </div>
+      <div v-if="tokenStore.hasTokens" class="account-summary">
+        <span><strong>{{ tokenStore.gameTokens.length }}</strong> 本地账号</span>
+        <span><strong>{{ onlineCount }}</strong> 已连接</span>
+        <span v-if="!isMobile"><strong>{{ offlineCount }}</strong> 未连接</span>
       </div>
+
+      <section v-if="nativeGame && singleGameSession" class="retained-game-summary" aria-label="保留的游戏">
+        <div class="retained-game-identity">
+          <strong :title="singleGameSession.accountName">{{ singleGameSession.accountName }}</strong>
+          <span>{{ singleGameSession.status === 'loading' ? '游戏加载中' : singleGameSession.status === 'failed' ? '游戏加载失败' : '游戏已保留' }}</span>
+        </div>
+        <n-button type="primary" @click="resumeSingleGame(router)">继续游戏</n-button>
+        <n-button secondary @click="confirmCloseRetained">关闭游戏</n-button>
+      </section>
 
       <!-- 限流等待提示 -->
       <n-alert
@@ -122,170 +118,113 @@
           <single-bin-token-form
             @cancel="() => (showImportForm = false)"
             @ok="() => (showImportForm = false)"
-            v-if="importMethod === 'singlebin'"
+            v-if="showImportForm && importMethod === 'singlebin'"
           />
         </div>
       </a-modal>
 
       <!-- Token列表 -->
       <div v-if="tokenStore.hasTokens" class="tokens-section">
-        <div class="section-header" :class="{ 'is-mobile': isMobile }">
+        <div v-if="isMobile" class="account-mobile-toolbar">
+          <n-input
+            v-model:value="accountSearch"
+            placeholder="名称或区服"
+            :input-props="{ 'aria-label': '搜索账号名称或区服' }"
+            clearable
+          >
+            <template #prefix>
+              <NIcon :component="SearchOutline" aria-hidden="true" />
+            </template>
+          </n-input>
+          <n-button type="primary" @click="openshowImportForm">添加账号</n-button>
+          <n-dropdown trigger="click" :options="accountMenuOptions" @select="handleAccountMenuAction">
+            <n-button aria-label="排序与更多操作">
+              <template #icon><NIcon :component="EllipsisHorizontal" /></template>
+            </n-button>
+          </n-dropdown>
+        </div>
+        <div v-else class="section-header account-desktop-toolbar">
           <div class="header-left">
             <h2>Token列表 ({{ tokenStore.gameTokens.length }}个)</h2>
-            <n-space v-if="!isMobile" align="center" size="small">
+            <n-space align="center" size="small">
               <n-radio-group v-model:value="viewMode" size="small">
                 <n-radio-button value="list">列表</n-radio-button>
                 <n-radio-button value="card">卡片</n-radio-button>
               </n-radio-group>
-              <n-divider vertical style="height: 24px"></n-divider>
               <n-button-group size="small">
                 <n-button
-                  @click="toggleSort('name')"
-                  :type="sortConfig.field === 'name' ? 'primary' : 'default'"
+                  v-for="option in sortOptions"
+                  :key="option.value"
+                  :type="sortConfig.field === option.value ? 'primary' : 'default'"
+                  @click="toggleSort(option.value)"
                 >
-                  名称 {{ getSortIcon("name") }}
-                </n-button>
-                <n-button
-                  @click="toggleSort('server')"
-                  :type="sortConfig.field === 'server' ? 'primary' : 'default'"
-                >
-                  服务器 {{ getSortIcon("server") }}
-                </n-button>
-                <n-button
-                  @click="toggleSort('createdAt')"
-                  :type="sortConfig.field === 'createdAt' ? 'primary' : 'default'"
-                >
-                  创建 {{ getSortIcon("createdAt") }}
-                </n-button>
-                <n-button
-                  @click="toggleSort('lastUsed')"
-                  :type="sortConfig.field === 'lastUsed' ? 'primary' : 'default'"
-                >
-                  使用 {{ getSortIcon("lastUsed") }}
+                  {{ option.label }} {{ getSortIcon(option.value) }}
                 </n-button>
               </n-button-group>
             </n-space>
-            <!-- 移动端简化控制 -->
-            <n-space v-else align="center" size="small">
-              <n-select
-                v-model:value="sortConfig.field"
-                :options="sortOptions"
-                size="tiny"
-                style="width: 104px"
-                :to="false"
-                :consistent-menu-width="false"
-                @update:value="updateSortField"
-              />
-              <n-button
-                size="tiny"
-                @click="toggleSortDirection"
-              >
-                {{ sortConfig.direction === 'asc' ? '↑' : '↓' }}
-              </n-button>
-            </n-space>
           </div>
-          <div class="header-actions" :class="{ 'is-mobile': isMobile }">
-            <span class="multi-game-selection-count">
-              {{ isOpeningMultiGame ? "正在准备" : "已选" }}
-              {{ multiGameSelectedTokenIds.size }} 个
-            </span>
-            <n-button
-                size="small"
-                :disabled="isOpeningMultiGame"
-                @click="selectAllMultiGameTokens"
+          <div class="header-actions">
+            <n-input
+              v-model:value="accountSearch"
+              size="small"
+              placeholder="名称或区服"
+              :input-props="{ 'aria-label': '搜索账号名称或区服' }"
+              class="account-desktop-search"
+              clearable
             >
-              {{ allMultiGameTokensSelected ? "已全选" : "全选" }}
-            </n-button>
-            <n-button
-                size="small"
-                :disabled="multiGameSelectedTokenIds.size === 0 || isOpeningMultiGame"
-                @click="clearMultiGameTokenSelection"
-            >
-              清空
-            </n-button>
-            <n-button
-                size="small"
-                secondary
-                type="warning"
-                :disabled="
-                multiGameSelectedTokenIds.size === 0 || isOpeningMultiGame
-              "
-                :loading="isOpeningMultiGame"
-                @click="openSelectedGames"
-            >
-              <template #icon>
-                <n-icon>
-                  <GameController />
-                </n-icon>
-              </template>
-              批量进入游戏（{{ multiGameSelectedTokenIds.size }}）
-            </n-button>
-            <n-button quaternary @click="openGame">
-              <template #icon>
-                <n-icon>
-                  <GameController />
-                </n-icon>
-              </template>
+              <template #prefix><NIcon :component="SearchOutline" aria-hidden="true" /></template>
+            </n-input>
+            <n-button quaternary size="small" @click="openGame()">
+              <template #icon><NIcon :component="GameController" /></template>
               打开游戏
             </n-button>
-            <n-button v-if="!isMobile" quaternary @click="goToDashboard" size="small">
-              <template #icon>
-                <n-icon>
-                  <List />
-                </n-icon>
-              </template>
+            <n-button quaternary size="small" @click="goToDashboard">
+              <template #icon><NIcon :component="List" /></template>
               批量
             </n-button>
-            <n-button quaternary @click="goToPushingLevels">
-              <template #icon>
-                <n-icon>
-                  <Rocket />
-                </n-icon>
-              </template>
+            <n-button quaternary size="small" @click="goToPushingLevels">
+              <template #icon><NIcon :component="Rocket" /></template>
               主线推关
             </n-button>
-
-            <n-button
-              v-if="!showImportForm"
-              type="primary"
-              @click="showImportForm = true"
-              size="small"
-            >
-              <template #icon>
-                <n-icon>
-                  <Add />
-                </n-icon>
-              </template>
-              <span v-if="!isMobile">添加Token</span>
-              <span v-else>添加</span>
+            <n-button v-if="!showImportForm" type="primary" size="small" @click="openshowImportForm">
+              <template #icon><NIcon :component="Add" /></template>
+              添加Token
             </n-button>
-
-            <n-dropdown :options="bulkOptions" @select="handleBulkAction">
+            <n-dropdown trigger="click" :options="desktopBulkOptions" @select="handleAccountMenuAction">
               <n-button size="small">
-                <template #icon>
-                  <n-icon>
-                    <Menu />
-                  </n-icon>
-                </template>
-                <span v-if="!isMobile">批量操作</span>
+                <template #icon><NIcon :component="Menu" /></template>
+                批量操作
               </n-button>
             </n-dropdown>
           </div>
         </div>
 
-        <div class="tokens-grid" v-if="viewMode === 'card'">
+        <div v-if="multiGameSelectedTokenIds.size" class="account-batch-bar">
+          <span role="status">{{ isOpeningMultiGame ? "正在准备" : "已选" }} {{ multiGameSelectedTokenIds.size }} 个</span>
+          <n-button size="small" :disabled="isOpeningMultiGame || allMultiGameTokensSelected" @click="selectAllMultiGameTokens">
+            {{ allMultiGameTokensSelected ? "已全选" : "全选" }}
+          </n-button>
+          <n-button size="small" :disabled="isOpeningMultiGame" @click="clearMultiGameTokenSelection">清空</n-button>
+          <n-button size="small" type="primary" :loading="isOpeningMultiGame" :disabled="Boolean(openingGameTokenId)" @click="openSelectedGames">
+            批量进入游戏
+          </n-button>
+        </div>
+
+        <n-empty v-if="!filteredTokens.length" description="没有匹配的账号" class="account-search-empty">
+          <template #extra><n-button text @click="accountSearch = ''">清除搜索</n-button></template>
+        </n-empty>
+        <div v-else-if="!isMobile && viewMode === 'card'" class="tokens-grid">
           <a-card
-            v-for="(token, index) in sortedTokens"
+            v-for="(token, index) in filteredTokens"
             :key="token.id"
-            draggable="true"
+            :draggable="!accountQuery"
             @dragstart="handleDragStart(index, $event)"
+            @dragend="dragIndex = null"
             @dragover="handleDragOver($event)"
             @drop="handleDrop(index, $event)"
-            :class="{
-              'token-card': true,
-              active: selectedTokenId === token.id,
-            }"
-            @click="selectToken(token)"
+            class="token-card"
+            :class="{ active: selectedTokenId === token.id }"
+            @click="selectAccount(token)"
           >
             <template #title>
               <a-space class="token-name" align="center">
@@ -312,7 +251,13 @@
                   size="small"
                   fallback-src="/icons/xiaoyugan.png"
                 />
-                {{ token.name }}
+                <button
+                  type="button"
+                  class="account-name-button"
+                  :title="token.name"
+                  :aria-pressed="selectedTokenId === token.id"
+                  @click.stop="selectAccount(token)"
+                >{{ token.name }}</button>
                 <a-tag
                   :color="getServerTagColor(token.id)"
                   v-if="token.server"
@@ -335,11 +280,11 @@
                 :options="getTokenActions(token)"
                 @select="(key) => handleTokenAction(key, token)"
               >
-                <n-button text>
+                <n-button text :aria-label="`更多操作：${token.name}`" @click.stop>
                   <template #icon>
-                    <n-icon>
+                    <NIcon>
                       <EllipsisHorizontal />
-                    </n-icon>
+                    </NIcon>
                   </template>
                 </n-button>
               </n-dropdown>
@@ -378,9 +323,9 @@
                 <span class="remark-value">{{
                   token.remark || "点击添加备注"
                 }}</span>
-                <n-icon style="margin-left: 4px; color: var(--text-tertiary)">
+                <NIcon style="margin-left: 4px; color: var(--text-tertiary)">
                   <Create />
-                </n-icon>
+                </NIcon>
               </div>
 
               <a-button
@@ -388,9 +333,9 @@
                 @click.stop="refreshToken(token)"
               >
                 <template #icon>
-                  <n-icon>
+                  <NIcon>
                     <Refresh />
-                  </n-icon>
+                  </NIcon>
                 </template>
                 {{ token.sourceUrl ? "刷新" : "重新获取" }}
               </a-button>
@@ -417,23 +362,13 @@
                   <n-tag
                     size="small"
                     :type="
-                      token.importMethod === 'url' ||
-                      token.importMethod === 'bin' ||
-                      token.importMethod === 'wxQrcode' ||
-                      token.importMethod === 'mobile' ||
-                      token.importMethod === 'wxForceLogout' ||
-                      token.upgradedToPermanent
+                      isPermanentToken(token)
                         ? 'success'
                         : 'warning'
                     "
                   >
                     {{
-                      token.importMethod === "url" ||
-                      token.importMethod === "bin" ||
-                      token.importMethod === "wxQrcode" ||
-                      token.importMethod === "mobile" ||
-                      token.importMethod === "wxForceLogout" ||
-                      token.upgradedToPermanent
+                      isPermanentToken(token)
                         ? "长期有效"
                         : "临时存储"
                     }}
@@ -443,14 +378,7 @@
                 <!-- 升级选项（仅对临时存储的token显示） -->
                 <div
                   v-if="
-                    !(
-                      token.importMethod === 'url' ||
-                      token.importMethod === 'bin' ||
-                      token.importMethod === 'wxQrcode' ||
-                      token.importMethod === 'mobile' ||
-                      token.importMethod === 'wxForceLogout' ||
-                      token.upgradedToPermanent
-                    )
+                    !isPermanentToken(token)
                   "
                   class="storage-upgrade"
                 >
@@ -461,9 +389,9 @@
                     @click.stop="upgradeTokenToPermanent(token)"
                   >
                     <template #icon>
-                      <n-icon>
+                      <NIcon>
                         <Star />
-                      </n-icon>
+                      </NIcon>
                     </template>
                     升级为长期有效
                   </n-button>
@@ -471,67 +399,45 @@
               </div>
             </template>
             <template #actions>
-              <n-button
-                type="primary"
-                size="large"
-                block
-                :loading="connectingTokens.has(token.id)"
-                @click="startTaskManagement(token)"
-              >
-                <template #icon>
-                  <n-icon>
-                    <Home />
-                  </n-icon>
-                </template>
-                进入控制台
-              </n-button>
+              <div class="account-card-actions">
+                <n-button
+                  :loading="isConnectionPending(token.id)"
+                  :aria-label="`${getConnectionActionLabel(token.id)}：${token.name}`"
+                  @click.stop="toggleAccountConnection(token)"
+                >{{ getConnectionActionLabel(token.id) }}</n-button>
+                <n-button type="primary" @click.stop="startTaskManagement(token)">
+                  <template #icon><NIcon :component="Home" /></template>
+                  进入控制台
+                </n-button>
+              </div>
             </template>
           </a-card>
         </div>
 
-        <!-- List View -->
-        <div class="tokens-list" v-else>
+        <div v-else class="tokens-list">
           <n-card
-            v-for="(token, index) in sortedTokens"
+            v-for="(token, index) in filteredTokens"
             :key="token.id"
-            draggable="true"
-            @dragstart="handleDragStart(index, $event)"
-            @dragover="handleDragOver($event)"
-            @drop="handleDrop(index, $event)"
             size="small"
-            style="margin-bottom: 8px"
-            hoverable
-            @click="selectToken(token)"
+            class="account-list-card"
             :class="{ active: selectedTokenId === token.id }"
+            :draggable="!isMobile && !accountQuery"
+            @dragstart="handleDragStart(index, $event)"
+            @dragend="dragIndex = null"
+            @dragover="handleDragOver"
+            @drop="handleDrop(index, $event)"
+            @click="selectAccount(token)"
           >
-            <n-space justify="space-between" align="center">
-              <!-- Info -->
-              <n-space align="center" :size="6">
-                <span
-                  class="multi-game-token-checkbox"
-                  @click.stop
-                  @mousedown.stop
-                  @dragstart.stop.prevent
-                >
+            <div class="account-list-row">
+              <div class="account-list-info">
+                <div class="account-list-check" @click.stop @mousedown.stop @dragstart.stop.prevent>
                   <n-checkbox
                     :checked="multiGameSelectedTokenIds.has(token.id)"
                     :disabled="isOpeningMultiGame"
                     :aria-label="`选择 ${token.name} 批量进入游戏`"
-                    @click.stop
-                    @update:checked="
-                      (checked) => setMultiGameTokenSelected(token.id, checked)
-                    "
-                  />
-                </span>
-                <!-- 连接状态 - 移动到最前端显示 -->
-                <div style="min-width: 65px">
-                  <a-badge
-                    :status="getTokenStyle(token.id)"
-                    :text="getConnectionStatusText(token.id)"
-                    :title="tokenStore.getWebSocketError(token.id)"
+                    @update:checked="(checked) => setMultiGameTokenSelected(token.id, checked)"
                   />
                 </div>
-                <!-- Avatar -->
                 <n-avatar
                   v-if="token.avatar"
                   :src="token.avatar"
@@ -539,174 +445,99 @@
                   size="small"
                   fallback-src="/icons/xiaoyugan.png"
                 />
-
-                <!-- Token基本信息 -->
-                <div style="min-width: 100px">
-                  <div
-                    style="
-                      display: flex;
-                      align-items: center;
-                      flex-wrap: wrap;
-                      gap: 2px;
-                    "
-                  >
-                    <span style="font-weight: bold; font-size: 0.95em">{{
-                      token.name
-                    }}</span>
-                    <n-tag
-                      size="small"
-                      :type="getServerTagType(token.id)"
-                      v-if="token.server"
-                      >{{ token.server }}</n-tag
-                    >
-                    <!-- 备注信息 - 显示在服务器信息后面 -->
-                    <div
-                      v-if="editingRemark === token.id"
-                      style="
-                        font-size: 0.75em;
-                        display: flex;
-                        align-items: center;
-                        gap: 4px;
-                      "
-                      @click.stop
-                    >
-                      <i
-                        class="i-mdi:note-outline"
-                        style="margin-right: 1px"
-                      ></i>
-                      <n-input
-                        v-model:value="tempRemarks[token.id]"
-                        size="small"
-                        placeholder="添加备注..."
-                        @blur="saveRemark(token)"
-                        @keyup.enter="saveRemark(token)"
-                        @keyup.esc="cancelEditRemark()"
-                        autofocus
-                        style="width: 150px"
-                      />
-                    </div>
-                    <div
-                      v-else
-                      style="
-                        font-size: 0.75em;
-                        color: var(--text-secondary);
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 4px;
-                      "
-                      @click.stop="startEditRemark(token)"
-                    >
-                      <i
-                        class="i-mdi:note-outline"
-                        style="margin-right: 1px"
-                      ></i>
-                      {{ token.remark || "点击添加备注" }}
-                      <n-icon
-                        style="font-size: 0.8em; color: var(--text-tertiary)"
-                      >
-                        <Create />
-                      </n-icon>
-                    </div>
+                <n-avatar v-else-if="isMobile" size="small" round aria-hidden="true" class="account-avatar-fallback">
+                  {{ token.name?.trim().charAt(0) || "号" }}
+                </n-avatar>
+                <div class="account-list-identity">
+                  <button
+                    type="button"
+                    class="account-name-button"
+                    :title="token.name"
+                    :aria-pressed="selectedTokenId === token.id"
+                    @click.stop="selectAccount(token)"
+                  >{{ token.name }}</button>
+                  <div class="account-list-meta">
+                    <span v-if="token.server" class="account-server" :title="String(token.server)">{{ token.server }}</span>
+                    <span v-if="isMobile" class="account-connection-status" role="status">
+                      <a-badge :status="getTokenStyle(token.id)" :text="getConnectionStatusText(token.id)" />
+                    </span>
+                    <a-badge v-else
+                      :status="getTokenStyle(token.id)"
+                      :text="getConnectionStatusText(token.id)"
+                      :title="tokenStore.getWebSocketError(token.id)"
+                    />
+                    <span v-if="!isMobile" class="account-storage">{{ isPermanentToken(token) ? "长期" : "临时" }}</span>
                   </div>
+                  <p v-if="isMobile && getLoginDisplay(token.id).error" class="account-connection-error" role="status">
+                    {{ getLoginDisplay(token.id).error }}
+                  </p>
                 </div>
-              </n-space>
-
-              <!-- Actions -->
-              <n-space>
-                <!-- 存储类型 -->
-                <n-tag
-                  size="small"
-                  :type="
-                    token.importMethod === 'url' ||
-                    token.importMethod === 'bin' ||
-                    token.importMethod === 'wxQrcode' ||
-                    token.importMethod === 'mobile' ||
-                    token.importMethod === 'wxForceLogout' ||
-                    token.upgradedToPermanent
-                      ? 'success'
-                      : 'warning'
-                  "
-                >
-                  {{
-                    token.importMethod === "url" ||
-                    token.importMethod === "bin" ||
-                    token.importMethod === "wxQrcode" ||
-                    token.importMethod === "mobile" ||
-                    token.importMethod === "wxForceLogout" ||
-                    token.upgradedToPermanent
-                      ? "长期"
-                      : "临时"
-                  }}
-                </n-tag>
-
-                <!-- 升级选项（仅对临时存储的token显示） -->
-                <n-button
-                  v-if="
-                    !(
-                      token.importMethod === 'url' ||
-                      token.importMethod === 'bin' ||
-                      token.importMethod === 'wxQrcode' ||
-                      token.importMethod === 'mobile' ||
-                      token.importMethod === 'wxForceLogout' ||
-                      token.upgradedToPermanent
-                    )
-                  "
-                  size="small"
-                  type="success"
-                  ghost
-                  @click.stop="upgradeTokenToPermanent(token)"
-                >
-                  <template #icon>
-                    <n-icon>
-                      <Star />
-                    </n-icon>
-                  </template>
-                  升级
-                </n-button>
-
-                <n-button
-                  size="small"
-                  type="primary"
-                  :loading="connectingTokens.has(token.id)"
-                  @click.stop="startTaskManagement(token)"
-                >
-                  <template #icon>
-                    <n-icon>
-                      <Home />
-                    </n-icon>
-                  </template>
-                  控制台
-                </n-button>
-                <n-button
-                  size="small"
-                  @click.stop="refreshToken(token)"
-                  :loading="refreshingTokens.has(token.id)"
-                >
-                  <template #icon>
-                    <n-icon>
-                      <Refresh />
-                    </n-icon>
-                  </template>
-                  刷新
-                </n-button>
-                <n-dropdown
-                  :options="getTokenActions(token)"
-                  @select="(key) => handleTokenAction(key, token)"
-                >
-                  <n-button size="small" circle @click.stop>
-                    <template #icon>
-                      <n-icon>
-                        <EllipsisHorizontal />
-                      </n-icon>
-                    </template>
+              </div>
+              <div class="account-list-actions">
+                <template v-if="isMobile">
+                  <n-button
+                    v-if="getLoginDisplay(token.id).canCancel"
+                    class="compact-account-action"
+                    size="small"
+                    type="error"
+                    quaternary
+                    :aria-label="`取消连接：${token.name}`"
+                    @click.stop="toggleAccountConnection(token)"
+                  >
+                    <template #icon><NIcon :component="CloseCircleOutline" aria-hidden="true" /></template>
+                  </n-button>
+                  <n-button
+                    v-else
+                    class="compact-account-action account-play"
+                    size="small"
+                    type="primary"
+                    quaternary
+                    :loading="openingGameTokenId === token.id"
+                    :disabled="Boolean(openingGameTokenId && openingGameTokenId !== token.id) || isOpeningMultiGame"
+                    :aria-label="`${nativeGame && singleGameSession?.accountId === token.id ? '继续游戏' : '进入游戏'}：${token.name}`"
+                    @click.stop="openGame(token)"
+                  >
+                    <template #icon><NIcon :component="PlayOutline" aria-hidden="true" /></template>
+                  </n-button>
+                </template>
+                <template v-else>
+                  <n-button
+                    size="small"
+                    :loading="isConnectionPending(token.id)"
+                    :aria-label="`${getConnectionActionLabel(token.id)}：${token.name}`"
+                    @click.stop="toggleAccountConnection(token)"
+                  >{{ getConnectionActionLabel(token.id) }}</n-button>
+                  <n-button size="small" type="primary" @click.stop="startTaskManagement(token)">
+                    控制台
+                  </n-button>
+                  <n-button size="small" :loading="refreshingTokens.has(token.id)" @click.stop="refreshToken(token)">刷新</n-button>
+                </template>
+                <n-dropdown trigger="click" :options="getTokenActions(token)" @select="(key) => handleTokenAction(key, token)">
+                  <n-button size="small" :quaternary="isMobile" :class="{ 'compact-account-action': isMobile }" :aria-label="`更多操作：${token.name}`" @click.stop>
+                    <template #icon><NIcon :component="EllipsisHorizontal" /></template>
                   </n-button>
                 </n-dropdown>
-              </n-space>
-            </n-space>
+              </div>
+            </div>
+            <div v-if="editingRemark === token.id" class="account-list-remark" @click.stop>
+              <n-input
+                v-model:value="tempRemarks[token.id]"
+                size="small"
+                placeholder="添加备注..."
+                aria-label="账号备注"
+                @blur="saveCurrentRemark"
+                @keyup.enter="saveCurrentRemark"
+                @keyup.esc="cancelEditRemark"
+                autofocus
+              />
+            </div>
+            <button
+              v-else-if="token.remark"
+              type="button"
+              class="account-list-remark"
+              :title="token.remark"
+              @click.stop="startEditRemark(token)"
+            >{{ token.remark }}</button>
           </n-card>
         </div>
       </div>
@@ -786,28 +617,30 @@ import MobileTokenForm from "./MobileTokenForm.vue";
 import { useTokenStore, selectedTokenId } from "@/stores/tokenStore";
 import {
   Add,
+  CloseCircleOutline,
   CloudUpload,
   Copy,
   Create,
+  Download,
   DownloadOutline,
   EllipsisHorizontal,
-  Grid,
-  List,
+  GameController,
   Home,
-  Key,
+  List,
   Menu,
+  PlayOutline,
   Refresh,
   Rocket,
+  SearchOutline,
   Star,
   SyncCircle,
   TrashBin,
-  GameController,
-  Download,
 } from "@vicons/ionicons5";
+import lz4 from "lz4js";
 import { NIcon, NAlert, useDialog, useMessage } from "naive-ui";
 import { g_utils } from "@/utils/bonProtocol";
 import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { transformToken, scheduleAuthUserRequest } from "@/utils/token";
 import {
   generateBinFromCombUser,
@@ -823,14 +656,17 @@ import {
 import { $emit } from "@/stores/events/index.ts";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { useMobile } from "@/composables/useMobile";
+import { closeSingleGame, openSingleGame, resumeSingleGame, singleGameSession } from "@/composables/useSingleGameSession";
 import { restoreFullBackup, validateBackup } from "@/utils/fullBackup";
-import { prepareMultiGameLaunch } from "@/utils/gameLauncher";
+import { isGameAccountReserved } from "@/utils/gameAccountLease";
+import { prepareMultiGameLaunch, prepareSingleGameLaunch } from "@/utils/gameLauncher";
 import {
   pruneTokenSelection,
   selectAllTokenIds,
   toggleTokenSelection,
 } from "@/utils/gameSelection";
-import lz4 from "lz4js";
+import { isNativeGameApp } from "@/utils/runtimePlatform";
+import { getTokenLoginDisplay } from "@/utils/tokenLoginDisplay";
 const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer, clearAll } =
   useIndexedDB();
 // 接收路由参数
@@ -844,10 +680,13 @@ const props = defineProps({
 });
 
 const router = useRouter();
+const route = useRoute();
 const message = useMessage();
 const dialog = useDialog();
 const tokenStore = useTokenStore();
-const { isMobile } = useMobile();
+const nativeGame = isNativeGameApp();
+const { isMobile: isNarrow } = useMobile();
+const isMobile = computed(() => isNarrow.value || route.name === "MobileTokens");
 
 // 限流等待状态
 const rateLimitWaiting = ref(false);
@@ -863,12 +702,14 @@ const editFormRef = ref(null);
 const editingToken = ref(null);
 const importMethod = ref("manual");
 const refreshingTokens = ref(new Set());
-const connectingTokens = ref(new Set());
+const accountSearch = ref("");
+const accountQuery = computed(() => accountSearch.value.trim().toLowerCase());
 // 从localStorage读取上次的视图模式，默认为列表视图
 const viewMode = ref(localStorage.getItem("tokenViewMode") || "list");
 const dragIndex = ref(null);
 const multiGameSelectedTokenIds = ref(new Set());
 const isOpeningMultiGame = ref(false);
+const openingGameTokenId = ref(null);
 
 // 导入方式选项 - 用于移动端下拉选择
 const importMethodOptions = [
@@ -880,25 +721,13 @@ const importMethodOptions = [
   { label: "单角色BIN", value: "singlebin" },
 ];
 
-// 排序选项 - 用于移动端下拉选择
+// 两种布局共用的排序选项
 const sortOptions = [
   { label: "名称", value: "name" },
   { label: "服务器", value: "server" },
   { label: "创建", value: "createdAt" },
   { label: "使用", value: "lastUsed" },
 ];
-
-// 切换排序方向
-const toggleSortDirection = () => {
-  sortConfig.value.direction = sortConfig.value.direction === "asc" ? "desc" : "asc";
-  localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
-};
-
-// 排序字段变更（模板内不能直接访问 localStorage 全局，须经 script 函数）
-const updateSortField = (val) => {
-  sortConfig.value.field = val;
-  localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
-};
 
 // 备注编辑状态管理
 const editingRemark = ref(null); // 当前正在编辑备注的tokenId
@@ -963,6 +792,17 @@ const sortedTokens = computed(() => {
   });
 });
 
+const filteredTokens = computed(() => {
+  const query = accountQuery.value;
+  if (!query) return sortedTokens.value;
+
+  return sortedTokens.value.filter((token) =>
+    [token.name, token.server, token.serverId].some((value) =>
+      String(value ?? "").toLowerCase().includes(query),
+    ),
+  );
+});
+
 const selectedMultiGameTokens = computed(() =>
   sortedTokens.value.filter((token) =>
     multiGameSelectedTokenIds.value.has(token.id),
@@ -1023,19 +863,21 @@ const getSortIcon = (field) => {
 };
 
 const handleDragStart = (index, event) => {
+  if (isMobile.value || accountQuery.value) return;
   dragIndex.value = index;
   event.dataTransfer.effectAllowed = "move";
   // 可以在这里设置拖拽时的预览图等
 };
 
 const handleDragOver = (event) => {
+  if (dragIndex.value === null || accountQuery.value) return;
   event.preventDefault(); // 允许放置
   event.dataTransfer.dropEffect = "move";
 };
 
 const handleDrop = (index, event) => {
   event.preventDefault();
-  if (dragIndex.value === null || dragIndex.value === index) return;
+  if (accountQuery.value || dragIndex.value === null || dragIndex.value === index) return;
 
   // 使用当前显示的列表（sortedTokens）来进行重新排序
   // 这样可以确保用户看到的顺序就是最终保存的顺序
@@ -1082,6 +924,51 @@ const bulkOptions = [
   { label: "清除所有Token", key: "clear" },
 ];
 
+const selectAllGamesOption = computed(() => ({
+  label: "全选账号用于批量进入游戏",
+  key: "selectAllForGame",
+  disabled: allMultiGameTokensSelected.value || isOpeningMultiGame.value,
+}));
+const desktopBulkOptions = computed(() => [
+  selectAllGamesOption.value,
+  { type: "divider", key: "bulk-divider" },
+  ...bulkOptions,
+]);
+const accountMenuOptions = computed(() => [
+  {
+    type: "group",
+    label: "排序",
+    key: "sort",
+    children: sortOptions.map(({ label, value }) => ({
+      label: [label, getSortIcon(value)].filter(Boolean).join(" "),
+      key: `sort:${value}`,
+    })),
+  },
+  { label: "打开游戏", key: "openGame" },
+  { label: "主线推关", key: "pushingLevels" },
+  selectAllGamesOption.value,
+  { type: "group", label: "批量操作", key: "bulk", children: bulkOptions },
+]);
+const handleAccountMenuAction = (key) => {
+  if (key.startsWith("sort:")) {
+    toggleSort(key.slice(5));
+    return;
+  }
+  switch (key) {
+    case "selectAllForGame":
+      selectAllMultiGameTokens();
+      break;
+    case "openGame":
+      openGame();
+      break;
+    case "pushingLevels":
+      goToPushingLevels();
+      break;
+    default:
+      handleBulkAction(key);
+  }
+};
+
 /**
  * 手动打开Token管理卡片
  */
@@ -1091,6 +978,13 @@ const openshowImportForm = () => {
 
 // 刷新Token
 const refreshToken = async (token) => {
+  if (isNativeGameApp() && token.importMethod === "bin") {
+    if (!getLoginDisplay(token.id).pending) {
+      void tokenStore.startTokenLogin(token.id, { force: true, refresh: true });
+    }
+    return;
+  }
+
   refreshingTokens.value.add(token.id);
 
   try {
@@ -1276,79 +1170,73 @@ const pendingTokenLogins = reactive(new Map());
 watch(
   () => [...pendingTokenLogins.keys()].map((id) => ({
     id,
-    status: tokenStore.getWebSocketStatus(id),
+    login: getLoginDisplay(id),
     error: tokenStore.wsConnections[id]?.lastError,
   })),
   (connections) => {
-    for (const { id, status, error } of connections) {
+    for (const { id, login, error } of connections) {
       const attempt = pendingTokenLogins.get(id);
       if (!attempt) continue;
-      if (status === "connected") {
+      if (login.status === "connected") {
         message.success(`已连接 ${attempt.name}`);
         pendingTokenLogins.delete(id);
-      } else if (status === "error" && error && error !== attempt.previousError) {
-        message.error(`${attempt.name}：${error.error}`);
+      } else if (login.status === "error" && (login.error || (error && error !== attempt.previousError))) {
+        message.error(`${attempt.name}：${login.error || "连接失败，请重试"}`);
+        pendingTokenLogins.delete(id);
+      } else if (login.status === "cancelled") {
         pendingTokenLogins.delete(id);
       }
     }
   },
 );
 
-const selectToken = (token, forceReconnect = false) => {
-  // 如果有备注正在编辑，保存备注并取消编辑
-  if (editingRemark.value) {
-    saveCurrentRemark();
+const selectAccount = (token) => {
+  if (editingRemark.value) saveCurrentRemark();
+  tokenStore.selectTokenOnly(token.id);
+};
+
+function getLoginDisplay(tokenId) {
+  return getTokenLoginDisplay(tokenStore.getTokenLoginState(tokenId), getConnectionStatus(tokenId));
+}
+
+const isConnectionPending = (tokenId) => getLoginDisplay(tokenId).pending;
+
+const getConnectionActionLabel = (tokenId) => {
+  const login = getLoginDisplay(tokenId);
+  const status = getConnectionStatus(tokenId);
+  if (isMobile.value && login.canCancel) return "取消连接";
+  if (isMobile.value && login.canRetry) return "重试连接";
+  if (status === "disconnecting") return "正在断开";
+  if (login.pending) return "正在连接";
+  return status === "connected" ? "断开连接" : "连接账号";
+};
+
+const toggleAccountConnection = (token) => {
+  if (nativeGame && isGameAccountReserved(token.id)) return promptGameBeforeConsole(token, () => toggleAccountConnection(token));
+  const login = getLoginDisplay(token.id);
+  if (isMobile.value && login.canCancel) {
+    tokenStore.cancelTokenLogin(token.id);
     return;
   }
+  if (login.pending) return;
 
-  const isAlreadySelected = selectedTokenId.value === token.id;
-  const connectionStatus = getConnectionStatus(token.id);
-
-  // 降噪日志已移除
-
-  // 如果已经选中且已连接，断开连接
-  if (
-    isAlreadySelected &&
-    connectionStatus === "connected" &&
-    !forceReconnect
-  ) {
-    // 断开连接
+  const connected = isMobile.value ? login.status === "connected" : getConnectionStatus(token.id) === "connected";
+  if (connected) {
     tokenStore.closeWebSocketConnection(token.id);
-    message.success(`已断开 ${token.name} 的连接`);
     return;
   }
 
-  // 如果未选中但已连接，断开连接
-  if (
-    !isAlreadySelected &&
-    connectionStatus === "connected" &&
-    !forceReconnect
-  ) {
-    // 断开连接
-    tokenStore.closeWebSocketConnection(token.id);
-    message.success(`已断开 ${token.name} 的连接`);
-    return;
-  }
-
-  // 如果已经选中但正在连接，也不执行操作
-  if (
-    isAlreadySelected &&
-    connectionStatus === "connecting" &&
-    !forceReconnect
-  ) {
-    message.info(`${token.name} 正在连接中...`);
-    return;
-  }
-
-  // 选择token（带智能连接判断）
   const previousError = tokenStore.wsConnections[token.id]?.lastError;
-  const result = tokenStore.selectToken(token.id, forceReconnect);
-
-  if (result) {
-    pendingTokenLogins.set(token.id, { name: token.name, previousError });
-    message.info(`正在连接 ${token.name}…`);
+  const selected = isMobile.value && login.canRetry
+    ? tokenStore.selectToken(token.id, true)
+    : tokenStore.selectToken(token.id);
+  if (selected) {
+    if (!isMobile.value) {
+      pendingTokenLogins.set(token.id, { name: token.name, previousError });
+      message.info(`正在连接 ${token.name}…`);
+    }
   } else {
-    message.error(`选择Token失败：${token.name}`);
+    message.error(`未找到账号：${token.name}`);
   }
 };
 
@@ -1368,11 +1256,12 @@ const offlineCount = computed(
 );
 
 const getConnectionStatusText = (tokenId) => {
+  if (isMobile.value) return getLoginDisplay(tokenId).label;
   const status = getConnectionStatus(tokenId);
   const statusMap = {
     connected: "已连接",
     connecting: "连接中...",
-    disconnected: "已断开",
+    disconnected: "未连接",
     error: "连接错误",
     disconnecting: "断开中...",
   };
@@ -1380,21 +1269,17 @@ const getConnectionStatusText = (tokenId) => {
 };
 
 const getTokenStyle = (tokenId) => {
-  const status = getConnectionStatus(tokenId);
+  const status = isMobile.value ? getLoginDisplay(tokenId).status : getConnectionStatus(tokenId);
   const statusMap = {
     connected: "success",
     connecting: "warning",
-    disconnected: "danger",
+    verifying: "warning",
+    refreshing: "warning",
+    disconnected: "normal",
     error: "danger",
     disconnecting: "warning",
   };
-  return statusMap[status] || "danger";
-};
-
-const getServerTagType = (tokenId) => {
-  const status = getConnectionStatus(tokenId);
-  // 连接成功时服务器标签使用绿色，其他状态保持红色
-  return status === "connected" ? "success" : "error";
+  return statusMap[status] || "normal";
 };
 
 const getServerTagColor = (tokenId) => {
@@ -1402,6 +1287,10 @@ const getServerTagColor = (tokenId) => {
   // 连接成功时服务器标签使用绿色，其他状态保持红色
   return status === "connected" ? "green" : "red";
 };
+
+const permanentImportMethods = new Set(["url", "bin", "wxQrcode", "mobile", "wxForceLogout"]);
+const isPermanentToken = (token) =>
+  permanentImportMethods.has(token.importMethod) || !!token.upgradedToPermanent;
 
 const getTokenActions = (token) => {
   const actions = [
@@ -1421,6 +1310,19 @@ const getTokenActions = (token) => {
       icon: () => h(NIcon, null, { default: () => h(DownloadOutline) }),
     },
   ];
+
+  if (isMobile.value) {
+    const login = getLoginDisplay(token.id);
+    actions.unshift({ label: "进入控制台", key: "console" }, { type: "divider" });
+    if (!login.canCancel) {
+      actions.unshift({ label: getConnectionActionLabel(token.id), key: "connection", disabled: login.pending });
+    }
+  }
+
+  actions.push({ label: "编辑备注", key: "remark" });
+  if (!isPermanentToken(token)) {
+    actions.push({ label: "升级为长期有效", key: "upgrade" });
+  }
 
   // 根据Token类型添加刷新选项
   if (token.importMethod === "url" && token.sourceUrl) {
@@ -1457,8 +1359,20 @@ const getTokenActions = (token) => {
 
 const handleTokenAction = async (key, token) => {
   switch (key) {
+    case "connection":
+      toggleAccountConnection(token);
+      break;
+    case "console":
+      startTaskManagement(token);
+      break;
     case "edit":
       editToken(token);
+      break;
+    case "remark":
+      startEditRemark(token);
+      break;
+    case "upgrade":
+      upgradeTokenToPermanent(token);
       break;
     case "copy":
       copyToken(token);
@@ -2209,8 +2123,14 @@ function convertBinToLx(buf) {
 }
 
 async function openSelectedGames() {
-  if (selectedMultiGameTokens.value.length === 0 || isOpeningMultiGame.value) return;
-  const tokensToOpen = [...selectedMultiGameTokens.value];
+  if (selectedMultiGameTokens.value.length === 0 || isOpeningMultiGame.value || openingGameTokenId.value) return;
+  const retainedAccount = nativeGame ? singleGameSession.value?.accountId : undefined;
+  const tokensToOpen = selectedMultiGameTokens.value.filter(token => token.id !== retainedAccount);
+  if (!tokensToOpen.length) {
+    message.warning('请先关闭该账号保留的游戏，再进入多开。');
+    return;
+  }
+  if (tokensToOpen.length < selectedMultiGameTokens.value.length) message.warning('已跳过正在单开的账号。');
   isOpeningMultiGame.value = true;
   try {
     const { launch, failures } = await prepareMultiGameLaunch({
@@ -2237,44 +2157,79 @@ async function openSelectedGames() {
   }
 }
 
-const openGame = async () => {
-  const token = tokenStore.selectedToken;
+const openGame = async (token = tokenStore.selectedToken) => {
+  if (openingGameTokenId.value || isOpeningMultiGame.value) return;
   if (!token) {
     message.warning("请先选择一个Token");
     return;
   }
-  // 从 IndexedDB 获取 BIN 数据，同步到 localStorage
-  const binData = await getArrayBuffer(token.id);
-  if (!binData) {
-    message.error("未找到该Token的BIN数据");
+  if (nativeGame && singleGameSession.value?.accountId === token.id) return resumeSingleGame(router);
+  openingGameTokenId.value = token.id;
+  try {
+    if (nativeGame) {
+      const session = await openSingleGame(token, { confirmSwitch: confirmRetainedSwitch });
+      if (session) await resumeSingleGame(router);
+      return;
+    }
+    await prepareSingleGameLaunch({ token, getArrayBuffer, localStorage });
+    if (isMobile.value) {
+      await tokenStore.closeWebSocketConnection(token.id);
+      tokenStore.selectTokenOnly(token.id);
+      await router.push({ name: "GamePlayer", query: { bin_id: token.id } });
+    } else {
+      await router.push("/game");
+    }
+  } catch (error) {
+    if (error?.message === "未找到该账号的 BIN 数据") {
+      message.error(isMobile.value ? "未找到该账号的 BIN 数据，请先导入对应的 BIN 文件" : "未找到该Token的BIN数据");
+    } else if (error?.message === '该账号已在其他游戏窗口打开') {
+      message.warning(error.message);
+    } else {
+      message.error("打开游戏失败，请重试");
+    }
+  } finally {
+    openingGameTokenId.value = null;
+  }
+};
+
+function confirmRetainedSwitch(previous) {
+  return new Promise((resolve) => {
+    dialog.warning({
+      title: '切换游戏账号', content: `切换会关闭「${previous.accountName}」的游戏窗口。`,
+      positiveText: '关闭并切换', negativeText: '取消',
+      onPositiveClick: () => resolve(true), onNegativeClick: () => resolve(false), onClose: () => resolve(false),
+      onEsc: () => resolve(false), onMaskClick: () => resolve(false),
+    });
+  });
+}
+
+function confirmCloseRetained() {
+  const retained = singleGameSession.value;
+  if (!retained) return;
+  dialog.warning({
+    title: '关闭游戏', content: `关闭后将结束「${retained.accountName}」的游戏连接。`,
+    positiveText: '关闭游戏', negativeText: '取消', onPositiveClick: () => closeSingleGame(retained.accountId),
+  });
+}
+
+function promptGameBeforeConsole(token, connect) {
+  if (singleGameSession.value?.accountId !== token.id) {
+    message.warning('该账号已在其他游戏窗口打开，请先关闭游戏窗口。');
     return;
   }
-  // 转换为 lx 格式后存入 localStorage
-  const converted = convertBinToLx(binData);
-  const hex = Array.from(converted)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  localStorage.setItem("bin_data_" + token.id, hex);
-  localStorage.setItem("current_bin_id", token.id);
-  let binList = [];
-  try {
-    binList = JSON.parse(localStorage.getItem("bin_file_list") || "[]");
-  } catch (e) {}
-  if (!binList.find((i) => i.id === token.id)) {
-    binList.push({
-      id: token.id,
-      name: token.name || "Token",
-      byteLength: binData.byteLength,
-      size: (binData.byteLength / 1024).toFixed(1) + " KB",
-      order: binList.length,
-    });
-    localStorage.setItem("bin_file_list", JSON.stringify(binList));
-  }
-  router.push("/game");
-};
+  dialog.warning({
+    title: '切换到控制台连接', content: '连接控制台前需要关闭该账号的游戏窗口。',
+    positiveText: '关闭并连接', negativeText: '取消',
+    async onPositiveClick() {
+      await closeSingleGame(token.id);
+      connect();
+    },
+  });
+}
 
 // 开始任务管理 - 直接跳转到控制台
 const startTaskManagement = (token) => {
+  if (nativeGame && isGameAccountReserved(token.id)) return promptGameBeforeConsole(token, () => startTaskManagement(token));
   // 选择token
   tokenStore.selectToken(token.id);
   // 直接跳转到控制台，不等待连接
@@ -2408,66 +2363,10 @@ onUnmounted(() => {
   padding: var(--spacing-lg) 0;
 }
 
-.container {
+.account-page-content {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
-}
-
-/* ============ 统计概览（与云端任务页同范式） ============ */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-
-  &.is-mobile {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
-  }
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--border-radius-medium);
-}
-
-.stat-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--text-primary);
-}
-
-.stat-value.stat-on {
-  color: var(--success-color);
-}
-
-.stat-label {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.stats-row.is-mobile .stat-card {
-  padding: 10px 12px;
-}
-
-.stats-row.is-mobile .stat-value {
-  font-size: 20px;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
 }
 
 .config-import-bar {
@@ -2579,7 +2478,7 @@ onUnmounted(() => {
 
 // 移动端适配
 @media screen and (max-width: 768px) {
-  .token-import-page .container {
+  .token-import-page .account-page-content {
     padding: 8px;
   }
 
@@ -2839,30 +2738,10 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-.multi-game-selection-count {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-}
-
 .multi-game-token-checkbox {
   display: inline-flex;
   align-items: center;
   cursor: default;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  flex-wrap: nowrap;
-
-  // 移动端适配
-  &.is-mobile {
-    width: 100%;
-    justify-content: flex-end;
-    gap: var(--spacing-xs);
-
-    .n-button {
-      padding: 0 8px;
-    }
-  }
 }
 
 .tokens-grid {
@@ -3215,7 +3094,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .container {
+  .account-page-content {
     padding: 0 var(--spacing-md);
   }
 
@@ -3352,5 +3231,272 @@ onUnmounted(() => {
 .tokens-list .n-card.active,
 .tokens-grid .token-card.active {
   background: var(--primary-color-light);
+}
+
+.account-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+
+  strong {
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.account-desktop-search {
+  width: 148px;
+  max-width: 100%;
+}
+
+.account-mobile-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  .n-input {
+    min-width: 0;
+    min-height: 44px;
+    --n-height: 44px !important;
+
+    :deep(.n-input__input-el) {
+      min-height: 44px;
+    }
+  }
+
+  .n-button {
+    height: 44px;
+    padding-inline: 10px;
+  }
+}
+
+.account-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: var(--border-radius-medium);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+
+  > span {
+    margin-inline-end: auto;
+  }
+}
+
+.account-search-empty {
+  padding: 24px 0;
+}
+
+.account-name-button,
+button.account-list-remark {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.account-card-actions,
+.account-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-list-card {
+  cursor: pointer;
+
+  + .account-list-card {
+    margin-top: 8px;
+  }
+}
+
+.account-list-row,
+.account-list-info,
+.account-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-list-row {
+  justify-content: space-between;
+}
+
+.account-list-info {
+  flex: 1;
+
+  :deep(.n-avatar) {
+    flex-shrink: 0;
+  }
+}
+
+.account-list-identity {
+  min-width: 0;
+}
+
+.account-list-meta {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+
+  :deep(.arco-badge-status-text) {
+    color: inherit;
+    font-size: inherit;
+  }
+}
+
+.account-server {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-connection-error {
+  margin: 4px 0 0;
+  color: var(--error-color);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.account-list-remark {
+  margin-top: 6px;
+}
+
+button.account-list-remark {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+}
+
+.account-page-mobile {
+  min-height: 0;
+  padding: 0;
+
+  .account-page-content {
+    padding-inline: 10px;
+  }
+
+  .account-summary {
+    margin-bottom: 8px;
+  }
+
+  .retained-game-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: var(--border-radius, 12px);
+    background: var(--bg-secondary);
+    box-shadow: var(--shadow-light);
+  }
+
+  .retained-game-identity {
+    display: grid;
+    flex: 1 1 0;
+    min-width: 0;
+    strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    span { color: var(--text-secondary); font-size: var(--font-size-xs); }
+  }
+
+  .retained-game-summary :deep(.n-button) { min-height: 44px; }
+
+  .tokens-section {
+    max-height: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .tokens-list {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .account-list-card {
+    --n-padding-left: 8px !important;
+    --n-padding-right: 8px !important;
+    --n-padding-bottom: 5px !important;
+    --n-padding-top: 5px !important;
+    border-radius: var(--radius-md, 12px);
+  }
+
+  .account-list-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .account-list-info { gap: 6px; }
+  .account-list-identity { flex: 1; }
+  .account-avatar-fallback { color: var(--primary-color); background: var(--primary-color-light); }
+
+  .account-list-check :deep(.n-checkbox) {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .account-list-actions {
+    flex-wrap: nowrap;
+    gap: 0;
+
+    .compact-account-action {
+      min-width: 44px;
+      width: 44px;
+      padding: 0;
+    }
+  }
+
+  .account-play :deep(.n-button__icon) { font-size: 20px; }
+
+  .account-list-actions .n-button,
+  .account-batch-bar .n-button,
+  .account-search-empty .n-button {
+    min-height: 44px;
+    height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tokens-list .n-card,
+  .tokens-grid .token-card {
+    transition: none;
+  }
+
+  .tokens-grid .token-card:hover {
+    transform: none;
+  }
 }
 </style>

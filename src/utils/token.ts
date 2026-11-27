@@ -2,6 +2,7 @@ import axios from "axios";
 import { enc, lib, MD5 } from "crypto-js";
 import { g_utils } from "@/utils/bonProtocol";
 import { getAuthUserData } from "@/utils/tokenLogin.js";
+import { throwIfAborted } from "./abortSignal.js";
 import { nativeHttp, isNativePlatform } from "./capacitor";
 import BinaryHttp from "./binaryHttp";
 
@@ -123,7 +124,7 @@ export const transformToken = async (
   { signal }: { signal?: AbortSignal } = {},
 ) => {
   return authUserRateLimiter.schedule(async () => {
-    signal?.throwIfAborted();
+    throwIfAborted(signal);
     const url = "https://xxz-xyzw.hortorgames.com/login/authuser?_seq=1";
     const headers = {
       "Content-Type": "application/octet-stream",
@@ -172,7 +173,7 @@ export const transformToken = async (
       responseData = res.data;
     }
 
-    signal?.throwIfAborted();
+    throwIfAborted(signal);
     const msg = g_utils.parse(responseData);
     const data = getAuthUserData(msg);
     const currentTime = Date.now();

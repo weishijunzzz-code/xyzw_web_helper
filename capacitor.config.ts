@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    iosScheme: 'https',
+    iosScheme: 'capacitor',
     // 启用 CapacitorHttp
     cleartext: true,
   },
@@ -23,6 +23,10 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'DARK',
       backgroundColor: '#2563EB',
+    },
+    SystemBars: {
+      insetsHandling: 'native',
+      initialViewportFitValueHint: 'cover',
     },
     Keyboard: {
       resize: 'body',
@@ -43,7 +47,7 @@ const config: CapacitorConfig = {
     },
   },
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
   },
 }
 

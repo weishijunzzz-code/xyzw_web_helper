@@ -12,6 +12,8 @@
  * (bin_data_* hex, ws_connection_*, activeConnections, changelogs cache, etc.).
  */
 
+import { Capacitor } from "@capacitor/core";
+
 const BACKUP_APP = "xyzw-web-helper";
 const BACKUP_KIND = "xyzw-full-backup";
 const BACKUP_VERSION = 1;
@@ -266,9 +268,28 @@ export async function collectFullBackup() {
   };
 }
 
-// Trigger a browser download of the backup as a dated JSON file.
-export function downloadBackupFile(backup) {
-  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+// Send the same backup JSON to the native share sheet or to the browser download.
+export async function downloadBackupFile(backup) {
+  const data = JSON.stringify(backup, null, 2);
+  if (Capacitor.isNativePlatform()) {
+    const [{ Directory, Encoding, Filesystem }, { Share }] = await Promise.all([
+      import("@capacitor/filesystem"),
+      import("@capacitor/share"),
+    ]);
+    const path = "xyzw_full_backup.json";
+    const directory = Directory.Cache;
+    const { uri } = await Filesystem.writeFile({ path, directory, data, encoding: Encoding.UTF8 });
+    try {
+      await Share.share({ files: [uri], dialogTitle: "保存或分享账号备份" });
+      return "shared";
+    } catch (error) {
+      await Filesystem.deleteFile({ path, directory }).catch(() => {});
+      if (error.message === "Share canceled") return "cancelled";
+      throw error;
+    }
+  }
+
+  const blob = new Blob([data], {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
@@ -279,6 +300,7 @@ export function downloadBackupFile(backup) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  return "downloaded";
 }
 
 // ==================== Import ====================

@@ -6,10 +6,14 @@
     size="large"
     :show-label="true"
   >
-    <NFormItem label="bin文件" :show-label="true">
+    <NFormItem label="BIN 文件" :show-label="true">
+      <NButton v-if="nativeBinPicker" :loading="isPickingBin" :disabled="isImporting" @click="pickBinFiles">
+        选择 BIN 文件
+      </NButton>
       <a-upload
+        v-else
         multiple
-        accept="*.bin,*.dmp"
+        accept=".bin,.dmp"
         @before-upload="uploadBin"
         draggable
         dropzone
@@ -51,9 +55,6 @@
         >
           <div>
             <strong>角色名称:</strong> {{ role.name || "未命名角色" }}<br />
-            <strong>Token:</strong>
-            <span style="word-break: break-all">{{ role.token }}</span
-            ><br />
             <strong>服务器:</strong> {{ role.server || "未指定" }}<br />
             <strong>角色序号:</strong> {{ role.roleIndex }}
           </div>
@@ -70,6 +71,7 @@
         size="large"
         block
         :loading="isImporting"
+        :disabled="isPickingBin"
         @click="handleImport"
       >
         <template #icon>
@@ -101,6 +103,7 @@ import {
   downloadBinFile,
   getRoleBinFileName,
 } from "@/utils/binFile";
+import { useBinFilePicker } from "@/utils/binFilePicker";
 import { g_utils } from "@/utils/bonProtocol";
 import { getServerList, getTokenId, transformToken } from "@/utils/token";
 
@@ -140,8 +143,6 @@ const roleList = ref<
   }>
 >([]);
 const serverListData = ref<any[]>([]);
-const currentBinData = ref<ArrayBuffer | null>(null);
-const binDecodedResult = ref("");
 const originalBinData = ref<any>(null);
 
 const tQueue = new PQueue({ concurrency: 1, interval: 1000 });
@@ -157,7 +158,6 @@ const handleDownload = (roleInfo: any) => {
     downloadBinFile(fileName, newBinBuffer);
     message.success(`已开始下载: ${fileName}`);
   } catch (e: any) {
-    console.error("下载失败", e);
     message.error(`下载失败: ${e.message}`);
   }
 };
@@ -220,64 +220,44 @@ const addSelectedRole = async (roleInfo: any) => {
     });
 
     message.success(`已添加角色: ${finalName}`);
-  } catch (e: any) {
-    console.error("添加角色失败", e);
-    message.error(`添加角色失败: ${e.message}`);
+  } catch {
+    message.error("添加角色失败，请检查连接后重试");
   }
 };
 
 const uploadBin = (binFile: File) => {
-  tQueue.add(async () => {
-    console.log("上传文件数据:", binFile);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const userToken = e.target?.result as ArrayBuffer;
-      currentBinData.value = userToken;
-
-      // 获取服务器角色列表
-      try {
-        const listStr = await getServerList(userToken);
-        const parsedList = JSON.parse(listStr);
-        // 转换为数组
-        if (parsedList && typeof parsedList === "object") {
-          serverListData.value = Object.values(parsedList).sort(
-            (a: any, b: any) => b.power - a.power,
-          );
-        } else {
-          serverListData.value = [];
-        }
-        console.log("Server List:", parsedList);
-        message.success("获取服务器角色列表成功，请选择角色添加");
-      } catch (err) {
-        console.error("Failed to get server list", err);
-        message.warning("获取服务器角色列表失败，请检查文件是否正确");
-        serverListData.value = [];
+  void tQueue.add(async () => {
+    serverListData.value = [];
+    originalBinData.value = null;
+    try {
+      if (!/\.(?:bin|dmp)$/i.test(binFile.name)) {
+        message.warning("仅支持 .bin 和 .dmp 文件");
+        return;
+      }
+      const bin = await binFile.arrayBuffer();
+      const binMsg = g_utils.parse(bin);
+      const rawBin = (binMsg as any)._raw;
+      const binData = binMsg.getData() || (rawBin ? { ...rawBin } : null);
+      if (!binData) {
+        message.warning("文件内容无法识别，请重新选择");
+        return;
       }
 
-      // 尝试解析 bin 文件内容
-      try {
-        const binMsg = g_utils.parse(userToken);
-        let binData = binMsg.getData();
-        if (!binData && (binMsg as any)._raw) {
-          console.log("Bin文件 getData() 为空，尝试使用 _raw");
-          binData = { ...(binMsg as any)._raw };
-        }
-
-        console.log("Bin文件解析:", binData);
-        binDecodedResult.value = JSON.stringify(binData, null, 2);
-        originalBinData.value = binData;
-      } catch (err: any) {
-        console.error("Bin文件解析失败", err);
-        binDecodedResult.value = `Bin文件解析失败: ${err.message || err}`;
-      }
-    };
-    reader.onerror = () => {
-      message.error("读取文件失败，请重试");
-    };
-    reader.readAsArrayBuffer(binFile);
+      const parsedList = JSON.parse(await getServerList(bin));
+      originalBinData.value = binData;
+      serverListData.value = parsedList && typeof parsedList === "object"
+        ? Object.values(parsedList).sort((a: any, b: any) => b.power - a.power)
+        : [];
+      if (serverListData.value.length) message.success("请选择要添加的角色");
+      else message.warning("这个文件没有可导入的角色");
+    } catch {
+      message.warning("无法读取角色列表，请检查文件和网络后重试");
+    }
   });
-  return false; // 阻止自动上传
+  return false;
 };
+
+const { nativeBinPicker, isPickingBin, pickBinFiles } = useBinFilePicker(uploadBin, message.error);
 
 const handleImport = async () => {
   if (roleList.value.length === 0) {
@@ -288,7 +268,6 @@ const handleImport = async () => {
     // tokenStore.gameTokens中发现已存在的重复名称，则移出token后重新添加
     const gameToken = tokenStore.gameTokens.find((t) => t.id === role.id);
     if (gameToken) {
-      console.log("移除同名token:", gameToken);
       // tokenStore.removeToken(gameToken.id);
       tokenStore.updateToken(gameToken.id, {
         ...role,
@@ -299,7 +278,6 @@ const handleImport = async () => {
       });
     }
   });
-  console.log("当前Token列表:", tokenStore.gameTokens);
   message.success("Token添加成功");
   roleList.value = [];
   $emit("ok");

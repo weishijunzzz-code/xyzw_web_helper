@@ -178,6 +178,9 @@ import {
 } from "vue";
 import { useRouter } from "vue-router";
 import { useMobile } from "@/composables/useMobile";
+import { useTokenStore } from "@/stores/tokenStore";
+import { acquireGameAccount } from "@/utils/gameAccountLease";
+import { isNativeGameApp } from "@/utils/runtimePlatform";
 import {
   buildMultiGameFrameSrc,
   closeMultiGameSession,
@@ -188,6 +191,8 @@ import {
 
 const props = defineProps({ workspaceActive: { type: Boolean, default: true } });
 const router = useRouter();
+const tokenStore = useTokenStore();
+const nativeGame = isNativeGameApp();
 const muted = ref(false);
 const compactFrames = ref(false);
 const lowFrameRate = ref(false);
@@ -281,38 +286,38 @@ function clearFrameTimeout(scopeId) {
 }
 
 function releaseFrameLease(scopeId) {
-  frameLeases.get(scopeId)?.release();
+  const lease = frameLeases.get(scopeId);
   frameLeases.delete(scopeId);
+  // Allow Vue to remove the old browsing context before yielding its account.
+  if (lease?.release) void nextTick().then(lease.release);
 }
 
-function openFrame(frame) {
+async function openFrame(frame) {
   const state = frameStates[frame.scopeId];
   if (!state || frameLeases.has(frame.scopeId)) return;
-  if (!navigator.locks) {
-    state.owned = true;
-    armFrameTimeout(frame.scopeId);
-    return;
-  }
-  let release;
-  const held = new Promise((done) => { release = done; });
-  const lease = { release };
+  const lease = {};
   frameLeases.set(frame.scopeId, lease);
-  navigator.locks.request("xyzw-game:" + frame.tokenId, { ifAvailable: true }, (lock) => {
-    if (frameLeases.get(frame.scopeId) !== lease) return;
-    if (!lock) {
+  try {
+    lease.release = await acquireGameAccount(frame.tokenId);
+    if (frameLeases.get(frame.scopeId) !== lease) {
+      lease.release?.();
+      return;
+    }
+    if (!lease.release) {
       state.status = "occupied";
       frameLeases.delete(frame.scopeId);
       return;
     }
+    if (nativeGame) await tokenStore.closeWebSocketConnection(frame.tokenId);
+    if (frameLeases.get(frame.scopeId) !== lease) return;
     state.owned = true;
     armFrameTimeout(frame.scopeId);
-    return held;
-  }).catch(() => {
+  } catch {
     if (frameLeases.get(frame.scopeId) === lease) {
-      frameLeases.delete(frame.scopeId);
+      releaseFrameLease(frame.scopeId);
       markFrameFatal(frame.scopeId);
     }
-  });
+  }
 }
 
 function armFrameTimeout(scopeId) {
@@ -495,7 +500,7 @@ function toggleFrameRate() {
   for (const frame of frames.value) applyFrameSettings(frame.scopeId);
 }
 
-watch(() => props.workspaceActive, (active) => {
+watch(() => props.workspaceActive, async (active) => {
   if (!active) return;
   const next = readLaunchSafely();
   if (next?.id === launch.value?.id) return;
@@ -507,6 +512,8 @@ watch(() => props.workspaceActive, (active) => {
   frameDomOrder.value = (next?.sessions || []).map((frame) => frame.scopeId);
   for (const scopeId of frameDomOrder.value) frameStates[scopeId] = { status: "loading", revision: 0 };
   launch.value = next;
+  await nextTick();
+  if (launch.value?.id !== next?.id) return;
   for (const frame of frames.value) openFrame(frame);
 });
 

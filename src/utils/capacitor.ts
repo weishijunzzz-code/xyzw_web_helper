@@ -1,6 +1,5 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { App } from '@capacitor/app'
-import { StatusBar, Style as StatusBarStyle } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Keyboard } from '@capacitor/keyboard'
 import { Preferences } from '@capacitor/preferences'
@@ -31,26 +30,14 @@ export const initCapacitor = async () => {
   console.log('[Capacitor] Running in native mode:', getPlatform())
 
   try {
-    // 设置状态栏
-    await StatusBar.setStyle({ style: StatusBarStyle.Dark })
-    await StatusBar.setBackgroundColor({ color: '#2563EB' })
-    await StatusBar.setOverlaysWebView({ overlay: false })
-
-    // 设置键盘
-    await Keyboard.setAccessoryBarVisible({ isVisible: false })
+    if (getPlatform() === 'ios') {
+      await Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {})
+    }
 
     // 隐藏启动屏（延迟一点确保页面渲染完成）
     setTimeout(() => {
       SplashScreen.hide()
     }, 1500)
-
-    // 监听返回键（Android）
-    App.addListener('backButton', ({ canGoBack }) => {
-      if (!canGoBack) {
-        // 可以在这里显示退出确认
-        // App.exitApp()
-      }
-    })
 
     // 监听应用状态
     App.addListener('appStateChange', ({ isActive }) => {

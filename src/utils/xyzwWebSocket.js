@@ -4,10 +4,10 @@
  */
 
 import { $CacheManager } from "@/stores/cache";
-import { bonProtocol, g_utils } from "./bonProtocol.js";
-import { wsLogger, gameLogger } from "./logger.js";
+import { g_utils } from "./bonProtocol.js";
 import { responseToCommandMap as commandResponseMap } from "./commandResponseMap.js";
 import { sleep } from "./helperTaskRunner.js";
+import { gameLogger, wsLogger } from "./logger.js";
 
 /**
  * 错误码映射表
@@ -552,7 +552,7 @@ export class XyzwWebSocketClient {
 
   /** 初始化连接 */
   init() {
-    wsLogger.info(`连接: ${this.url.split("?")[0]}`);
+    wsLogger.info("正在建立游戏 WebSocket 连接");
 
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
@@ -743,10 +743,9 @@ export class XyzwWebSocketClient {
     socket.onclose = (evt) => {
       if (this.socket !== socket) return;
       this.socket = null;
-      wsLogger.info(`WebSocket 连接关闭: ${evt.code} ${evt.reason || ""}`);
+      wsLogger.info(`WebSocket 连接关闭: ${evt.code}`);
       wsLogger.debug("关闭详情:", {
         code: evt.code,
-        reason: evt.reason || "未提供原因",
         wasClean: evt.wasClean,
         timestamp: new Date().toISOString(),
       });
@@ -760,7 +759,7 @@ export class XyzwWebSocketClient {
 
     socket.onerror = (error) => {
       if (this.socket !== socket) return;
-      wsLogger.error("WebSocket 错误:", error);
+      wsLogger.error("游戏 WebSocket 连接错误");
       this.connected = false;
       this._clearTimers();
       if (this.onError) this.onError(error);

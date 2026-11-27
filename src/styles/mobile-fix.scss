@@ -3,7 +3,7 @@
 // 移动端基础设置
 @media screen and (max-width: 768px) {
   html {
-    font-size: 14px !important;
+    font-size: 87.5% !important;
   }
 
   body {
@@ -89,10 +89,7 @@
   }
 
   // 修复模态框和弹窗
-  .n-modal,
-  .arco-modal,
-  .n-dialog,
-  .token-import-modal .arco-modal {
+  :where(:root:not([data-mobile-shell])) :is(.n-modal, .arco-modal, .n-dialog) {
     width: 95vw !important;
     max-width: 95vw !important;
     margin: 0 auto !important;
@@ -100,9 +97,7 @@
     right: 2.5vw !important;
   }
 
-  .n-modal-container,
-  .arco-modal-container,
-  .token-import-modal .arco-modal-container {
+  :where(:root:not([data-mobile-shell])) :is(.n-modal-container, .arco-modal-container) {
     padding: 12px !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -110,13 +105,13 @@
 
   // 修复 Token 导入模态框内容
   .token-import-modal {
-    .arco-modal {
+    :where(:root:not([data-mobile-shell])) & .arco-modal {
       width: 95vw !important;
       max-width: 95vw !important;
       margin: 0 auto !important;
     }
 
-    .arco-modal-content {
+    :where(:root:not([data-mobile-shell])) & .arco-modal-content {
       padding: 12px !important;
       max-height: 80vh !important;
       overflow-y: auto !important;
@@ -177,7 +172,7 @@
   }
 
   // 修复抽屉
-  .n-drawer {
+  :where(:root:not([data-mobile-shell])) .n-drawer {
     width: 85vw !important;
   }
 
@@ -263,22 +258,6 @@
         }
       }
     }
-  }
-
-  // 修复底部导航
-  .mobile-bottom-nav {
-    display: flex !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 60px !important;
-    background: var(--bg-primary) !important;
-    border-top: 1px solid var(--border-color) !important;
-    z-index: 1000 !important;
-    justify-content: space-around !important;
-    align-items: center !important;
-    padding-bottom: env(safe-area-inset-bottom, 0) !important;
   }
 
   // 修复页面头部
@@ -432,13 +411,7 @@
       padding-top: env(safe-area-inset-top) !important;
     }
 
-    .mobile-bottom-nav {
-      padding-bottom: env(safe-area-inset-bottom) !important;
-    }
-
-    .main,
-    .main-content,
-    .page-content {
+    :root:not([data-mobile-shell]) :is(.main, .main-content, .page-content) {
       padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important;
     }
   }

@@ -6,7 +6,7 @@
         <p>导出或恢复全部账号与配置，用于换浏览器 / 换设备</p>
       </div>
 
-      <a-card>
+      <a-card class="backup-card">
         <div class="backup-items">
           <!-- Export: download all data as a single JSON file -->
           <div class="backup-item">
@@ -79,9 +79,11 @@ const handleBackup = async () => {
     const accountCount =
       backup.indexedDB?.xyzw_token_db?.gameTokens?.length ?? 0;
     const binCount = backup.indexedDB?.xyzw?.tokens?.length ?? 0;
-    downloadBackupFile(backup);
+    const delivery = await downloadBackupFile(backup);
+    if (delivery === "cancelled") return;
+    const action = delivery === "shared" ? "已打开系统分享" : "已下载备份";
     message.success(
-      `备份已下载：账号记录 ${accountCount} 条，BIN 凭据 ${binCount} 份`,
+      `${action}，包含 ${accountCount} 个账号记录和 ${binCount} 份 BIN 凭据`,
     );
   } catch (error) {
     console.error("备份失败:", error);
@@ -230,19 +232,39 @@ const runRestore = async (data, mode) => {
   }
 }
 
-@media (max-width: 768px) {
-  .container {
-    padding: 0 var(--spacing-md);
-  }
+.mobile-main .backup-page {
+  min-height: 0;
+  padding: var(--mobile-page-gutter, 12px) 0;
+}
 
-  .backup-item {
+.mobile-main .container { padding-inline: var(--mobile-page-gutter, 12px); }
+.mobile-main .page-header { margin-bottom: var(--spacing-md); text-align: start; }
+.mobile-main .page-header h1 { margin: 0 0 var(--spacing-xs); }
+.mobile-main .page-header p { font-size: var(--font-size-sm); }
+.mobile-main .backup-card :deep(.arco-card-body) { padding: 0 var(--spacing-md); }
+.mobile-main .backup-items { gap: 0; }
+.mobile-main .backup-items .backup-item {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.mobile-main .backup-items .backup-item + .backup-item { border-top: 1px solid var(--border-light); }
+.mobile-main .backup-info h3 { margin-top: 0; }
+.mobile-main .backup-items .backup-item .backup-action { width: auto; }
+.mobile-main .backup-action :deep(.n-button) { min-height: var(--mobile-touch-target, 44px); min-width: var(--mobile-touch-target, 44px); }
+
+@media (max-width: 768px) {
+  .container { padding: 0 var(--spacing-md); }
+  .backup-items .backup-item {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-md);
 
-    .backup-action {
-      width: 100%;
-    }
+    .backup-action { width: 100%; }
   }
 }
 </style>

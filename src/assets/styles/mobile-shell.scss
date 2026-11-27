@@ -1,0 +1,117 @@
+:root[data-mobile-shell] {
+  --mobile-safe-top: env(safe-area-inset-top, 0px);
+  --mobile-safe-right: env(safe-area-inset-right, 0px);
+  --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-safe-left: env(safe-area-inset-left, 0px);
+  --mobile-page-gutter: 12px;
+  --mobile-touch-target: 44px;
+  --mobile-header-controls: max(64px, 3.7rem);
+  --mobile-nav-controls: max(56px, 3.5rem);
+  --mobile-visible-height: var(--mobile-viewport-height, 100vh);
+  --mobile-header-height: calc(var(--mobile-header-controls) + var(--mobile-safe-top));
+  --mobile-nav-height: calc(var(--mobile-nav-controls) + var(--mobile-safe-bottom));
+  --mobile-panel-width: calc(100vw - var(--mobile-safe-left) - var(--mobile-safe-right) - 2 * var(--mobile-page-gutter));
+  --mobile-panel-height: calc(var(--mobile-visible-height) - var(--mobile-safe-top) - var(--mobile-safe-bottom) - 2 * var(--mobile-page-gutter));
+  height: auto;
+  overflow-x: clip;
+  scroll-padding-block: var(--mobile-header-height) var(--mobile-nav-height);
+
+  body, #app {
+    height: auto;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .back-to-top { bottom: calc(var(--mobile-nav-height) + var(--mobile-page-gutter)); }
+  #offline-indicator { display: none; }
+
+  &[data-mobile-keyboard] {
+    --mobile-safe-bottom: 0px;
+    --mobile-nav-height: 0px;
+
+    .mobile-bottom-nav, .back-to-top { display: none; }
+  }
+
+  // Portalled overlays are outside MobileLayout's DOM tree.
+  :is(.n-modal, .n-dialog, .arco-modal) {
+    min-width: 0;
+    max-width: min(42rem, var(--mobile-panel-width)) !important;
+    max-height: var(--mobile-panel-height);
+    margin: auto !important;
+    box-sizing: border-box;
+  }
+
+  .n-modal-body-wrapper {
+    box-sizing: border-box;
+    padding: calc(var(--mobile-safe-top) + var(--mobile-page-gutter))
+      calc(var(--mobile-safe-right) + var(--mobile-page-gutter))
+      calc(var(--mobile-safe-bottom) + var(--mobile-page-gutter))
+      calc(var(--mobile-safe-left) + var(--mobile-page-gutter));
+  }
+
+  .arco-modal-wrapper.arco-modal-wrapper-align-center {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    padding-block: var(--mobile-safe-top) var(--mobile-safe-bottom);
+    padding-inline: var(--mobile-safe-left) var(--mobile-safe-right);
+
+    &::after { display: none; }
+  }
+
+  :is(.arco-modal, .n-dialog) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .n-modal:not(.n-card, .n-dialog),
+  .n-modal > .n-card__content,
+  .n-dialog > .n-dialog__content,
+  .arco-modal > .arco-modal-body {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    overflow-wrap: anywhere;
+  }
+
+  :is(.n-card__footer, .n-card__action, .n-dialog__action, .arco-modal-footer, .arco-drawer-footer, .n-drawer-footer) {
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  :is(.n-drawer, .arco-drawer) {
+    box-sizing: border-box;
+    max-width: 100vw;
+    max-height: var(--mobile-visible-height);
+    padding-inline: var(--mobile-safe-left) var(--mobile-safe-right);
+  }
+
+  :is(.n-drawer--left-placement, .n-drawer--right-placement, .arco-drawer-left, .arco-drawer-right) {
+    padding-block: var(--mobile-safe-top) var(--mobile-safe-bottom);
+  }
+
+  :is(.n-drawer--top-placement, .arco-drawer-top) { padding-block-start: var(--mobile-safe-top); }
+  :is(.n-drawer--bottom-placement, .arco-drawer-bottom) { padding-block-end: var(--mobile-safe-bottom); }
+  :is(.n-drawer--top-placement, .n-drawer--bottom-placement) { width: 100%; }
+
+  :is(.n-drawer .n-drawer-body, .arco-drawer-body) { min-height: 0; overscroll-behavior: contain; }
+
+  :is(.n-modal, .n-dialog, .n-drawer, .arco-modal, .arco-drawer)
+  :is(.n-button, .arco-btn, .n-card-header__close, .n-dialog__close, .n-drawer-header__close, .arco-modal-close-btn, .arco-drawer-close-btn) {
+    min-height: var(--mobile-touch-target);
+    min-width: var(--mobile-touch-target);
+  }
+}
+
+@supports (height: 100dvh) {
+  :root[data-mobile-shell] { --mobile-visible-height: var(--mobile-viewport-height, 100dvh); }
+}
+
+@media (max-width: 768px) {
+  :root[data-mobile-shell] { --mobile-header-controls: max(52px, 3.5rem); }
+}
+
+:root:is([data-platform="android"], [data-platform="ios"]) {
+  body, #app { min-height: 100vh; min-height: 100dvh; }
+}

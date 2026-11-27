@@ -22,7 +22,7 @@
             :checked="selected.includes(token.id)"
             @update:checked="(v) => toggle(token.id, v)"
           />
-          <span class="token-name">{{ token.name || token.id }}</span>
+          <span class="token-name" :title="token.name || token.id">{{ token.name || token.id }}</span>
           <span v-if="selected[0] === token.id" class="badge">队长</span>
           <span class="ws-status">{{ wsStatus(token.id) }}</span>
         </label>
@@ -32,18 +32,19 @@
 
     <section class="block">
       <div class="row">
-        <span class="label">队伍名称</span>
-        <n-input v-model:value="teamName" size="small" style="width: 220px" />
-        <span class="label">teamId</span>
+        <label class="label" for="nightmare-team-name">队伍名称</label>
+        <n-input v-model:value="teamName" size="small" class="team-edit-field" :input-props="{ id: 'nightmare-team-name' }" />
+        <label class="label" for="nightmare-team-id">队伍号</label>
         <n-input
           v-model:value="teamId"
           size="small"
-          placeholder="可手动粘贴游戏里建好的队伍号"
-          style="width: 220px"
+          placeholder="可粘贴游戏中的队伍号"
+          class="team-edit-field"
+          :input-props="{ id: 'nightmare-team-id' }"
         />
       </div>
       <div class="actions">
-        <n-button type="primary" :loading="running" @click="runAll()"
+        <n-button class="team-action-wide" type="primary" :loading="running" @click="runAll()"
           >一键组队（自动校正 → 准备）</n-button
         >
         <n-button :loading="connecting" @click="connectSelected()"
@@ -80,6 +81,7 @@
           >读取房间状态</n-button
         >
         <n-button
+          class="team-action-wide"
           type="primary"
           :loading="!!fightingRoleId"
           :disabled="running || !room.roomId || cdLeft > 0"
@@ -353,8 +355,9 @@
           class="lineup-card"
           :class="{ leader: member.isLeader }"
         >
-          <div
+          <button
             class="card-head"
+            type="button"
             title="点击查看该账号的完整上阵信息"
             @click="openDetail(member)"
           >
@@ -364,9 +367,9 @@
               class="card-avatar"
               alt=""
             />
-            <div v-else class="card-avatar placeholder" />
-            <div class="card-meta">
-              <div class="card-name">
+            <span v-else class="card-avatar placeholder" aria-hidden="true" />
+            <span class="card-meta">
+              <span class="card-name">
                 <span class="name-text">{{ member.name }}</span>
                 <span v-if="member.isLeader" class="badge">队长</span>
                 <span class="prep" :class="member.prepared ? 'on' : 'off'">{{
@@ -375,10 +378,10 @@
                 <span v-if="!memberOnline(member)" class="prep off"
                   >本人未连接</span
                 >
-              </div>
-              <div class="card-power">战力 {{ fmtPower(member.power) }}</div>
-            </div>
-          </div>
+              </span>
+              <span class="card-power">战力 {{ fmtPower(member.power) }}</span>
+            </span>
+          </button>
           <div class="hero-row">
             <div v-for="slot in 5" :key="slot" class="hero-slot">
               <template v-if="member.heroes[slot - 1]">
@@ -455,7 +458,8 @@
     <n-modal
       v-model:show="detailVisible"
       preset="card"
-      style="width: 620px"
+      class="nightmare-detail-modal"
+      style="width: min(620px, calc(100% - 24px))"
       :title="detailMember ? `${detailMember.name} 的上阵阵容` : ''"
     >
       <template v-if="detailMember">
@@ -3062,6 +3066,13 @@ async function runAll() {
   margin-bottom: 8px;
   cursor: pointer;
   border-radius: 6px;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  font: inherit;
 }
 .card-head:hover {
   background: rgba(22, 119, 255, 0.06);
@@ -3114,6 +3125,7 @@ async function runAll() {
   background: rgba(240, 160, 32, 0.12);
 }
 .card-power {
+  display: block;
   font-size: 12px;
   color: var(--text-secondary, #666666);
   margin-top: 2px;
@@ -3245,10 +3257,13 @@ async function runAll() {
   font-size: 13px;
   color: var(--text-secondary, #666666);
 }
+.team-edit-field {
+  width: 220px;
+}
 .team-id {
   font-family: monospace;
   font-size: 13px;
-  color: var(--primary-color, #667eea);
+  color: var(--primary-color);
   font-weight: 600;
 }
 .actions {
@@ -3267,7 +3282,7 @@ async function runAll() {
 }
 .fast-phase {
   font-size: 12px;
-  color: var(--primary-color, #667eea);
+  color: var(--primary-color);
   font-weight: 600;
 }
 .fast-cd {
@@ -3299,7 +3314,7 @@ async function runAll() {
   flex: 0 0 auto;
 }
 .log .who {
-  color: var(--primary-color, #667eea);
+  color: var(--primary-color);
   min-width: 110px;
   flex: 0 0 auto;
 }
@@ -3318,5 +3333,58 @@ async function runAll() {
 .empty {
   color: var(--text-tertiary, #999999);
   font-size: 12px;
+}
+
+.mobile-main .lab {
+  min-height: 0;
+  min-width: 0;
+  gap: var(--spacing-sm);
+  padding: var(--mobile-page-gutter, 12px);
+  background: var(--bg-secondary);
+}
+
+.mobile-main .block {
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-primary);
+}
+
+.mobile-main .row-between,
+.mobile-main .card-name { flex-wrap: wrap; }
+
+.mobile-main .token-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }
+.mobile-main .token-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; min-height: var(--mobile-touch-target, 44px); }
+.mobile-main .token-name { max-width: none; }
+.mobile-main .ws-status { grid-column: 4; }
+.mobile-main .team-edit-field { width: min(100%, 220px); }
+.mobile-main .team-edit-field,
+.mobile-main .lab :deep(.n-button) { min-height: var(--mobile-touch-target, 44px); }
+.mobile-main .lab :deep(.n-button) { height: auto; }
+.mobile-main .lab :deep(.n-button__content) { white-space: normal; overflow-wrap: anywhere; text-align: center; }
+.mobile-main .lineup-grid { grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
+.mobile-main .hero-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.mobile-main .hero-img { max-width: 100%; height: auto; aspect-ratio: 1; }
+.mobile-main .hero-empty { overflow-wrap: anywhere; text-align: center; }
+.mobile-main .layer-item { flex-wrap: wrap; }
+.mobile-main .log .who { min-width: 0; max-width: 30%; }
+
+@media (max-width: 540px) {
+  .mobile-main .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .mobile-main .row .team-edit-field { width: 100%; margin-bottom: var(--spacing-xs); }
+  .mobile-main .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mobile-main .team-action-wide { grid-column: 1 / -1; }
+  .mobile-main .room-line { display: grid; grid-template-columns: max-content minmax(0, 1fr); overflow-wrap: anywhere; }
+  .mobile-main .room-line .hint { grid-column: 1 / -1; }
+  .mobile-main .battle-hero { display: grid; grid-template-columns: minmax(0, 55px) minmax(0, 1fr) auto auto; gap: 4px; }
+  .mobile-main .bh-bar,
+  .mobile-main .bh-name { min-width: 0; width: auto; overflow-wrap: anywhere; }
+  .mobile-main .bh-pct,
+  .mobile-main .bh-num { width: auto; }
+  .mobile-main .bh-sub { width: auto; grid-column: 1 / -1; text-align: start; }
+
+  .detail-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; }
+  .detail-pos { min-width: 0; grid-column: 1 / -1; }
+  .detail-img { width: 36px; height: 36px; }
+  .detail-stats { grid-column: 2; flex-flow: row wrap; gap: 4px 8px; }
 }
 </style>

@@ -13,21 +13,27 @@ const api = axios.create({
   timeout: 30000,
 });
 
+function clearExpiredAuth(config) {
+  const token = localStorage.getItem("auth_token");
+  // A delayed unauthorized response from an earlier session cannot log out the current user.
+  if (!token || config?.headers?.Authorization !== `Bearer ${token}`) return;
+  authApi.logout();
+  window.dispatchEvent(new CustomEvent("cloud-auth-expired"));
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("auth_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-});
+}, undefined, { synchronous: true });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-      window.dispatchEvent(new CustomEvent("cloud-auth-expired"));
+      clearExpiredAuth(err.config);
     }
     return Promise.reject(err);
   },
@@ -124,24 +130,33 @@ export const settingsApi = {
     api.get(`/settings/${encodeURIComponent(key)}`).then((r) => r.data?.value ?? null),
   put: (key, value) =>
     api.put(`/settings/${encodeURIComponent(key)}`, { value }).then((r) => r.data),
+  seed: (key, value) =>
+    api.put(`/settings/${encodeURIComponent(key)}`, { value, ifAbsent: true }).then((r) => r.data),
   batchGet: (keys) =>
     api.post("/settings/batch", { keys }).then((r) => r.data),
 };
 
 export class ServerPushClient {
-  constructor(onMessage) {
+  constructor(onMessage, onConnectionChange = () => {}) {
     this.onMessage = onMessage;
+    this.onConnectionChange = onConnectionChange;
     this.ws = null;
     this.reconnectTimer = null;
-    this.intentionalClose = false;
+    this.stopped = true;
     this.reconnectDelay = 3000;
-    this.maxReconnectDelay = 30000;
   }
 
   connect() {
-    this.intentionalClose = false;
+    if (!this.stopped) return;
+    this.stopped = false;
     this.reconnectDelay = 3000;
+    this.openSocket();
+  }
 
+  openSocket() {
+    if (this.stopped || this.ws) return;
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
     let wsUrl;
     if (API_BASE) {
       wsUrl = `${API_BASE.replace(/^http/, "ws")  }/ws`;
@@ -150,48 +165,66 @@ export class ServerPushClient {
       wsUrl = `${proto}//${location.host}/ws`;
     }
 
-    this.ws = new WebSocket(wsUrl);
+    const socket = new WebSocket(wsUrl);
+    this.ws = socket;
+    let authenticated = false;
 
-    this.ws.onmessage = (evt) => {
+    socket.onmessage = (evt) => {
+      if (this.ws !== socket || localStorage.getItem("auth_token") !== token) return;
+      let msg;
       try {
-        const msg = JSON.parse(evt.data);
-        this.onMessage(msg);
+        msg = JSON.parse(evt.data);
       } catch (e) {
         console.warn("[ServerPush] 消息解析失败:", e);
+        return;
+      }
+      if (msg?.type === "connected") {
+        if (!authenticated) this.onConnectionChange(true);
+        authenticated = true;
+        this.reconnectDelay = 3000;
+      } else if (authenticated) {
+        this.onMessage(msg);
       }
     };
 
-    this.ws.onopen = () => {
-      this.reconnectDelay = 3000;
-      const token = localStorage.getItem("auth_token");
-      if (token) this.ws.send(JSON.stringify({ token }));
-      else this.disconnect();
+    socket.onopen = () => {
+      if (this.ws !== socket || localStorage.getItem("auth_token") !== token) {
+        socket.close();
+        return;
+      }
+      socket.send(JSON.stringify({ token }));
     };
 
-    this.ws.onclose = (event) => {
-      if (this.intentionalClose || event.code === 1008) return;
-      this.reconnectTimer = setTimeout(() => this.connect(), this.reconnectDelay);
+    socket.onclose = (event) => {
+      if (this.ws !== socket) return;
+      this.ws = null;
+      this.onConnectionChange(false);
+      if (this.stopped || event.code === 1008 || localStorage.getItem("auth_token") !== token) return;
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
+        this.openSocket();
+      }, this.reconnectDelay);
       this.reconnectDelay = Math.min(
         (this.reconnectDelay * 1.5) | 0,
-        this.maxReconnectDelay,
+        30000,
       );
     };
 
-    this.ws.onerror = (e) => {
+    socket.onerror = (e) => {
       console.warn("[ServerPush] WebSocket 错误:", e);
     };
   }
 
   disconnect() {
-    this.intentionalClose = true;
+    this.stopped = true;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+    const socket = this.ws;
+    this.ws = null;
+    socket?.close();
+    this.onConnectionChange(false);
   }
 }
 

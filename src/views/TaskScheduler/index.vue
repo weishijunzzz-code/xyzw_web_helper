@@ -347,7 +347,7 @@ const {
   .view-segment {
     display: flex;
     // MobileLayout 固定头高 64px，子树被 zoom 缩放，CSS 值需反向放大
-    top: calc(64px / var(--mobile-content-zoom, 1));
+    top: var(--mobile-header-height, 52px);
   }
 
   .page-content {

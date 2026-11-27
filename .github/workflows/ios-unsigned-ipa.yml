@@ -1,0 +1,31 @@
+name: Build unsigned iOS IPA
+
+on:
+  push:
+    branches:
+      - codex/ios-ipa-build
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Build unsigned device IPA
+        env:
+          IOS_OUTPUT_DIR: ${{ runner.temp }}/ios-build
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+        run: bash ios/build.sh unsigned-ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xyzw-ios-unsigned
+          path: ${{ runner.temp }}/ios-build/*-unsigned.ipa
+          if-no-files-found: error

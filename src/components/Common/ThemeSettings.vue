@@ -1,8 +1,8 @@
 <template>
   <div class="theme-settings">
-    <NPopover trigger="click" placement="bottom" :show-arrow="false">
+    <NPopover v-model:show="showPanel" trigger="click" placement="bottom" :show-arrow="false">
       <template #trigger>
-        <NButton circle size="medium" class="theme-toggle-btn" aria-label="主题设置">
+        <NButton ref="themeTrigger" circle size="medium" class="theme-toggle-btn" aria-label="主题设置" :aria-expanded="showPanel">
           <template #icon>
             <NIcon v-if="currentTheme === 'dark'">
               <Moon />
@@ -17,7 +17,7 @@
         </NButton>
       </template>
 
-      <div class="theme-panel">
+      <div class="theme-panel" data-mobile-escape @keydown.esc.stop="closePanel">
         <div class="panel-header">
           <h4>主题设置</h4>
         </div>
@@ -116,6 +116,13 @@ import { useTheme } from '@/composables/useTheme';
 
 const { themeMode: currentTheme, setThemeMode: setTheme } = useTheme();
 const { accent, accentOptions, setAccent } = useAccent();
+const themeTrigger = ref(null);
+const showPanel = ref(false);
+
+function closePanel() {
+  showPanel.value = false;
+  themeTrigger.value?.$el?.focus();
+}
 
 // 主题选项
 const themeOptions = [

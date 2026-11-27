@@ -1,17 +1,25 @@
-﻿<template>
+<template>
   <div class="mobile-page-embed">
-    <TokenImport />
+    <TokenImport v-bind="props" />
   </div>
 </template>
 
 <script setup>
 import TokenImport from '@/views/TokenImport/TokenImport.vue'
+
+const props = defineProps({
+  token: String,
+  name: String,
+  server: String,
+  wsUrl: String,
+  api: String,
+  auto: Boolean,
+})
 </script>
 
 <style scoped>
-/* PC 组件直接嵌入移动布局：只做容器约束，不做缩放 */
 .mobile-page-embed {
   width: 100%;
-  overflow-x: hidden;
+  min-width: 0;
 }
 </style>

@@ -553,9 +553,8 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-// APK专用样式 - 通过 body.capacitor-app 类来识别
-// 这些样式只在 Capacitor 环境中通过 JS 添加类名后生效
-body.capacitor-app {
+// Preserve the existing iOS scroll container. Android uses document scrolling.
+:root[data-platform="ios"] body.capacitor-app {
   position: fixed;
   width: 100%;
   height: 100%;
@@ -580,37 +579,35 @@ body.capacitor-app {
 
 // Naive UI 移动端适配
 @media (max-width: 768px) {
-  // Modal 适配
-  .n-modal {
-    width: auto !important;
-    max-width: 95vw !important;
-    margin: 0 auto !important;
-  }
+  :where(:root:not([data-mobile-shell])) {
+    .n-modal {
+      width: auto !important;
+      max-width: 95vw !important;
+      margin: 0 auto !important;
+    }
 
-  .n-modal-content {
-    padding: var(--spacing-sm) !important;
-    border-radius: var(--border-radius-medium) !important;
-  }
+    .n-modal-content {
+      padding: var(--spacing-sm) !important;
+      border-radius: var(--border-radius-medium) !important;
+    }
 
-  .n-modal-header {
-    padding: var(--spacing-sm) var(--spacing-sm) !important;
-  }
+    .n-modal-header { padding: var(--spacing-sm) !important; }
 
-  .n-modal-title {
-    font-size: var(--font-size-lg) !important;
-    line-height: 1.4 !important;
-  }
+    .n-modal-title {
+      font-size: var(--font-size-lg) !important;
+      line-height: 1.4 !important;
+    }
 
-  .n-modal-body {
-    max-height: 70vh !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
+    .n-modal-body {
+      max-height: 70vh !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
 
-  // 抽屉适配
-  .n-drawer {
-    width: 85vw !important;
-    max-width: 320px !important;
+    .n-drawer {
+      width: 85vw !important;
+      max-width: 320px !important;
+    }
   }
 
   // 表单元素适配
@@ -645,11 +642,11 @@ body.capacitor-app {
 
 // 横屏模式优化
 @media (orientation: landscape) and (max-height: 500px) {
-  .n-modal {
+  :where(:root:not([data-mobile-shell])) .n-modal {
     max-height: 80vh !important;
   }
 
-  .n-modal-body {
+  :where(:root:not([data-mobile-shell])) .n-modal-body {
     max-height: 60vh !important;
   }
 }

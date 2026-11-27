@@ -1,11 +1,13 @@
+import { throwIfAborted } from './abortSignal.js';
+
 /** Read and authenticate a BIN without writing account data before confirmation. */
 export async function prepareBinToken(file, options, dependencies) {
-  options.signal?.throwIfAborted();
+  throwIfAborted(options.signal);
   if (!/\.(?:bin|dmp)$/i.test(file.name)) {
     throw new Error("仅支持 .bin 和 .dmp 文件");
   }
   const binData = await file.arrayBuffer();
-  options.signal?.throwIfAborted();
+  throwIfAborted(options.signal);
   if (!binData.byteLength) throw new Error("文件内容为空");
   const id = dependencies.getTokenId(binData);
   if (options.pendingIds.has(id))
@@ -15,7 +17,7 @@ export async function prepareBinToken(file, options, dependencies) {
   const token = await dependencies.transformToken(binData.slice(0), {
     signal: options.signal,
   });
-  options.signal?.throwIfAborted();
+  throwIfAborted(options.signal);
   const meta = file.name.match(/^bin-(.*?)服-([0-2])-(\d{6,12})-(.*)\.bin$/i);
   return {
     id,

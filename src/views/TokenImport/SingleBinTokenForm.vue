@@ -14,8 +14,12 @@
       />
     </NFormItem>
 
-    <NFormItem label="bin文件" :show-label="true">
+    <NFormItem label="BIN 文件" :show-label="true">
+      <NButton v-if="nativeBinPicker" :loading="isPickingBin" :disabled="isImporting" @click="pickBinFiles">
+        选择 BIN 文件
+      </NButton>
       <a-upload
+        v-else
         multiple
         accept=".bin,.dmp"
         @before-upload="uploadBin"
@@ -68,7 +72,7 @@
         size="large"
         block
         :loading="isImporting"
-        :disabled="isReading || !readyCount"
+        :disabled="isPickingBin || isReading || !readyCount"
         @click="handleImport"
       >
         <template #icon>
@@ -104,6 +108,8 @@ import { computed, onBeforeUnmount, reactive, ref } from "vue";
 
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { useTokenStore } from "@/stores/tokenStore";
+import { throwIfAborted } from "@/utils/abortSignal.js";
+import { useBinFilePicker } from "@/utils/binFilePicker";
 import { prepareBinToken, saveBinToken } from "@/utils/binTokenImport.js";
 import { getTokenId, transformToken } from "@/utils/token";
 import { getTokenErrorMessage } from "@/utils/tokenLogin.js";
@@ -166,7 +172,7 @@ const uploadBin = (file: File) => {
         transformToken,
         onAuthenticating: () => { item.status = "校验中"; },
       });
-      signal.throwIfAborted();
+      throwIfAborted(signal);
       pendingIds.add(role.id);
       item.role = role;
       item.status = tokenStore.gameTokens.some(({ id }) => id === role.id)
@@ -178,6 +184,8 @@ const uploadBin = (file: File) => {
   });
   return false;
 };
+
+const { nativeBinPicker, isPickingBin, pickBinFiles } = useBinFilePicker(uploadBin, message.error);
 
 const handleImport = async () => {
   if (isImporting.value || isReading.value || !readyCount.value) return;

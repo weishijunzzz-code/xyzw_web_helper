@@ -1,11 +1,12 @@
 import naive from "naive-ui";
 import { createPinia } from "pinia";
-import { createApp, nextTick } from "vue";
+import { createApp } from "vue";
 import App from "./App.vue";
 
 import { initAccent } from "./composables/useAccent";
 import { initTheme } from "./composables/useTheme";
 import router from "./router";
+import { initRuntimePlatform } from "./utils/runtimePlatform";
 import "@arco-design/web-vue/dist/arco.css";
 import "virtual:uno.css";
 import "./assets/styles/design-tokens.scss";
@@ -23,6 +24,7 @@ import "./styles/mobile-fix.scss";
 import "./assets/styles/task-scheduler-theme.scss";
 
 import "./assets/styles/theme-foundation.scss";
+import "./assets/styles/mobile-shell.scss";
 // 加载游戏加密模块（用于微信扫码导入功能）
 // 注意：加载顺序很重要，必须先加载 game-defines.js，然后是 cocos2d-js-min.js，最后是 index.js
 import "./xyzw/game-defines.js";
@@ -30,29 +32,14 @@ import "./xyzw/cocos2d-js-min.js";
 
 import "./xyzw/index.js";
 
-// 创建应用实例
-const app = createApp(App);
-
-// 使用插件
-app.use(createPinia());
-app.use(router);
-app.use(naive);
-
-// Restore appearance before mounting, including direct route entry.
+// Set the platform and appearance before the first route is resolved.
+initRuntimePlatform();
 initTheme();
 initAccent();
 document.documentElement.classList.toggle("reduce-motion", localStorage.getItem("theme-animations") === "false");
 
-// 挂载应用
+const app = createApp(App);
+app.use(createPinia());
+app.use(router);
+app.use(naive);
 app.mount("#app");
-
-// 检测是否是 Capacitor (APK) 环境
-const isCapacitor = () => {
-  return typeof (window).Capacitor !== 'undefined' && (window).Capacitor.isNativePlatform();
-};
-// Apply the native-platform class after the DOM is mounted.
-nextTick(() => {
-  if (isCapacitor()) {
-    document.body.classList.add('capacitor-app');
-  }
-});

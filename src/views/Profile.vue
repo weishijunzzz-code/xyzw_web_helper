@@ -1,29 +1,44 @@
 <template>
-  <div class="profile-page">
+  <div class="profile-page" :class="{ 'mobile-profile-page': isMobileProfile }">
     <div class="container">
       <div class="page-header">
         <h1>个人资料</h1>
         <p>管理您的账户信息和偏好设置</p>
       </div>
 
+      <a-card v-if="showLocalGameScripts" class="profile-game-scripts">
+        <div class="security-item">
+          <div class="security-info">
+            <h3>本地脚本</h3>
+            <p>管理 APK 单开启动时加载的脚本</p>
+          </div>
+          <n-button secondary @click="openScriptLibrary">
+            <template #icon><n-icon :component="SnowOutline" /></template>
+            管理脚本
+          </n-button>
+        </div>
+      </a-card>
+
       <h2>基本信息</h2>
       <a-card>
-        <a-form :model="userInfo" label-placement="left" label-width="80px">
-          <a-form-item label="用户名">
-            <a-input v-model:value="userInfo.username" readonly />
+        <a-form :model="userInfo" :layout="formLayout">
+          <a-form-item field="username" label="用户名">
+            <a-input v-model="userInfo.username" readonly />
           </a-form-item>
-          <a-form-item label="邮箱">
-            <a-input v-model:value="userInfo.email" />
+          <a-form-item field="email" label="邮箱">
+            <a-input v-model="userInfo.email" :input-attrs="{ inputmode: 'email', autocomplete: 'email' }" />
           </a-form-item>
-          <a-form-item label="昵称">
+          <a-form-item field="nickname" label="昵称">
             <a-input
-              v-model:value="userInfo.nickname"
+              v-model="userInfo.nickname"
+              :input-attrs="{ autocomplete: 'nickname' }"
               placeholder="请输入昵称"
             />
           </a-form-item>
-          <a-form-item label="手机">
+          <a-form-item field="phone" label="手机">
             <a-input
-              v-model:value="userInfo.phone"
+              v-model="userInfo.phone"
+              :input-attrs="{ inputmode: 'tel', autocomplete: 'tel' }"
               placeholder="请输入手机号"
             />
           </a-form-item>
@@ -39,27 +54,29 @@
         <a-form
           :model="passwordForm"
           ref="passwordFormRef"
-          label-placement="left"
-          label-width="100px"
+          :layout="formLayout"
         >
-          <a-form-item label="当前密码" prop="currentPassword">
+          <a-form-item label="当前密码" field="currentPassword">
             <a-input
-              v-model:value="passwordForm.currentPassword"
+              v-model="passwordForm.currentPassword"
               type="password"
+              :input-attrs="{ autocomplete: 'current-password' }"
               placeholder="请输入当前密码"
             />
           </a-form-item>
-          <a-form-item label="新密码" prop="newPassword">
+          <a-form-item label="新密码" field="newPassword">
             <a-input
-              v-model:value="passwordForm.newPassword"
+              v-model="passwordForm.newPassword"
               type="password"
+              :input-attrs="{ autocomplete: 'new-password' }"
               placeholder="请输入新密码"
             />
           </a-form-item>
-          <a-form-item label="确认新密码" prop="confirmPassword">
+          <a-form-item label="确认新密码" field="confirmPassword">
             <a-input
-              v-model:value="passwordForm.confirmPassword"
+              v-model="passwordForm.confirmPassword"
               type="password"
+              :input-attrs="{ autocomplete: 'new-password' }"
               placeholder="请再次输入新密码"
             />
           </a-form-item>
@@ -70,8 +87,8 @@
       </a-card>
 
       <h2>系统偏好</h2>
-      <a-card>
-        <a-form>
+      <a-card class="profile-preferences">
+        <a-form :layout="formLayout">
           <a-form-item label="主题设置">
             <n-select
               :value="themeMode"
@@ -134,7 +151,15 @@
               <h3>数据导出</h3>
               <p>导出全部账号 Token、BIN 登录凭据及所有本地配置</p>
             </div>
-            <n-button @click="exportData"> 导出 </n-button>
+            <n-button :loading="exportingBackup" @click="exportData"> 导出 </n-button>
+          </div>
+
+          <div v-if="isMobileProfile" class="security-item">
+            <div class="security-info">
+              <h3>备份恢复</h3>
+              <p>从备份文件合并或覆盖本地账号与配置</p>
+            </div>
+            <RouterLink class="settings-link" :to="{ name: 'MobileBackupRestore' }">打开</RouterLink>
           </div>
 
           <div class="security-item danger">
@@ -151,21 +176,29 @@
 </template>
 
 <script setup>
+import { SnowOutline } from "@vicons/ionicons5";
 import { useDialog, useMessage } from "naive-ui";
-import { onMounted, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, onMounted, reactive, ref } from "vue";
+import { useRoute } from "vue-router";
 import { useAccent } from "@/composables/useAccent";
+import { useLocalGameScripts } from "@/composables/useLocalGameScripts.js";
 import { useTheme } from "@/composables/useTheme";
 import { useAuthStore } from "@/stores/auth";
 import { collectFullBackup, downloadBackupFile } from "@/utils/fullBackup";
+import { isNativeGameApp } from "@/utils/runtimePlatform.js";
 
 const { themeMode, setThemeMode } = useTheme();
 const { accent, accentOptions, setAccent } = useAccent();
-useRouter();
+const route = useRoute();
+const isMobileProfile = computed(() => route.name === "MobileProfile");
+const showLocalGameScripts = isNativeGameApp();
+const { open: openScriptLibrary } = useLocalGameScripts();
+const formLayout = computed(() => isMobileProfile.value ? "vertical" : "horizontal");
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
 const passwordFormRef = ref(null);
+const exportingBackup = ref(false);
 
 // 用户信息
 const userInfo = reactive({
@@ -244,18 +277,24 @@ const viewLoginHistory = () => {
 
 // Export a full backup (localStorage config + IndexedDB incl. BIN credentials).
 const exportData = async () => {
+  if (exportingBackup.value) return;
+  exportingBackup.value = true;
   try {
     const backup = await collectFullBackup();
     const accountCount =
       backup.indexedDB?.xyzw_token_db?.gameTokens?.length ?? 0;
     const binCount = backup.indexedDB?.xyzw?.tokens?.length ?? 0;
-    downloadBackupFile(backup);
+    const delivery = await downloadBackupFile(backup);
+    if (delivery === "cancelled") return;
+    const action = delivery === "shared" ? "已打开系统分享" : "已下载备份";
     message.success(
-      `备份已下载：账号记录 ${accountCount} 条，BIN 凭据 ${binCount} 份`,
+      `${action}，包含 ${accountCount} 个账号记录和 ${binCount} 份 BIN 凭据`,
     );
   } catch (error) {
     console.error("导出失败:", error);
     message.error(`导出失败：${error.message}`);
+  } finally {
+    exportingBackup.value = false;
   }
 };
 
@@ -302,6 +341,10 @@ onMounted(() => {
   max-width: 800px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
+}
+
+.profile-game-scripts :deep(.n-button) {
+  min-height: 44px;
 }
 
 .page-header {
@@ -373,6 +416,50 @@ h2 {
       }
     }
   }
+}
+
+.mobile-profile-page {
+  min-height: 0;
+  padding: var(--mobile-page-gutter, 12px) 0;
+
+  .container { padding-inline: var(--mobile-page-gutter, 12px); }
+  .page-header { margin-bottom: var(--spacing-md); text-align: start; }
+  .page-header h1 { margin: 0 0 var(--spacing-xs); }
+  .page-header p { font-size: var(--font-size-sm); }
+  h2 { margin: var(--spacing-md) 0 var(--spacing-sm); }
+
+  :deep(.arco-card-body) { padding: var(--spacing-md); }
+  :deep(.arco-form-item) { margin-bottom: var(--spacing-md); }
+  :deep(.arco-form-item:last-child) { margin-bottom: 0; }
+  :deep(.arco-form-item-label-col) { padding: 0 0 var(--spacing-xs); }
+  :deep(.arco-input-wrapper),
+  :deep(.arco-btn),
+  :deep(.n-base-selection),
+  :deep(.n-button),
+  .settings-link { min-height: var(--mobile-touch-target, 44px); }
+
+  .profile-preferences :deep(.arco-form-item + .arco-form-item) {
+    border-top: 1px solid var(--border-light);
+    padding-top: var(--spacing-sm);
+  }
+
+  .security-items { gap: 0; }
+  .security-items .security-item {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .security-items .security-item + .security-item { border-top: 1px solid var(--border-light); }
+  .security-info { min-width: 0; }
+  .security-info h3 { margin-top: 0; }
+  .security-item :deep(.n-button),
+  .settings-link { flex: 0 0 auto; min-width: var(--mobile-touch-target, 44px); }
+  .settings-link { display: inline-grid; place-items: center; color: var(--primary-color); }
 }
 
 @media (max-width: 768px) {

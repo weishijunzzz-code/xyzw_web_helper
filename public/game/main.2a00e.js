@@ -326,11 +326,15 @@ window.convertAssets = function (url) {
 }
 
 window.loadJscAndDecode = async function (url, callback) {
+  const timing = window.__xyzwAssetTiming
+  const downloadStarted = timing ? performance.now() : 0
   const jscRes = await fetch(url, { cache: 'force-cache' })
   if (!jscRes.ok) {
     throw new Error('download failed: ' + url + ', status: ' + jscRes.status)
   }
   const jscData = await jscRes.arrayBuffer()
+  if (timing) timing('download', performance.now() - downloadStarted)
+  const decodeStarted = timing ? performance.now() : 0
   const uint8Data = new Uint8Array(jscData)
   const jsCodeData = xxtea.decrypt(uint8Data, xxtea.toBytes('0Aed5E79bbEa69f8'))
   const decoder = new TextDecoder();
@@ -340,6 +344,7 @@ window.loadJscAndDecode = async function (url, callback) {
   jsCode = jsCode.replace(/cc\.assetManager\.loadAny=function\(\)\{\},?/g, '');
   // 删除 game 中禁用 loadBundle 的代码 (isH5 判断)
   jsCode = jsCode.replace(/[a-zA-Z]\.PlatformManager\.instance\.isH5&&\(cc\.assetManager\.loadBundle=function\(\)\{\}\),?/g, '');
+  if (timing) timing('decode', performance.now() - decodeStarted)
   console.log('[loadDecodeJSC] 已删除H5禁用代码');
   
   callback(jsCode)
@@ -559,7 +564,7 @@ window.installRemoteAssetLoader = function () {
   console.log('[remoteAssets] 资源加载已切换到 CDN')
 }
 
-window.boot = async function () {
+window.boot = async function ({ onReady, onFailure, autoFullscreen = true } = {}) {
   try {
     await window.ensureBundleVers()
   } catch (err) {
@@ -576,6 +581,10 @@ window.boot = async function () {
   var RESOURCES = cc.AssetManager.BuiltinBundleName.RESOURCES
   var INTERNAL = cc.AssetManager.BuiltinBundleName.INTERNAL
   var MAIN = cc.AssetManager.BuiltinBundleName.MAIN
+  function failLoading(error) {
+    console.error('[game] 无法加载游戏资源', error)
+    if (onFailure) onFailure()
+  }
   function setLoadingDisplay() {
     // Loading splash scene
     var splash = document.getElementById('splash')
@@ -617,7 +626,7 @@ window.boot = async function () {
         cc.view.setOrientation(cc.macro.ORIENTATION_PORTRAIT)
       }
       cc.view.enableAutoFullScreen(
-        [
+        autoFullscreen && [
           cc.sys.BROWSER_TYPE_BAIDU,
           cc.sys.BROWSER_TYPE_BAIDU_APP,
           cc.sys.BROWSER_TYPE_WECHAT,
@@ -641,9 +650,17 @@ window.boot = async function () {
     var bundle = cc.assetManager.bundles.find(function (b) {
       return b.getSceneInfo(launchScene)
     })
+    if (!bundle) {
+      failLoading(new Error('Game scene bundle is missing'))
+      return
+    }
 
     bundle.loadScene(launchScene, null, onProgress, function (err, scene) {
-      if (!err) {
+      if (err) {
+        failLoading(err)
+        return
+      }
+      try {
         cc.director.runSceneImmediate(scene)
         if (cc.sys.isBrowser) {
           // show canvas
@@ -655,6 +672,9 @@ window.boot = async function () {
           }
           console.log('Success to load scene: ' + launchScene)
         }
+        if (onReady) onReady()
+      } catch (error) {
+        failLoading(error)
       }
     })
   }
@@ -679,12 +699,21 @@ window.boot = async function () {
 
   var count = 0
   function cb(err) {
-    if (err) return console.error(err.message, err.stack)
+    if (err) {
+      failLoading(err)
+      return
+    }
     count++
     if (count === bundleRoot.length + 1) {
       cc.assetManager.loadBundle(MAIN, function (err) {
-        if (!err) {
+        if (err) {
+          failLoading(err)
+          return
+        }
+        try {
           cc.game.run(option, onStart)
+        } catch (error) {
+          failLoading(error)
         }
       })
     }

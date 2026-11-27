@@ -43,6 +43,8 @@
 (function() {
     'use strict';
 
+    if (new URLSearchParams(window.location.search).get('android_no_scripts') === '1') return;
+
     // ==================== 【极致模拟版 v2.3】Tampermonkey 运行时环境 ====================
     // 完整模拟 Tampermonkey/篡改猴 运行时环境，提供与真实油猴一样的 API 体验
     // 注意：由于浏览器安全限制，部分功能（如绝对跨域）需要服务器CORS支持

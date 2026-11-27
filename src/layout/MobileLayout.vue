@@ -1,9 +1,9 @@
 <template>
   <div class="mobile-layout">
-    <!-- 顶部导航栏 - 玻璃拟态风格 -->
+    <!-- 顶部导航栏 -->
     <header class="mobile-header">
       <div class="header-left">
-        <n-button text @click="goBack" v-if="showBack" class="back-btn">
+        <n-button v-if="showBack" text aria-label="返回上一页" class="back-btn" @click="goBack">
           <template #icon>
             <n-icon size="24"><ArrowBack /></n-icon>
           </template>
@@ -11,30 +11,38 @@
         <h1 class="header-title">{{ title }}</h1>
       </div>
       
-      <!-- 账号选择和连接状态 -->
-      <div class="header-center" v-if="tokenStore.selectedToken">
-        <div class="token-selector" @click="showTokenDrawer = true">
-          <div class="token-avatar-wrapper">
-            <div class="token-avatar" :class="{ online: isConnected }">
-              <img v-if="tokenStore.selectedToken.avatar" :src="tokenStore.selectedToken.avatar" />
-              <div v-else class="token-avatar-placeholder">
-                {{ tokenStore.selectedToken.name?.charAt(0) || '?' }}
-              </div>
-            </div>
-            <div class="online-indicator" v-if="isConnected"></div>
-          </div>
-          <div class="token-info">
-            <div class="token-name">{{ getTokenDisplayName(tokenStore.selectedToken) }}</div>
-            <div class="token-status" :class="connectionStatusClass">
-              {{ connectionStatusText }}
-            </div>
-          </div>
-          <div class="dropdown-btn">
-            <n-icon size="16"><ChevronDown /></n-icon>
-          </div>
-        </div>
+      <div v-if="allTokens.length" class="header-center">
+        <button
+          ref="accountPickerTrigger"
+          class="token-selector"
+          type="button"
+          aria-haspopup="dialog"
+          :aria-expanded="showTokenDrawer"
+          :aria-label="accountPickerLabel"
+          :title="selectedLogin.error || undefined"
+          @click="openAccountPicker"
+        >
+          <span v-if="tokenStore.selectedToken" class="token-avatar-wrapper" aria-hidden="true">
+            <span class="token-avatar">
+              <img v-if="tokenStore.selectedToken.avatar" :src="tokenStore.selectedToken.avatar" alt="" />
+              <span v-else class="token-avatar-placeholder">
+                {{ getTokenDisplayName(tokenStore.selectedToken).charAt(0) }}
+              </span>
+            </span>
+            <span v-if="selectedLogin.status === 'connected'" class="online-indicator"></span>
+          </span>
+          <span class="token-info">
+            <span class="token-name">
+              {{ tokenStore.selectedToken ? getTokenDisplayName(tokenStore.selectedToken) : '选择账号' }}
+            </span>
+            <span v-if="tokenStore.selectedToken" class="token-status" :class="{ 'token-status-error': selectedLogin.status === 'error' }">
+              {{ selectedLogin.label }}
+            </span>
+          </span>
+          <n-icon class="dropdown-btn" size="16" aria-hidden="true"><ChevronDown /></n-icon>
+        </button>
       </div>
-      
+
       <div class="header-right">
         <!-- 活动日历 -->
         <ActivityCalendarDropdown />
@@ -45,22 +53,23 @@
 
     <!-- 主内容区域 -->
     <main class="mobile-main" :class="{ 'has-bottom-nav': showBottomNav }">
-      <router-view v-slot="{ Component, route }">
+      <p v-if="offline" class="mobile-network-status" role="status">网络已断开，部分功能可能无法使用</p>
+      <router-view v-slot="{ Component, route: childRoute }">
         <transition name="slide" mode="out-in">
-          <component :is="Component" :key="route.path" />
+          <component :is="Component" :key="childRoute.path" />
         </transition>
       </router-view>
     </main>
 
-    <!-- 底部导航栏 - 悬浮胶囊设计 -->
-    <nav class="mobile-bottom-nav" v-if="showBottomNav">
+    <nav v-if="showBottomNav" class="mobile-bottom-nav" aria-label="主导航">
       <div class="nav-container">
         <router-link
           v-for="item in bottomNavItems"
           :key="item.path"
-          :to="item.path"
+          :to="bottomNavTarget(item.path)"
           class="nav-item"
           :class="{ active: isActiveRoute(item.path) }"
+          :aria-current="isActiveRoute(item.path) ? 'page' : undefined"
         >
           <div class="nav-icon-wrapper">
             <n-icon size="20">
@@ -72,76 +81,75 @@
       </div>
     </nav>
     
-    <!-- Token选择抽屉 - 现代卡片风格 -->
-    <n-drawer v-model:show="showTokenDrawer" placement="top" :height="540" class="token-drawer">
-      <n-drawer-content :body-style="{ padding: 0, background: '#f8fafc' }" :header-style="{ display: 'none' }">
-        <div class="drawer-body">
-          <!-- 抽屉头部 -->
-          <div class="drawer-header">
-            <h2 class="drawer-title">选择账号</h2>
-            <p class="drawer-subtitle">切换当前操作的游戏账号</p>
-          </div>
-          
-          <!-- 当前选中账号 -->
-          <div v-if="tokenStore.selectedToken" class="current-token-section">
-            <div class="section-label">
-              <span class="label-icon">✦</span>
-              当前账号
-            </div>
-            <div class="current-token-card">
-              <div class="card-glow"></div>
-              <div class="token-avatar-large">
-                <img v-if="tokenStore.selectedToken.avatar" :src="tokenStore.selectedToken.avatar" />
-                <div v-else class="avatar-placeholder-large">
-                  {{ tokenStore.selectedToken.name?.charAt(0) || '?' }}
-                </div>
-              </div>
-              <div class="token-details">
-                <div class="token-name-large">{{ getTokenDisplayName(tokenStore.selectedToken) }}</div>
-                <div class="token-meta">
-                  <span class="server-badge">{{ formatServer(tokenStore.selectedToken.server) }}</span>
-                  <span class="status-badge" :class="getConnectionStatus(tokenStore.selectedToken.id)">
-                    {{ getConnectionStatus(tokenStore.selectedToken.id) === 'connected' ? '已连接' : '未连接' }}
-                  </span>
-                </div>
-              </div>
-              <div class="active-indicator">
-                <n-icon size="20" color="#10b981"><CheckmarkCircle /></n-icon>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 其他账号列表 -->
-          <div class="other-tokens-section">
-            <div class="section-label">
-              <span class="label-icon">◈</span>
-              其他账号
-            </div>
-            <div v-if="otherTokens.length === 0" class="empty-state">
-              <div class="empty-icon">📱</div>
-              <p>暂无其他账号</p>
-            </div>
-            <div v-else class="token-list">
-              <div
-                v-for="token in otherTokens"
-                :key="token.id"
-                class="token-list-item"
-                @click="selectToken(token)"
+    <n-drawer
+      v-model:show="showTokenDrawer"
+      placement="top"
+      height="min(34rem, 85vh)"
+      class="token-drawer"
+      aria-labelledby="mobile-account-picker-title"
+      @after-leave="accountPickerTrigger?.focus()"
+    >
+      <n-drawer-content :body-content-style="{ height: '100%', padding: 0, overflow: 'hidden' }">
+        <div class="account-picker">
+          <div class="account-picker-controls">
+            <div class="account-picker-heading">
+              <h2 id="mobile-account-picker-title">选择账号</h2>
+              <button
+                class="account-picker-close"
+                type="button"
+                aria-label="关闭账号选择"
+                @click="showTokenDrawer = false"
               >
-                <div class="token-avatar-small">
-                  <img v-if="token.avatar" :src="token.avatar" />
-                  <div v-else class="avatar-placeholder-small">
-                    {{ token.name?.charAt(0) || '?' }}
-                  </div>
-                </div>
-                <div class="token-info-compact">
-                  <div class="token-name-small">{{ getTokenDisplayName(token) }}</div>
-                  <div class="token-server-small">{{ formatServer(token.server) }}</div>
-                </div>
-                <div class="status-dot-small" :class="getConnectionStatus(token.id)"></div>
-              </div>
+                <n-icon size="20" aria-hidden="true"><Close /></n-icon>
+              </button>
             </div>
+            <input
+              v-model="pickerQuery"
+              class="account-picker-search"
+              type="search"
+              aria-label="搜索账号或区服"
+              placeholder="搜索账号 / 区服"
+            />
           </div>
+          <ul v-if="filteredAccounts.length" class="account-picker-list">
+            <li v-for="account in filteredAccounts" :key="account.token.id" class="token-list-item">
+              <button
+                class="account-picker-option"
+                type="button"
+                :aria-pressed="account.token.id === tokenStore.selectedToken?.id"
+                @click="selectPickerToken(account.token)"
+              >
+                <span class="account-picker-avatar" aria-hidden="true">
+                  <img v-if="account.token.avatar" :src="account.token.avatar" alt="" />
+                  <span v-else>{{ account.name.charAt(0) }}</span>
+                </span>
+                <span class="account-picker-details">
+                  <span class="account-picker-name">{{ account.name }}</span>
+                  <span class="account-picker-meta">
+                    <span v-if="account.server">{{ account.server }}</span>
+                    <span class="account-picker-status" role="status">{{ account.login.label }}</span>
+                  </span>
+                  <span v-if="account.login.error" class="account-picker-error">{{ account.login.error }}</span>
+                </span>
+                <n-icon
+                  v-if="account.token.id === tokenStore.selectedToken?.id"
+                  class="account-picker-check"
+                  size="18"
+                  aria-hidden="true"
+                ><CheckmarkCircle /></n-icon>
+              </button>
+              <button
+                v-if="account.actionLabel"
+                class="account-picker-connect"
+                type="button"
+                :aria-label="`${account.actionLabel} ${account.name}`"
+                @click="runPickerAction(account.token)"
+              >
+                {{ account.actionLabel }}
+              </button>
+            </li>
+          </ul>
+          <p v-else class="account-picker-empty" role="status">没有匹配的账号</p>
         </div>
       </n-drawer-content>
     </n-drawer>
@@ -149,25 +157,29 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import {
+  ArrowBack,
+  CheckmarkCircle,
+  ChevronDown,
+  Close,
+  Grid,
+  Home,
+  Layers,
+  Person,
+  Time,
+} from '@vicons/ionicons5'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ThemeSettings from '@/components/Common/ThemeSettings.vue'
 import { useTokenStore } from '@/stores/tokenStore'
+import { isNativeGameApp } from '@/utils/runtimePlatform'
+import { getTokenLoginDisplay } from '@/utils/tokenLoginDisplay'
 import ActivityCalendarDropdown from '@/views/TaskScheduler/components/ActivityCalendarDropdown.vue'
-import {
-  ArrowBack,
-  ChevronDown,
-  Home,
-  Grid,
-  Person,
-  Time,
-  Layers,
-  CheckmarkCircle
-} from '@vicons/ionicons5'
 
 const route = useRoute()
 const router = useRouter()
 const tokenStore = useTokenStore()
+const landingPage = computed(() => tokenStore.hasTokens ? '/mobile/dashboard' : '/mobile/tokens')
 
 // 底部导航项（云端任务已并入"定时"页的分段切换，不再单占一个 tab）
 const bottomNavItems = [
@@ -178,43 +190,93 @@ const bottomNavItems = [
   { path: '/mobile/batch-daily-tasks', label: '批量', icon: Layers }
 ]
 
+function bottomNavTarget(path) {
+  if (path === '/mobile/task-scheduler' && !tokenStore.hasTokens) {
+    return { path, query: { tab: 'cloud' } }
+  }
+  return path
+}
+
 // 计算属性
 const title = computed(() => route.meta.title || 'XYZW助手')
-const showBack = computed(() => route.meta.showBack !== false && route.path !== '/mobile/dashboard')
+const showBack = computed(() => route.meta.showBack !== false && route.path !== '/mobile/dashboard' &&
+  (!isNativeGameApp() || route.path !== landingPage.value))
 const showBottomNav = computed(() => route.meta.showBottomNav !== false)
 
-// 连接状态
-const isConnected = computed(() => {
-  if (!tokenStore.selectedToken) return false
-  return tokenStore.getWebSocketStatus(tokenStore.selectedToken.id) === 'connected'
+const root = document.documentElement
+const viewport = window.visualViewport
+const offline = ref(!navigator.onLine)
+let keyboardObserver
+
+function syncNetworkStatus() {
+  offline.value = !navigator.onLine
+}
+
+function syncViewport() {
+  const fieldFocused = document.activeElement?.matches('input:not([type="checkbox"], [type="radio"], [type="file"]), textarea, [contenteditable="true"]')
+  const viewportHeight = viewport?.height || window.innerHeight
+  const keyboardOpen = root.hasAttribute('data-native-keyboard') ||
+    (fieldFocused && viewport?.scale === 1 && window.innerHeight - viewportHeight > 100)
+  root.toggleAttribute('data-mobile-keyboard', keyboardOpen)
+  if (keyboardOpen) root.style.setProperty('--mobile-viewport-height', `${viewportHeight}px`)
+  else root.style.removeProperty('--mobile-viewport-height')
+}
+
+onMounted(() => {
+  root.setAttribute('data-mobile-shell', '')
+  syncViewport()
+  keyboardObserver = new MutationObserver(syncViewport)
+  keyboardObserver.observe(root, { attributes: true, attributeFilter: ['data-native-keyboard'] })
+  viewport?.addEventListener('resize', syncViewport)
+  window.addEventListener('resize', syncViewport)
+  window.addEventListener('online', syncNetworkStatus)
+  window.addEventListener('offline', syncNetworkStatus)
 })
 
-const connectionStatusClass = computed(() => ({
-  connected: isConnected.value,
-  disconnected: !isConnected.value
-}))
-
-const connectionStatusText = computed(() => {
-  if (!tokenStore.selectedToken) return '未选择'
-  return isConnected.value ? '已连接' : '未连接'
+onUnmounted(() => {
+  keyboardObserver?.disconnect()
+  viewport?.removeEventListener('resize', syncViewport)
+  window.removeEventListener('resize', syncViewport)
+  window.removeEventListener('online', syncNetworkStatus)
+  window.removeEventListener('offline', syncNetworkStatus)
+  root.removeAttribute('data-mobile-shell')
+  root.removeAttribute('data-mobile-keyboard')
+  root.style.removeProperty('--mobile-viewport-height')
 })
 
-// 所有账号列表
 const allTokens = computed(() => tokenStore.gameTokens || [])
-
-// 其他账号列表（排除当前选中的）
-const otherTokens = computed(() => {
-  if (!tokenStore.selectedToken) return allTokens.value
-  return allTokens.value.filter(t => t.id !== tokenStore.selectedToken.id)
+const showTokenDrawer = ref(false)
+const pickerQuery = ref('')
+const accountPickerTrigger = ref(null)
+function getLoginDisplay(tokenId) {
+  if (!tokenId) return getTokenLoginDisplay()
+  return getTokenLoginDisplay(tokenStore.getTokenLoginState(tokenId), tokenStore.getWebSocketStatus(tokenId))
+}
+const selectedLogin = computed(() => getLoginDisplay(tokenStore.selectedToken?.id))
+const accountPickerLabel = computed(() => {
+  const token = tokenStore.selectedToken
+  if (!token) return '选择账号'
+  return `选择账号，当前为 ${getTokenDisplayName(token)}，${selectedLogin.value.label}`
 })
 
-// Token选择抽屉
-const showTokenDrawer = ref(false)
+function openAccountPicker() {
+  pickerQuery.value = ''
+  showTokenDrawer.value = true
+}
 
-// 选择Token
-const selectToken = (token) => {
-  tokenStore.selectToken(token.id)
-  showTokenDrawer.value = false
+function selectPickerToken(token) {
+  if (tokenStore.selectTokenOnly(token.id)) {
+    showTokenDrawer.value = false
+  }
+}
+
+function runPickerAction(token) {
+  const login = getLoginDisplay(token.id)
+  if (login.canCancel) {
+    tokenStore.cancelTokenLogin(token.id)
+  } else if (!login.pending && login.status !== 'connected') {
+    tokenStore.selectToken(token.id, login.canRetry)
+  }
 }
 
 // 格式化服务器显示
@@ -243,20 +305,37 @@ const getTokenDisplayName = (token) => {
   return `账号${token.id?.slice(-4) || '未知'}`
 }
 
-// 获取连接状态
-const getConnectionStatus = (tokenId) => {
-  const status = tokenStore.getWebSocketStatus(tokenId)
-  return status || 'disconnected'
+function getPickerActionLabel(login) {
+  if (login.canCancel) return '取消连接'
+  if (login.canRetry) return '重试连接'
+  return login.status === 'disconnected' ? '连接' : ''
 }
+
+const filteredAccounts = computed(() => {
+  const query = pickerQuery.value.trim().toLowerCase()
+  return allTokens.value
+    .map((token) => {
+      const login = getLoginDisplay(token.id)
+      return {
+        token,
+        name: getTokenDisplayName(token),
+        server: formatServer(token.server),
+        login,
+        actionLabel: getPickerActionLabel(login),
+      }
+    })
+    .filter(({ name, server }) => !query || `${name} ${server}`.toLowerCase().includes(query))
+})
 
 // 返回上一页
 const goBack = () => {
-  router.back()
+  if (window.history.state?.back) router.back()
+  else router.replace(landingPage.value)
 }
 
 // 检查当前路由是否激活
 const isActiveRoute = (path) => {
-  return route.path === path || route.path.startsWith(path + '/')
+  return route.meta.mobileTab === path || route.path === path || route.path.startsWith(`${path}/`)
 }
 </script>
 
@@ -285,7 +364,6 @@ const isActiveRoute = (path) => {
   font-variant-numeric: tabular-nums;
 }
 
-// 顶部导航栏 - 玻璃拟态风格
 .mobile-header {
   position: fixed;
   top: 0;
@@ -295,18 +373,12 @@ const isActiveRoute = (path) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  padding: 0 16px;
+  box-sizing: border-box;
+  height: var(--mobile-header-height);
+  padding-block-start: var(--mobile-safe-top);
+  padding-inline: calc(var(--mobile-page-gutter) + var(--mobile-safe-left)) calc(var(--mobile-page-gutter) + var(--mobile-safe-right));
   background: var(--bg-primary);
-  backdrop-filter: none;
-  backdrop-filter: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-
-  /* 深色主题适配 */
-  [data-theme="dark"] & {
-    background: var(--bg-primary);
-    border-bottom-color: rgba(255, 255, 255, 0.05);
-  }
+  border-bottom: 1px solid var(--border-light);
 }
 
 .header-left {
@@ -346,31 +418,22 @@ const isActiveRoute = (path) => {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
   padding: 6px 12px 6px 6px;
-  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(0, 0, 0, 0.05);
 
   &:hover {
-    background: rgba(241, 245, 249, 1);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    background: var(--bg-hover);
   }
 
-  &:active {
-    transform: translateY(0);
-  }
-
-  /* 深色主题适配 */
-  [data-theme="dark"] & {
-    background: rgba(51, 65, 85, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
-
-    &:hover {
-      background: rgba(51, 65, 85, 1);
-    }
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
   }
 }
 
@@ -379,19 +442,14 @@ const isActiveRoute = (path) => {
 }
 
 .token-avatar {
+  display: grid;
+  place-items: center;
   width: 36px;
   height: 36px;
   border-radius: var(--radius-full);
   overflow: hidden;
   background: var(--primary-color-light);
-  border: 2px solid transparent;
-  transition: all 0.3s;
-  
-  &.online {
-    border-color: var(--success-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-  }
-  
+
   img {
     width: 100%;
     height: 100%;
@@ -400,14 +458,9 @@ const isActiveRoute = (path) => {
 }
 
 .token-avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  color: #6366f1;
+  color: var(--primary-color);
 }
 
 .online-indicator {
@@ -418,13 +471,14 @@ const isActiveRoute = (path) => {
   height: 10px;
   background: var(--success-color);
   border-radius: var(--radius-full);
-  border: 2px solid white;
+  border: 2px solid var(--bg-primary);
 }
 
 .token-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  line-height: 1.2;
 }
 
 .token-name {
@@ -439,32 +493,17 @@ const isActiveRoute = (path) => {
 
 .token-status {
   font-size: 12px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  
-  &.connected {
-    color: var(--success-color);
-  }
-  
-  &.disconnected {
-    color: var(--text-tertiary);
-  }
+  color: var(--text-secondary);
+}
+
+.token-status-error,
+.account-picker-error {
+  color: var(--error-color);
 }
 
 .dropdown-btn {
   width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  transition: transform 0.3s;
-  
-  .token-selector:hover & {
-    transform: rotate(180deg);
-  }
+  color: var(--text-secondary);
 }
 
 .header-right {
@@ -483,14 +522,14 @@ const isActiveRoute = (path) => {
     justify-content: center;
     padding: 0;
     border-radius: var(--radius-md);
-    background: rgba(241, 245, 249, 0.8);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    color: var(--text-primary);
     transition: all 0.3s ease;
 
     &:active {
       transform: scale(0.95);
-      background: rgba(241, 245, 249, 1);
+      background: var(--bg-hover);
     }
 
     .n-icon {
@@ -508,64 +547,56 @@ const isActiveRoute = (path) => {
 // 主内容区域
 .mobile-main {
   flex: 1;
-  padding-top: 64px;
-  padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
+  min-width: 0;
+  padding-block: var(--mobile-header-height) calc(var(--mobile-page-gutter) + var(--mobile-safe-bottom));
+  padding-inline: var(--mobile-safe-left) var(--mobile-safe-right);
 
   &.has-bottom-nav {
-    padding-bottom: calc(110px + env(safe-area-inset-bottom, 20px));
+    padding-bottom: calc(var(--mobile-page-gutter) + var(--mobile-nav-height));
   }
-
-  // 注意：这里不能设 overflow，否则本元素会成为滚动容器，
-  // 页面内 position: sticky 元素将相对它吸附（而它高度随内容增长、永不滚动）。
-  // 移动端实际滚动由 body 承担，横向溢出也在 body 上裁剪（见 global.scss）。
-
-  // Density is controlled by spacing, preserving readable text and touch sizes.
 }
 
-// 底部导航栏 - 悬浮胶囊设计
+.mobile-network-status {
+  margin: 0;
+  padding: 6px var(--mobile-page-gutter);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light);
+  font-size: .875rem;
+}
+
 .mobile-bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 20px));
-  background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%);
-  backdrop-filter: none;
-  backdrop-filter: none;
-
-  /* 深色主题适配 */
-  [data-theme="dark"] & {
-    background: linear-gradient(to top, rgba(30, 41, 59, 0.95) 0%, rgba(30, 41, 59, 0.8) 100%);
-  }
+  box-sizing: border-box;
+  min-height: var(--mobile-nav-height);
+  padding-block: 4px calc(4px + var(--mobile-safe-bottom));
+  padding-inline: calc(8px + var(--mobile-safe-left)) calc(8px + var(--mobile-safe-right));
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
 }
 
 .nav-container {
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
-  max-width: 380px;
+  width: 100%;
+  max-width: 56rem;
   margin: 0 auto;
-  padding: 6px 8px;
-  background: rgba(241, 245, 249, 0.9);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-
-  /* 深色主题适配 */
-  [data-theme="dark"] & {
-    background: rgba(51, 65, 85, 0.9);
-  }
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px 10px; // 5 项，留足水平内边距且不溢出胶囊
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--mobile-touch-target);
   text-decoration: none;
-  color: var(--text-tertiary);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-secondary);
   border-radius: var(--radius-md);
   
   &:hover {
@@ -573,266 +604,160 @@ const isActiveRoute = (path) => {
   }
   
   &.active {
-    color: #6366f1;
+    color: var(--primary-color);
     
     .nav-icon-wrapper {
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-light);
+      background: var(--primary-color-light);
     }
     
     .nav-label {
       font-weight: 600;
-      color: #6366f1;
     }
   }
 }
 
 .nav-icon-wrapper {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   background: transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-label {
-  font-size: 12px;
+  font-size: .875rem;
   font-weight: 500;
-  transition: all 0.3s;
 }
 
-// Token选择抽屉 - 现代卡片风格
-.token-drawer {
-  :deep(.n-drawer-content) {
-    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-  }
-}
-
-.drawer-body {
-  padding: 24px 20px;
-  background: var(--bg-secondary);
-  min-height: 100%;
-}
-
-.drawer-header {
-  text-align: center;
-  margin-bottom: 24px;
-  
-  .drawer-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 4px 0;
-  }
-  
-  .drawer-subtitle {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    margin: 0;
-  }
-}
-
-.section-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  
-  .label-icon {
-    font-size: 12px;
-    opacity: 0.7;
-  }
-}
-
-// 当前账号卡片
-.current-token-section {
-  margin-bottom: 24px;
-}
-
-.current-token-card {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
+:global(.n-drawer.token-drawer) {
+  width: 100% !important;
+  max-width: none !important;
+  max-height: 85dvh;
   background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-light);
 }
 
-.card-glow {
-  display: none;
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.token-avatar-large {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  flex-shrink: 0;
-  
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.avatar-placeholder-large {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.token-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.token-name-large {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.token-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.server-badge {
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.status-badge {
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 500;
-  
-  &.connected {
-    background: rgba(16, 185, 129, 0.3);
-    color: #6ee7b7;
-  }
-  
-  &.disconnected {
-    background: rgba(156, 163, 175, 0.3);
-    color: #d1d5db;
-  }
-}
-
-.active-indicator {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-
-// 其他账号列表
-.other-tokens-section {
-  flex: 1;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-tertiary);
-
-  .empty-icon {
-    font-size: 20px;
-    margin-bottom: 12px;
-  }
-
-  p {
-    font-size: 14px;
-    margin: 0;
-  }
-}
-
-.token-list {
+.account-picker {
   display: flex;
   flex-direction: column;
+  height: 100%;
+}
+
+.account-picker-controls {
+  flex-shrink: 0;
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-primary);
+}
+
+.account-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.account-picker-close,
+.account-picker-option,
+.account-picker-connect {
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.account-picker-search,
+.account-picker-close,
+.account-picker-option,
+.account-picker-connect {
+  min-height: 44px;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+}
+
+.account-picker-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.account-picker-search {
+  display: block;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+
+  &::placeholder {
+    color: var(--text-secondary);
+  }
+}
+
+.account-picker-list {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px 16px 16px;
+  margin: 0;
+  list-style: none;
 }
 
 .token-list-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: white;
+  gap: 4px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.account-picker-option {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  text-align: left;
 
-  &:hover {
-    background: rgba(241, 245, 249, 0.8);
-    transform: translateX(4px);
-  }
-
-  &:active {
-    transform: translateX(0);
-  }
-
-  /* 深色主题适配 */
-  [data-theme="dark"] & {
-    background: rgba(30, 41, 59, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
-
-    &:hover {
-      background: rgba(51, 65, 85, 0.9);
-    }
+  &[aria-pressed="true"] {
+    background: var(--primary-color-light);
   }
 }
 
-.token-avatar-small {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
+.account-picker-avatar {
+  display: grid;
+  flex: 0 0 28px;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   overflow: hidden;
-  background: var(--primary-color-light);
-  flex-shrink: 0;
-  
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+
   img {
     width: 100%;
     height: 100%;
@@ -840,52 +765,59 @@ const isActiveRoute = (path) => {
   }
 }
 
-.avatar-placeholder-small {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 600;
-  color: #6366f1;
-}
-
-.token-info-compact {
+.account-picker-details {
+  display: grid;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
 }
 
-.token-name-small {
+.account-picker-name {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 2px;
+  overflow-wrap: anywhere;
 }
 
-.token-server-small {
+.account-picker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  color: var(--text-secondary);
   font-size: 12px;
-  color: var(--text-tertiary);
+  overflow-wrap: anywhere;
 }
 
-.status-dot-small {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
+.account-picker-error {
+  font-size: 12px;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.account-picker-check,
+.account-picker-connect {
   flex-shrink: 0;
-  
-  &.connected {
-    background: var(--success-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  color: var(--primary-color);
+}
+
+.account-picker-connect {
+  min-width: 44px;
+  padding: 0 6px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+@media (hover: hover) {
+  .account-picker-option:hover,
+  .account-picker-close:hover,
+  .account-picker-connect:hover {
+    background: var(--bg-hover);
   }
-  
-  &.disconnected {
-    background: var(--text-tertiary);
-  }
+}
+
+.account-picker-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 // 页面过渡动画
@@ -906,66 +838,36 @@ const isActiveRoute = (path) => {
 
 /* Reserve both edge controls; the account chip uses only the remaining width. */
 @media (max-width: 768px) {
-  .mobile-header { display: grid; grid-template-columns: minmax(0, 112px) minmax(0, 1fr) 44px; gap: 8px; padding: 0 12px; }
+  .mobile-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; }
   .header-left { grid-column: 1; min-width: 0; gap: 4px; }
   .header-title { min-width: 0; }
   .header-left .back-btn { flex: 0 0 44px; width: 44px; height: 44px; }
   .header-center { grid-column: 2; min-width: 0; }
   .header-right { grid-column: 3; min-width: 0; }
-  .header-right :deep(.activity-calendar-btn) { width: 44px; height: 44px; }
+  .header-right :deep(.activity-calendar-btn) { width: var(--mobile-touch-target); height: var(--mobile-touch-target); }
   .token-selector { width: 100%; max-width: 260px; min-width: 0; gap: 6px; padding: 5px 6px; }
   .token-avatar-wrapper { flex: 0 0 28px; }
   .token-avatar { width: 28px; height: 28px; }
   .token-info { min-width: 0; flex: 1; }
   .token-name { max-width: none; width: 100%; }
   .dropdown-btn { flex: 0 0 16px; width: 16px; }
-}
-
-/* Compact mobile chrome leaves more of the viewport for page content. */
-@media (max-width: 768px) {
-  .mobile-header { height: 52px; grid-template-columns: auto minmax(0, 1fr) 76px; gap: 6px; padding: 0 10px; }
   .header-left { max-width: 104px; }
-  .header-title { font-size: 14px; }
-  .header-left .back-btn { flex-basis: 36px; width: 36px; height: 36px; }
-  .header-right :deep(.activity-calendar-btn) { width: 36px; height: 36px; }
+  .header-title { font-size: 1rem; }
   .token-selector { gap: 4px; padding: 3px 5px; }
   .token-avatar-wrapper { flex-basis: 24px; }
   .token-avatar { width: 24px; height: 24px; }
   .token-name { font-size: 12px; }
-  .token-status { font-size: 12px; }
-  .mobile-main { padding-top: 52px; }
-  .mobile-main.has-bottom-nav { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-  .mobile-bottom-nav { padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)); }
-  .nav-container { padding: 2px 4px; }
-  .nav-item { min-width: 44px; min-height: 44px; padding: 0 8px; gap: 0; }
-  .nav-icon-wrapper { width: 26px; height: 26px; }
-  .nav-item.active, .nav-item.active .nav-label { color: var(--primary-color); }
-}
-
-@media (max-width: 768px) {
+  .token-status { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .header-right { gap: 4px; flex-wrap: nowrap; }
   .header-right > :deep(*) { flex-shrink: 0; }
-  .header-right :deep(.theme-settings), .header-right :deep(.theme-toggle-btn) { width: 36px; height: 36px; }
-  .token-selector { overflow: hidden; }
+  .header-right :deep(.theme-settings), .header-right :deep(.theme-toggle-btn) { width: var(--mobile-touch-target); height: var(--mobile-touch-target); }
 }
 
-/* Fill the bottom bar instead of shrinking the capsule to its content width. */
-@media (max-width: 768px) {
-  // Override the legacy global fixed height so safe-area padding can expand the bar.
-  .mobile-bottom-nav {
-    display: block !important;
-    height: auto !important;
-    min-height: 56px;
-    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  .mobile-bottom-nav .nav-container {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    box-sizing: border-box;
-  }
-  .mobile-bottom-nav .nav-item { width: 100%; min-width: 0; min-height: 44px; padding: 0; box-sizing: border-box; }
+@media (max-width: 350px) {
+  .token-avatar-wrapper { display: none; }
+}
+
+@media (min-width: 560px) and (max-width: 768px) {
+  .header-left { max-width: none; }
 }
 </style>

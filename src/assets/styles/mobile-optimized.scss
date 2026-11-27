@@ -20,7 +20,7 @@
 // --------------------------------------------
 // 2. 底部导航栏 (移动端)
 // --------------------------------------------
-.mobile-bottom-nav {
+:root:not([data-mobile-shell]) .mobile-bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -563,7 +563,7 @@
 // --------------------------------------------
 .dark,
 [data-theme="dark"] {
-  .mobile-bottom-nav {
+  :root:not([data-mobile-shell]) .mobile-bottom-nav {
     background: var(--bg-secondary);
     border-color: rgba(255, 255, 255, 0.1);
   }
@@ -609,7 +609,7 @@
 // 15. 横屏模式优化
 // --------------------------------------------
 @media (orientation: landscape) and (max-height: 500px) {
-  .mobile-bottom-nav {
+  :root:not([data-mobile-shell]) .mobile-bottom-nav {
     display: none;
   }
   

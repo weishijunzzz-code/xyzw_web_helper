@@ -2,19 +2,25 @@ import type { ProtoMsg } from "@/utils/bonProtocol";
 import { useLocalStorage } from "@vueuse/core";
 import { defineStore } from "pinia";
 
-import { computed, ref } from "vue";
+import { computed, markRaw, ref } from "vue";
 import useIndexedDB from "@/hooks/useIndexedDB";
-import router from "@/router";
 import { g_utils } from "@/utils/bonProtocol";
+import { isGameAccountReserved } from "@/utils/gameAccountLease";
 
 import { gameLogger, tokenLogger, wsLogger } from "@/utils/logger";
 import { generateRandomSeed } from "@/utils/randomSeed";
+import { isNativeGameApp } from "@/utils/runtimePlatform";
 import {
   scheduleAuthUserRequest,
   setAuthUserRateLimiterCallback,
   transformToken,
 } from "@/utils/token";
-import { getTokenErrorMessage } from "@/utils/tokenLogin.js";
+import {
+  credentialWasRejected,
+  describeTokenLoginFailure,
+  TOKEN_LOGIN_TIMEOUT,
+  TOKEN_RECOVERY_TIMEOUT,
+} from "@/utils/tokenConnectionState.js";
 import {
   refreshTokenFromCombUser,
   roleIndexFromServerId,
@@ -51,11 +57,14 @@ declare interface WebSocketConnection {
   client: XyzwWebSocketClient | null;
   actualToken?: string;
   lastError: { timestamp: string; error: string } | null;
-  loginTimer?: ReturnType<typeof setTimeout>;
   tokenId: string;
   sessionId: string;
   createdAt: string;
   lastMessageAt: string | null;
+  connectedAt?: string | null;
+  lastMessage?: { timestamp: string; data: ProtoMsg; cmd: string };
+  wsUrl?: string;
+  reconnectAttempts?: number;
   randomSeedSynced?: boolean;
   lastRandomSeedSource?: number | null;
   lastRandomSeed?: number | null;
@@ -63,13 +72,30 @@ declare interface WebSocketConnection {
 
 declare type WebCtx = Record<string, Partial<WebSocketConnection>>;
 
-declare interface ConnectLock {
-  tokenId: string;
-  operation: "connect" | "disconnect";
-  timestamp: number;
-  sessionId: string;
+type TokenLoginPhase =
+  | "idle" | "connecting" | "verifying" | "refreshing" | "connected" | "error" | "cancelled";
+
+interface TokenLoginState {
+  phase: TokenLoginPhase;
+  message: string;
+  startedAt?: number;
+  deadlineAt?: number;
+  transport?: "direct" | "relay";
 }
-declare type LockCtx = Record<string, Partial<ConnectLock>>;
+
+interface TokenLoginAttempt {
+  tokenId: string;
+  startedAt: number;
+  deadlineAt: number;
+  controller: AbortController;
+  refreshUsed: boolean;
+  ownsCrossTabState: boolean;
+  timer?: ReturnType<typeof setTimeout>;
+  transport?: XyzwWebSocketClient;
+  transportKind: "direct" | "relay";
+  customWsUrl: string | null;
+  opened?: Promise<XyzwWebSocketClient | null>;
+}
 
 // 分组接口定义
 declare interface TokenGroup {
@@ -101,23 +127,12 @@ export const tokenGroups = useLocalStorage<TokenGroup[]>("tokenGroups", []);
  */
 export const useTokenStore = defineStore("tokens", () => {
   const wsConnections = ref<WebCtx>({}); // WebSocket连接状态
-  const connectionLocks = ref<LockCtx>({}); // 连接操作锁，防止竞态条件
+  const tokenLoginStates = ref<Record<string, TokenLoginState>>({});
+  const tokenLoginAttempts = new Map<string, TokenLoginAttempt>();
+  const closingSockets = new Map<string, WebSocket>();
 
-  const clearLoginTimer = (connection?: Partial<WebSocketConnection>) => {
-    if (!connection) return;
-    clearTimeout(connection.loginTimer);
-    connection.loginTimer = undefined;
-  };
-
-  const setLoginError = (tokenId: string, error: unknown, code = 0) => {
-    const connection = (wsConnections.value[tokenId] ??= { tokenId });
-    clearLoginTimer(connection);
-    connection.status = "error";
-    connection.lastError = {
-      timestamp: new Date().toISOString(),
-      error: getTokenErrorMessage(error, code),
-    };
-  };
+  const getTokenLoginState = (tokenId: string): TokenLoginState =>
+    tokenLoginStates.value[tokenId] ?? { phase: "idle", message: "" };
 
   // 游戏数据存储
   const gameData = ref({
@@ -294,9 +309,8 @@ export const useTokenStore = defineStore("tokens", () => {
     gameTokens.value = gameTokens.value.filter((token) => token.id !== tokenId);
 
     // 关闭对应的WebSocket连接
-    if (wsConnections.value[tokenId]) {
-      closeWebSocketConnection(tokenId);
-    }
+    closeWebSocketConnection(tokenId);
+    delete tokenLoginStates.value[tokenId];
 
     // 如果删除的是当前选中token，清除选中状态
     if (selectedTokenId.value === tokenId) {
@@ -309,14 +323,21 @@ export const useTokenStore = defineStore("tokens", () => {
     return true;
   };
 
-  const selectToken = (tokenId: string, forceReconnect = false) => {
+  const selectTokenOnly = (tokenId: string) => {
     const token = gameTokens.value.find((t) => t.id === tokenId);
     if (!token) {
       return null;
     }
+    selectedTokenId.value = tokenId;
+    return token;
+  };
 
-    // 检查是否已经是当前选中的token
+  const selectToken = (tokenId: string, forceReconnect = false) => {
     const isAlreadySelected = selectedTokenId.value === tokenId;
+    const token = selectTokenOnly(tokenId);
+    if (!token) {
+      return null;
+    }
     const existingConnection = wsConnections.value[tokenId];
     const isConnected = existingConnection?.status === "connected";
     const isConnecting = existingConnection?.status === "connecting";
@@ -327,9 +348,6 @@ export const useTokenStore = defineStore("tokens", () => {
       isConnecting,
       forceReconnect,
     });
-
-    // 更新选中状态
-    selectedTokenId.value = tokenId;
 
     // 更新最后使用时间
     updateToken(tokenId, { lastUsed: new Date().toISOString() });
@@ -355,7 +373,7 @@ export const useTokenStore = defineStore("tokens", () => {
       }
 
       // 创建WebSocket连接
-      createWebSocketConnection(tokenId, token.token, token.wsUrl);
+      void createWebSocketConnection(tokenId, token.token, token.wsUrl, { force: forceReconnect });
     } else {
       if (isConnected) {
         wsLogger.debug(`Token已连接，跳过连接创建: ${tokenId}`);
@@ -369,161 +387,64 @@ export const useTokenStore = defineStore("tokens", () => {
     return token;
   };
 
-  // Token刷新尝试记录
-  const tokenRefreshAttempts = ref<Record<string, number>>({});
+  const binImportMethods = new Set(["bin", "wxQrcode", "mobile", "wxForceLogout"]);
 
-  // 尝试自动刷新Token
-  const attemptTokenRefresh = async (
-    tokenId: string,
-    forceReconnect = false,
-  ) => {
-    // 检查冷却时间 (10秒)
-    const lastAttempt = tokenRefreshAttempts.value[tokenId] || 0;
-    const now = Date.now();
-    if (now - lastAttempt < 10000) {
-      wsLogger.warn(`Token刷新过于频繁，跳过 [${tokenId}]`);
-      return false;
-    }
-    tokenRefreshAttempts.value[tokenId] = now;
+  function canRefreshCredential(token?: TokenData) {
+    return Boolean(token && (
+      (token.importMethod === "url" && token.sourceUrl) ||
+      (token.importMethod && binImportMethods.has(token.importMethod)) ||
+      token.combUser
+    ));
+  }
 
-    const gameToken = gameTokens.value.find((t) => t.id === tokenId);
-    if (!gameToken) return false;
+  async function refreshLoginCredential(attempt: TokenLoginAttempt) {
+    const { tokenId, controller } = attempt;
+    const { signal } = controller;
+    const current = gameTokens.value.find(token => token.id === tokenId);
+    if (!current) throw loginFailure("missingCredential");
 
-    wsLogger.info(`尝试自动刷新Token [${tokenId}]`);
-    let refreshSuccess = false;
+    let updates: Partial<TokenData> | undefined;
+    if (current.importMethod === "url" && current.sourceUrl) {
+      const token = await scheduleAuthUserRequest(async () => {
+        if (signal.aborted) return null;
+        const response = await fetch(current.sourceUrl, { signal });
+        if (!response.ok) throw Object.assign(new Error("Credential HTTP request failed"), { code: response.status });
+        return (await response.json()).token;
+      });
+      if (typeof token === "string" && token.trim()) updates = { token };
+    } else {
+      // Prefer the already saved, account-specific BIN. A name key supports older imports.
+      let bin = await getArrayBuffer(tokenId);
+      if (!bin && binImportMethods.has(current.importMethod || "")) {
+        bin = await getArrayBuffer(current.name);
+      }
+      if (signal.aborted) return null;
 
-    try {
-      if (gameToken.importMethod === "url" && gameToken.sourceUrl) {
-        // URL形式token刷新
-        const token = await scheduleAuthUserRequest(async () => {
-          const response = await fetch(gameToken.sourceUrl!);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.token) {
-              return data.token;
-            }
-          }
-          return null;
+      if (bin) {
+        updates = { token: await transformToken(bin, { signal }) };
+      } else if (current.combUser) {
+        const refreshed = await refreshTokenFromCombUser(current.combUser as any, {
+          serverId: current.serverId, roleIndex: current.roleIndex, roleId: current.roleId,
         });
-        if (token) {
-          updateToken(tokenId, { ...gameToken, token });
-          wsLogger.info(`从URL获取token成功: ${gameToken.name}`);
-          refreshSuccess = true;
-        }
-      } else if (gameToken.combUser) {
-        const refreshed = await refreshTokenFromCombUser(
-          gameToken.combUser as any,
-          {
-            serverId: gameToken.serverId,
-            roleIndex: gameToken.roleIndex,
-            roleId: gameToken.roleId,
-          },
-        );
-        updateToken(tokenId, {
-          ...gameToken,
+        if (!isActiveLogin(attempt)) return null;
+        if (!await storeArrayBuffer(tokenId, refreshed.bin)) throw loginFailure("missingBin");
+        updates = {
           token: refreshed.token,
           serverId: refreshed.role.serverId,
           roleId: refreshed.role.roleId,
           roleIndex: roleIndexFromServerId(refreshed.role.serverId),
-          lastRefreshed: Date.now(),
-        } as any);
-        // 关键修复：combUser 重新登录生成的新 BIN 必须持久化，
-        // 否则一旦 combUser 过期，这个账号就再也刷不动了
-        await storeArrayBuffer(tokenId, refreshed.bin);
-        refreshSuccess = true;
-      } else if (
-        gameToken.importMethod === "bin" ||
-        gameToken.importMethod === "wxQrcode" ||
-        gameToken.importMethod === "mobile" ||
-        gameToken.importMethod === "wxForceLogout"
-      ) {
-        // Bin形式token刷新
-        let userToken: ArrayBuffer | null = await getArrayBuffer(tokenId);
-        let usedOldKey = false;
-
-        if (!userToken) {
-          const tokenByName = await getArrayBuffer(gameToken.name);
-          if (tokenByName) {
-            userToken = tokenByName;
-            usedOldKey = true;
-          }
-        }
-
-        if (userToken) {
-          const token = await transformToken(userToken);
-          updateToken(tokenId, { ...gameToken, token });
-          if (usedOldKey) {
-            const saved = await storeArrayBuffer(tokenId, userToken);
-            if (saved) {
-              await deleteArrayBuffer(gameToken.name);
-            }
-          }
-          refreshSuccess = true;
-        } else {
-          wsLogger.error(`Token刷新失败: 未找到BIN数据 [${tokenId}]`);
-        }
+        };
+      } else {
+        throw loginFailure("missingBin");
       }
-    } catch (error) {
-      wsLogger.error(`Token刷新过程出错 [${tokenId}]:`, error);
     }
 
-    if (refreshSuccess) {
-      wsLogger.info(`Token刷新成功 [${tokenId}]`);
-
-      const currentPath = router.currentRoute.value.path;
-      const shouldReconnect =
-        forceReconnect ||
-        currentPath === "/tokens" ||
-        currentPath === "/admin/game-features";
-
-      if (shouldReconnect) {
-        wsLogger.info(`触发自动重连 [${tokenId}]`);
-        // 重置重连状态以允许立即重连
-        if (wsConnections.value[tokenId]) {
-          wsConnections.value[tokenId].reconnectAttempts = 0;
-        }
-        selectToken(tokenId, true);
-      }
-      return true;
-    } else {
-      wsLogger.error(`Token刷新失败，请手动重新导入 [${tokenId}]`);
-      return false;
-    }
-  };
-
-  /**
-   * 把刷新出的新凭证静默推送到云端（若已登录云端）。
-   * 云端是独立执行体，服务端靠"bin/token 快照"自主续期；批量页恰好在刷新凭证时
-   * 顺手覆盖云端快照，可避免云端拿着过期快照反复重连。失败静默，不影响本地。
-   */
-  const pushRefreshedTokenToCloud = async (
-    tokenId: string,
-    refreshedBin: ArrayBuffer | null,
-  ) => {
-    try {
-      if (!localStorage.getItem("auth_token")) return;
-      const t = gameTokens.value.find((item) => item.id === tokenId);
-      if (!t?.token) return;
-      await tokenApi.importTokens([
-        {
-          id: t.id,
-          name: t.name,
-          token: t.token,
-          wsUrl: t.wsUrl || null,
-          server: t.server || "",
-          remark: t.remark || "",
-          importMethod: t.importMethod || "manual",
-          sourceUrl: t.sourceUrl || null,
-        },
-      ]);
-      if (refreshedBin) {
-        await tokenApi.uploadBin(t.id, refreshedBin);
-      }
-      tokenLogger.info(`已将刷新后的凭证同步到云端 [${tokenId}]`);
-    } catch (e) {
-      tokenLogger.warn(`凭证同步云端失败（不影响本地） [${tokenId}]:`, e);
-    }
-  };
+    if (!isActiveLogin(attempt)) return null;
+    const latest = gameTokens.value.find(token => token.id === tokenId);
+    if (!latest || latest.token !== current.token) throw loginFailure("missingCredential");
+    if (!updates || !updateToken(tokenId, updates)) throw loginFailure("missingCredential");
+    return updates.token;
+  }
 
   // 游戏消息处理
   const handleGameMessage = async (
@@ -536,27 +457,7 @@ export const useTokenStore = defineStore("tokens", () => {
         gameLogger.warn(`消息处理跳过 [${tokenId}]: 无效消息`);
         return;
       }
-      if (message.error || Number(message.code)) {
-        const errText = String(message.error || message.hint || "").toLowerCase();
-        gameLogger.warn(`消息处理跳过 [${tokenId}]:`, message.error);
-        if (/token.*expir|token.*过期|check\s+token\s+error/i.test(errText)) {
-          setLoginError(tokenId, errText, Number(message.code));
-          client.disconnect();
-          updateCrossTabConnectionState(tokenId, "disconnected");
-          releaseConnectionLock(tokenId, "connect");
-          const gameToken = gameTokens.value.find((t) => t.id === tokenId);
-          if (gameToken) {
-            // 调用统一的Token刷新逻辑
-            const refreshed = await attemptTokenRefresh(tokenId);
-            if (!refreshed) {
-              wsLogger.error(
-                `Token 已过期且无法自动刷新，请重新导入 [${tokenId}]`,
-              );
-            }
-          }
-        }
-        return;
-      }
+      if (message.error || Number(message.code)) return;
 
       const cmd = message.cmd?.toLowerCase();
       const body = message.getData();
@@ -737,10 +638,10 @@ export const useTokenStore = defineStore("tokens", () => {
         token: newToken,
         tokenName: name,
         message:
-          `Token "${name}" 导入成功` +
-          (binRestored
+          `Token "${name}" 导入成功${
+          binRestored
             ? "，已附带BIN数据（可直接打开游戏/导出BIN）"
-            : ""),
+            : ""}`,
         details: `实际Token: ${displayToken}`,
       };
     } catch (error) {
@@ -757,62 +658,15 @@ export const useTokenStore = defineStore("tokens", () => {
     `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const currentSessionId = generateSessionId();
 
-  // 获取连接锁
-  const acquireConnectionLock = async (
-    tokenId: string,
-    operation = "connect",
-  ) => {
-    const lockKey = `${tokenId}_${operation}`;
-    const connect = connectionLocks.value;
-    if (connect[lockKey]) {
-      wsLogger.debug(`等待连接锁释放: ${tokenId} (${operation})`);
-      // 等待现有操作完成，最多等待10秒
-      let attempts = 0;
-      while (connect[lockKey] && attempts < 100) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        attempts++;
-      }
-      if (connect[lockKey]) {
-        wsLogger.warn(`连接锁等待超时: ${tokenId} (${operation})`);
-        return false;
-      }
+  function updateCrossTabConnectionState(tokenId: string, action: string) {
+    const state = { action, sessionId: currentSessionId, timestamp: Date.now() };
+    try {
+      localStorage.setItem(`ws_connection_${tokenId}`, JSON.stringify(state));
+      activeConnections.value[tokenId] = state;
+    } catch {
+      // A private or full storage partition must not block login.
     }
-    connect[lockKey] = {
-      tokenId,
-      operation,
-      timestamp: Date.now(),
-      sessionId: currentSessionId,
-    };
-    wsLogger.connectionLock(tokenId, operation, true);
-    return true;
-  };
-
-  // 释放连接锁
-  const releaseConnectionLock = (tokenId: string, operation = "connect") => {
-    const lockKey = `${tokenId}_${operation}`;
-    if (connectionLocks.value[lockKey]) {
-      delete connectionLocks.value[lockKey];
-      wsLogger.connectionLock(tokenId, operation, false);
-    }
-  };
-
-  // 更新跨标签页连接状态
-  const updateCrossTabConnectionState = (
-    tokenId: string,
-    action: string,
-    sessionId: string = currentSessionId,
-  ) => {
-    const state = useLocalStorage(`ws_connection_${tokenId}`, {
-      action, // 'connecting', 'connected', 'disconnecting', 'disconnected'
-      sessionId,
-      timestamp: Date.now(),
-      url: window.location.href,
-    });
-
-    if (activeConnections.value) {
-      activeConnections.value[tokenId] = state.value;
-    }
-  };
+  }
 
   // 检查是否有其他标签页的活跃连接
   const checkCrossTabConnection = (tokenId: string) => {
@@ -839,260 +693,277 @@ export const useTokenStore = defineStore("tokens", () => {
     return null;
   };
 
-  // WebSocket连接管理（重构版 - 防重连）
-  const createWebSocketConnection = async (
-    tokenId: string,
-    base64Token: string,
-    customWsUrl = null,
-  ) => {
-    wsLogger.info(`开始创建连接: ${tokenId}`);
+  function loginFailure(kind: string) {
+    return Object.assign(new Error(kind), { kind });
+  }
 
-    // 1. 获取连接锁，防止竞态条件
-    const lockAcquired = await acquireConnectionLock(tokenId, "connect");
-    if (!lockAcquired) {
-      wsLogger.error(`无法获取连接锁: ${tokenId}`);
-      return null;
+  function isActiveLogin(attempt: TokenLoginAttempt) {
+    return tokenLoginAttempts.get(attempt.tokenId) === attempt && !attempt.controller.signal.aborted;
+  }
+
+  function setLoginPhase(attempt: TokenLoginAttempt, phase: TokenLoginPhase, message: string) {
+    tokenLoginStates.value[attempt.tokenId] = {
+      phase, message, startedAt: attempt.startedAt, deadlineAt: attempt.deadlineAt,
+      transport: attempt.transportKind,
+    };
+  }
+
+  function detachTransport(tokenId: string, expected?: XyzwWebSocketClient) {
+    const connection = wsConnections.value[tokenId];
+    const client = connection?.client;
+    if (!connection || (expected && expected !== client)) return;
+    delete wsConnections.value[tokenId];
+    const socket = client?.socket;
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      closingSockets.set(tokenId, socket);
+      // Cancellation may never be followed by a retry. Do not retain a detached socket.
+      setTimeout(() => {
+        if (closingSockets.get(tokenId) === socket) closingSockets.delete(tokenId);
+      }, 2000);
     }
-
     try {
-      // 2. 检查跨标签页连接状态
-      const crossTabState = checkCrossTabConnection(tokenId);
-      if (crossTabState) {
-        wsLogger.debug(`跳过创建，其他标签页已有连接: ${tokenId}`);
-        setLoginError(tokenId, "此账号正在其他标签页连接，请先断开后再登录");
-        releaseConnectionLock(tokenId, "connect");
-        return null;
-      }
-
-      // 3. 更新跨标签页状态为连接中
-      updateCrossTabConnectionState(tokenId, "connecting");
-
-      // 4. 如果存在现有连接，先优雅关闭
-      if (wsConnections.value[tokenId]) {
-        wsLogger.debug(`优雅关闭现有连接: ${tokenId}`);
-        await closeWebSocketConnectionAsync(tokenId, true);
-      }
-
-      // 5. 解析token
-      const parseResult = parseBase64Token(base64Token);
-      let actualToken;
-      if (parseResult.success) {
-        actualToken = parseResult.data.actualToken;
-      } else {
-        if (validateToken(base64Token)) {
-          actualToken = base64Token;
-        } else {
-          throw new Error(`Token无效: ${parseResult.error}`);
-        }
-      }
-      // 6. 构建WebSocket URL
-      const baseWsUrl = `wss://xxz-xyzw.hortorgames.com/agent?p=${encodeURIComponent(actualToken)}&e=x&lang=chinese`;
-
-      const wsUrl = customWsUrl || baseWsUrl;
-
-      // 7. 创建新的WebSocket客户端（增强版）
-      const wsClient = new XyzwWebSocketClient({
-        url: wsUrl,
-        utils: g_utils,
-        heartbeatMs: 5000,
-      });
-
-      // 8. 设置连接状态（带会话ID）
-      wsConnections.value[tokenId] = {
-        client: wsClient,
-        status: "connecting",
-        tokenId,
-        wsUrl,
-        actualToken,
-        sessionId: currentSessionId,
-        connectedAt: null,
-        lastMessage: null,
-        lastError: null,
-        reconnectAttempts: 0,
-        randomSeedSynced: false,
-        lastRandomSeedSource: null,
-        lastRandomSeed: null,
-      };
-
-      // Capture the reactive record: an older client's callbacks must not update its replacement.
-      const connection = wsConnections.value[tokenId];
-      const isCurrentConnection = () =>
-        wsConnections.value[tokenId] === connection;
-      const failLogin = (error: unknown) => {
-        if (!isCurrentConnection() || connection.status !== "connecting") return;
-        setLoginError(tokenId, error);
-        wsClient.disconnect();
-        updateCrossTabConnectionState(tokenId, "disconnected");
-        releaseConnectionLock(tokenId, "connect");
-      };
-      connection.loginTimer = setTimeout(
-        () => failLogin(new Error("登录超时")),
-        20000,
-      );
-
-      // 9. 设置事件监听（增强版）
-      wsClient.onConnect = async () => {
-        if (!isCurrentConnection()) return;
-        connection.status = "connecting";
-        connection.connectedAt = new Date().toISOString();
-        connection.randomSeedSynced = false;
-        connection.lastRandomSeedSource = null;
-        connection.lastRandomSeed = null;
-        try {
-          const response = await wsClient.sendWithPromise("role_getroleinfo", {}, 12000);
-          if (!isCurrentConnection() || connection.status !== "connecting") return;
-          if (!response?.role || typeof response.role !== "object" ||
-            Array.isArray(response.role) || !Object.keys(response.role).length) {
-            throw new Error("登录响应中没有有效角色信息");
-          }
-          clearLoginTimer(connection);
-          connection.status = "connected";
-          connection.lastError = null;
-          connection.reconnectAttempts = 0;
-          syncRandomSeedFromStatistics(tokenId, response, wsClient);
-          updateCrossTabConnectionState(tokenId, "connected");
-          releaseConnectionLock(tokenId, "connect");
-          localStorage.removeItem("xyzw_chat_msg_list");
-          wsLogger.wsConnect(tokenId);
-        } catch (error) {
-          failLogin(error);
-        }
-      };
-
-      wsClient.onDisconnect = async (event) => {
-        if (!isCurrentConnection()) return;
-        clearLoginTimer(connection);
-        releaseConnectionLock(tokenId, "connect");
-        const reason = event.code === 1006 ? "异常断开" : event.reason || "";
-        wsLogger.wsDisconnect(tokenId, reason);
-        if (wsConnections.value[tokenId]) {
-          const conn = wsConnections.value[tokenId];
-          const wasDisconnecting = conn.status === "disconnecting";
-          if (wasDisconnecting) conn.status = "disconnected";
-          else if (!conn.lastError) setLoginError(tokenId, event.reason || "连接已断开，请检查网络后重试");
-          conn.randomSeedSynced = false;
-          updateCrossTabConnectionState(tokenId, "disconnected");
-
-          // 如果连接异常断开(1006)且从未连接成功(握手失败)，尝试刷新Token
-          // connectedAt 为 null 表示 socket.onopen 还没触发就断开了，通常意味着握手失败（如403 Forbidden）
-          if (event.code === 1006 && !conn.connectedAt && !wasDisconnecting) {
-            wsLogger.warn(`检测到握手失败(1006)，尝试刷新Token [${tokenId}]`);
-            // 强制刷新并重连
-            await attemptTokenRefresh(tokenId, true);
-          }
-        }
-      };
-
-      wsClient.onError = (error) => {
-        if (!isCurrentConnection()) return;
-        wsLogger.wsError(tokenId, error);
-        setLoginError(tokenId, error);
-        updateCrossTabConnectionState(tokenId, "disconnected");
-        releaseConnectionLock(tokenId, "connect");
-      };
-
-      // 10. 设置消息监听
-      wsClient.setMessageListener((message: ProtoMsg) => {
-        if (!isCurrentConnection()) return;
-        const cmd = message?.cmd || "unknown";
-        wsLogger.wsMessage(tokenId, cmd, true);
-
-        if (wsConnections.value[tokenId]) {
-          wsConnections.value[tokenId].lastMessage = {
-            timestamp: new Date().toISOString(),
-            data: message,
-            cmd: message?.cmd,
-          };
-          handleGameMessage(tokenId, message, wsClient);
-        }
-      });
-
-      // 11. 初始化连接
-      wsClient.init();
-
-      wsLogger.verbose(`WebSocket客户端创建成功: ${tokenId}`);
-      return wsClient;
-    } catch (error) {
-      wsLogger.error(`创建连接失败 [${tokenId}]:`, error);
-      setLoginError(tokenId, error);
-      updateCrossTabConnectionState(tokenId, "disconnected");
-      releaseConnectionLock(tokenId, "connect");
-      return null;
+      client?.disconnect();
+    } catch {
+      // Detached sockets may still emit events. Their ownership checks ignore them.
     }
-  };
+  }
 
-  /**
-   * Close the current transport before replacing its connection record.
-   * @param {string} tokenId Account connection to close.
-   * @returns {Promise<void>} Resolves after transport closure or the five-second limit.
-   */
-  const closeWebSocketConnectionAsync = async (
-    tokenId: string,
-    preserveConnectLock = false,
-  ) => {
-    const lockAcquired = await acquireConnectionLock(tokenId, "disconnect");
-    if (!lockAcquired) {
-      wsLogger.warn(`无法获取断开连接锁: ${tokenId}`);
-      return;
-    }
-
-    try {
-      const connection = wsConnections.value[tokenId];
-      clearLoginTimer(connection);
-      if (connection && connection.client) {
-        wsLogger.debug(`开始优雅关闭连接: ${tokenId}`);
-
-        const cancelingLogin = connection.status === "connecting";
-        connection.status = "disconnecting";
-        updateCrossTabConnectionState(tokenId, "disconnecting");
-        if (cancelingLogin && !preserveConnectLock) {
-          releaseConnectionLock(tokenId, "connect");
+  function waitForSocketClose(tokenId: string, signal?: AbortSignal) {
+    const socket = closingSockets.get(tokenId);
+    if (!socket) return Promise.resolve();
+    return new Promise<void>(resolve => {
+      const deadline = Date.now() + 2000;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const finish = () => {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", finish);
+        if (closingSockets.get(tokenId) === socket) {
+          closingSockets.delete(tokenId);
         }
-
-        // disconnect() clears client.socket immediately, before the native close event.
-        const socket = connection.client.socket;
-        connection.client.disconnect();
-
-        // 等待连接完全关闭
-        await new Promise<void>((resolve) => {
-          let pollTimer: ReturnType<typeof setTimeout> | undefined;
-          const finish = () => {
-            clearTimeout(timeoutTimer);
-            clearTimeout(pollTimer);
-            resolve();
-          };
-          const timeoutTimer = setTimeout(finish, 5000);
-          const checkDisconnected = () => {
-            if (!socket || socket.readyState === WebSocket.CLOSED) {
-              finish();
-            } else {
-              pollTimer = setTimeout(checkDisconnected, 100);
-            }
-          };
-          checkDisconnected();
-        });
-
-        if (wsConnections.value[tokenId] === connection) {
-          delete wsConnections.value[tokenId];
-          updateCrossTabConnectionState(tokenId, "disconnected");
-        }
-        wsLogger.info(`连接已优雅关闭: ${tokenId}`);
-      }
-    } catch (error) {
-      wsLogger.error(`关闭连接失败 [${tokenId}]:`, error);
-    } finally {
-      releaseConnectionLock(tokenId, "disconnect");
-    }
-  };
-
-  // 同步版本的关闭连接（保持向后兼容）
-  const closeWebSocketConnection = (tokenId: string) => {
-    closeWebSocketConnectionAsync(tokenId).catch((error) => {
-      wsLogger.error(`关闭连接异步操作失败 [${tokenId}]:`, error);
+        resolve();
+      };
+      const poll = () => {
+        if (signal?.aborted || socket.readyState === WebSocket.CLOSED || Date.now() >= deadline) finish();
+        else timer = setTimeout(poll, 50);
+      };
+      signal?.addEventListener("abort", finish, { once: true });
+      poll();
     });
+  }
+
+  function finishLogin(attempt: TokenLoginAttempt, phase: "connected" | "error" | "cancelled", message: string) {
+    if (!isActiveLogin(attempt)) return;
+    const { tokenId } = attempt;
+    clearTimeout(attempt.timer);
+    tokenLoginAttempts.delete(tokenId);
+    attempt.controller.abort();
+    if (phase !== "connected") {
+      if (attempt.transport) detachTransport(tokenId, attempt.transport);
+      if (attempt.ownsCrossTabState) updateCrossTabConnectionState(tokenId, "disconnected");
+      if (phase === "error" && !wsConnections.value[tokenId]?.client) {
+        wsConnections.value[tokenId] = {
+          tokenId,
+          status: "error",
+          lastError: { timestamp: new Date().toISOString(), error: message },
+        };
+      }
+    }
+    setLoginPhase(attempt, phase, message);
+  }
+
+  function armLoginDeadline(attempt: TokenLoginAttempt) {
+    clearTimeout(attempt.timer);
+    attempt.timer = setTimeout(() => {
+      finishLogin(attempt, "error", describeTokenLoginFailure({ kind: "timeout" }, getTokenLoginState(attempt.tokenId).phase));
+    }, Math.max(0, attempt.deadlineAt - Date.now()));
+  }
+
+  function cancelTokenLogin(tokenId: string) {
+    const attempt = tokenLoginAttempts.get(tokenId);
+    if (attempt) finishLogin(attempt, "cancelled", "已取消登录，可以重试");
+  }
+
+  async function recoverCredential(attempt: TokenLoginAttempt, error: unknown) {
+    if (!isActiveLogin(attempt)) return null;
+    const token = gameTokens.value.find(item => item.id === attempt.tokenId);
+    if (attempt.refreshUsed || !canRefreshCredential(token)) {
+      finishLogin(attempt, "error", describeTokenLoginFailure(error, getTokenLoginState(attempt.tokenId).phase));
+      return null;
+    }
+    attempt.refreshUsed = true;
+    attempt.deadlineAt = attempt.startedAt + TOKEN_RECOVERY_TIMEOUT;
+    armLoginDeadline(attempt);
+    if (attempt.transport) detachTransport(attempt.tokenId, attempt.transport);
+    updateCrossTabConnectionState(attempt.tokenId, "connecting");
+    setLoginPhase(attempt, "refreshing", "正在刷新登录凭证");
+    try {
+      const credential = await refreshLoginCredential(attempt);
+      if (!credential || !isActiveLogin(attempt)) return null;
+      return await openLoginTransport(attempt, credential);
+    } catch (refreshError) {
+      finishLogin(attempt, "error", describeTokenLoginFailure(refreshError, "refreshing"));
+      return null;
+    }
+  }
+
+  async function openLoginTransport(attempt: TokenLoginAttempt, credential: string) {
+    const { tokenId } = attempt;
+    await waitForSocketClose(tokenId, attempt.controller.signal);
+    if (!isActiveLogin(attempt)) return null;
+    if (Date.now() >= attempt.deadlineAt) throw loginFailure("timeout");
+    const parsed = parseBase64Token(credential);
+    const actualToken = parsed.success ? parsed.data.actualToken : validateToken(credential) ? credential : null;
+    if (!actualToken) throw loginFailure("missingCredential");
+
+    // Existing user-configured endpoints stay explicit. A refresh never silently submits
+    // credentials through a different transport or replaces a supplied URL's parameters.
+    const wsUrl = attempt.customWsUrl || `wss://xxz-xyzw.hortorgames.com/agent?p=${encodeURIComponent(actualToken)}&e=x&lang=chinese`;
+    const client = markRaw(new XyzwWebSocketClient({ url: wsUrl, utils: g_utils, heartbeatMs: 5000 }));
+    attempt.transport = client;
+    wsConnections.value[tokenId] = {
+      client, status: "connecting", tokenId, actualToken, sessionId: currentSessionId,
+      createdAt: new Date().toISOString(), lastMessageAt: null, connectedAt: null,
+      lastError: null, reconnectAttempts: 0, randomSeedSynced: false,
+    };
+    const connection = wsConnections.value[tokenId];
+    const ownsTransport = () => wsConnections.value[tokenId]?.client === client;
+    setLoginPhase(attempt, "connecting", "正在连接游戏服务");
+
+    const reportFailure = (error: unknown, code?: number) => {
+      if (!ownsTransport()) return;
+      const phase = getTokenLoginState(tokenId).phase;
+      if (credentialWasRejected(error) && !attempt.customWsUrl) {
+        if (isActiveLogin(attempt)) {
+          void recoverCredential(attempt, error);
+          return;
+        }
+        if (connection.status === "connected" && !attempt.refreshUsed) {
+          const token = gameTokens.value.find(item => item.id === tokenId);
+          if (token && canRefreshCredential(token)) {
+            void createWebSocketConnection(tokenId, token.token, token.wsUrl, { refresh: true });
+            return;
+          }
+        }
+      }
+
+      const message = describeTokenLoginFailure(error, phase, code);
+      if (isActiveLogin(attempt)) {
+        finishLogin(attempt, "error", message);
+      } else if (connection.status === "connected") {
+        detachTransport(tokenId, client);
+        updateCrossTabConnectionState(tokenId, "disconnected");
+        wsConnections.value[tokenId] = {
+          tokenId, status: "error", lastError: { timestamp: new Date().toISOString(), error: message },
+        };
+        setLoginPhase(attempt, "error", message);
+      }
+    };
+
+    client.onConnect = async () => {
+      if (!ownsTransport() || !isActiveLogin(attempt)) return;
+      connection.connectedAt = new Date().toISOString();
+      setLoginPhase(attempt, "verifying", "已连接，正在校验角色信息");
+      try {
+        const response = await client.sendWithPromise("role_getroleinfo", {}, Math.max(1, attempt.deadlineAt - Date.now()));
+        if (!ownsTransport() || !isActiveLogin(attempt)) return;
+        if (Date.now() >= attempt.deadlineAt) throw loginFailure("timeout");
+        const role = response?.role || response?.data?.role || response?.body?.role;
+        if (!role || typeof role !== "object" || Array.isArray(role) || !Object.keys(role).length) {
+          throw loginFailure("roleMissing");
+        }
+        connection.status = "connected";
+        connection.reconnectAttempts = 0;
+        syncRandomSeedFromStatistics(tokenId, response, client);
+        updateCrossTabConnectionState(tokenId, "connected");
+        finishLogin(attempt, "connected", "已连接，角色信息已就绪");
+        try { localStorage.removeItem("xyzw_chat_msg_list"); } catch { /* optional cache */ }
+        wsLogger.wsConnect(tokenId);
+      } catch (error) {
+        const timedOut = Date.now() >= attempt.deadlineAt;
+        reportFailure(timedOut ? { kind: "timeout" } : error);
+      }
+    };
+    client.onDisconnect = event => reportFailure(event?.reason || { kind: "transport" }, event?.code);
+    client.onError = () => reportFailure({ kind: "transport" });
+    client.setMessageListener((message: ProtoMsg) => {
+      if (!ownsTransport()) return;
+      if (credentialWasRejected(message?.error || message?.hint)) {
+        reportFailure(message.error || message.hint, Number(message.code));
+        return;
+      }
+      const cmd = message?.cmd || "unknown";
+      connection.lastMessage = { timestamp: new Date().toISOString(), data: message, cmd };
+      void handleGameMessage(tokenId, message, client);
+    });
+    client.init();
+    return client;
+  }
+
+  const createWebSocketConnection = (
+    tokenId: string,
+    credential: string,
+    customWsUrl: string | null = null,
+    { force = false, refresh = false } = {},
+  ): Promise<XyzwWebSocketClient | null> => {
+    if (isNativeGameApp() && isGameAccountReserved(tokenId)) {
+      tokenLoginStates.value[tokenId] = { phase: "error", message: "该账号的游戏窗口已打开，请先关闭游戏窗口。" };
+      return Promise.resolve(null);
+    }
+    const inFlight = tokenLoginAttempts.get(tokenId);
+    if (inFlight && !force) return inFlight.opened ?? Promise.resolve(null);
+    if (inFlight) cancelTokenLogin(tokenId);
+
+    // The deadline begins on the user's action, including wait for previous socket closure.
+    const startedAt = Date.now();
+    const attempt: TokenLoginAttempt = {
+      tokenId, startedAt, deadlineAt: startedAt + TOKEN_LOGIN_TIMEOUT,
+      controller: new AbortController(), refreshUsed: false, ownsCrossTabState: false,
+      transportKind: "direct", customWsUrl,
+    };
+    tokenLoginAttempts.set(tokenId, attempt);
+    setLoginPhase(attempt, "connecting", "正在连接游戏服务");
+    armLoginDeadline(attempt);
+    attempt.opened = Promise.resolve().then(async () => {
+      if (!isActiveLogin(attempt)) return null;
+      if (checkCrossTabConnection(tokenId)) throw loginFailure("crossTab");
+      detachTransport(tokenId);
+      attempt.ownsCrossTabState = true;
+      updateCrossTabConnectionState(tokenId, "connecting");
+      if (refresh) return recoverCredential(attempt, { kind: "missingCredential" });
+      return openLoginTransport(attempt, credential);
+    }).catch(error => {
+      finishLogin(attempt, "error", describeTokenLoginFailure(error, getTokenLoginState(tokenId).phase));
+      return null;
+    });
+    return attempt.opened;
   };
+
+  const startTokenLogin = (tokenId: string, { force = false, refresh = false } = {}) => {
+    const token = selectTokenOnly(tokenId);
+    if (!token) return Promise.resolve(null);
+    if (!force && !refresh && getWebSocketStatus(tokenId) === "connected") {
+      return Promise.resolve(getWebSocketClient(tokenId));
+    }
+    updateToken(tokenId, { lastUsed: new Date().toISOString() });
+    return createWebSocketConnection(tokenId, token.token, token.wsUrl, { force, refresh });
+  };
+
+  async function closeWebSocketConnectionAsync(tokenId: string) {
+    cancelTokenLogin(tokenId);
+    if (wsConnections.value[tokenId]) {
+      detachTransport(tokenId);
+      updateCrossTabConnectionState(tokenId, "disconnected");
+      if (getTokenLoginState(tokenId).phase !== "cancelled") {
+        tokenLoginStates.value[tokenId] = { phase: "idle", message: "" };
+      }
+    }
+    await waitForSocketClose(tokenId);
+  }
+
+  const closeWebSocketConnection = closeWebSocketConnectionAsync;
 
   const getWebSocketStatus = (tokenId: string) => {
+    if (["connecting", "verifying", "refreshing"].includes(getTokenLoginState(tokenId).phase)) return "connecting";
     return wsConnections.value[tokenId]?.status || "disconnected";
   };
 
@@ -1384,9 +1255,8 @@ export const useTokenStore = defineStore("tokens", () => {
 
   const clearAllTokens = async () => {
     // 关闭所有WebSocket连接
-    Object.keys(wsConnections.value).forEach((tokenId) => {
-      closeWebSocketConnection(tokenId);
-    });
+    new Set([...Object.keys(wsConnections.value), ...tokenLoginAttempts.keys()]).forEach(closeWebSocketConnection);
+    tokenLoginStates.value = {};
 
     gameTokens.value = [];
     selectedTokenId.value = null;
@@ -1504,14 +1374,6 @@ export const useTokenStore = defineStore("tokens", () => {
           }
         });
 
-        // 清理过期的连接锁（超过10分钟）
-        Object.entries(connectionLocks.value).forEach(([tokenId, lock]) => {
-          if (now - lock.timestamp > 600000) {
-            delete connectionLocks.value[tokenId];
-            wsLogger.debug(`清理过期连接锁: ${tokenId}`);
-          }
-        });
-
         // 清理过期的跨标签页状态（超过5分钟）
         Object.entries(activeConnections.value).forEach(([tokenId, state]) => {
           if (now - state.timestamp > 300000) {
@@ -1533,7 +1395,7 @@ export const useTokenStore = defineStore("tokens", () => {
         disconnectedCount: 0,
         errorCount: 0,
         duplicateTokens,
-        activeLocks: Object.keys(connectionLocks.value).length,
+        activeLocks: tokenLoginAttempts.size,
         crossTabStates: Object.keys(activeConnections.value).length,
       };
 
@@ -1558,16 +1420,10 @@ export const useTokenStore = defineStore("tokens", () => {
     forceCleanup: async () => {
       wsLogger.info("开始强制清理所有连接...");
 
-      const cleanupPromises = Object.keys(wsConnections.value).map((tokenId) =>
-        closeWebSocketConnectionAsync(tokenId),
-      );
+      const ids = new Set([...Object.keys(wsConnections.value), ...tokenLoginAttempts.keys()]);
+      const cleanupPromises = [...ids].map(closeWebSocketConnectionAsync);
 
       await Promise.all(cleanupPromises);
-
-      // TODO:
-      // 清理所有锁和状态
-      // connectionLocks.value.clear()
-      // activeConnections.value.clear()
 
       // 清理localStorage中的跨标签页状态
       Object.keys(localStorage).forEach((key) => {
@@ -1781,6 +1637,7 @@ export const useTokenStore = defineStore("tokens", () => {
     updateToken,
     removeToken,
     selectToken,
+    selectTokenOnly,
 
     // Base64解析方法
     parseBase64Token,
@@ -1788,6 +1645,9 @@ export const useTokenStore = defineStore("tokens", () => {
 
     // WebSocket方法
     createWebSocketConnection,
+    startTokenLogin,
+    cancelTokenLogin,
+    getTokenLoginState,
     closeWebSocketConnection,
     getWebSocketStatus,
     getWebSocketError: (tokenId: string) => wsConnections.value[tokenId]?.lastError?.error,
@@ -1863,7 +1723,7 @@ export const useTokenStore = defineStore("tokens", () => {
     devTools: {
       getConnectionStats: () => connectionMonitor.getStats(),
       forceCleanup: () => connectionMonitor.forceCleanup(),
-      showConnectionLocks: () => Object.keys(connectionLocks.value),
+      showConnectionLocks: () => [...tokenLoginAttempts.keys()],
       showCrossTabStates: () => Object.keys(activeConnections.value),
       testDuplicateConnection: (tokenId: string) => {
         // 降噪

@@ -2,36 +2,44 @@
   <div class="mobile-game-features">
     <!-- 连接操作条：顶栏已展示标题与账号，这里只留连接切换 -->
     <div class="mgf-header">
-      <span class="mgf-hint">{{ connectionStatusText }} · 点击切换连接</span>
-      <div
+      <span class="mgf-hint">{{ connectionStatusText }}</span>
+      <button
         class="mgf-conn-pill"
+        type="button"
         :class="connectionStatus"
         @click="toggleConnection"
       >
-        <span class="pill-dot" />
+        <span class="pill-dot" aria-hidden="true" />
         {{ isConnected ? "断开" : "连接" }}
-      </div>
+      </button>
     </div>
 
     <!-- 快速入口区 -->
     <div class="quick-entries">
-      <div class="quick-entry-card" @click="goToPushingLevels">
-        <div class="entry-icon">⚔️</div>
-        <div class="entry-info">
-          <div class="entry-title">主线推关</div>
-          <div class="entry-desc">批量自动推图</div>
-        </div>
-        <n-icon size="18" class="entry-arrow"><ChevronForward /></n-icon>
-      </div>
-      <div class="quick-entry-card apex" @click="goToApex">
-        <div class="entry-icon">🐉</div>
-        <div class="entry-info">
-          <div class="entry-title">逐鹿盐山</div>
-          <div class="entry-desc">Apex 竞速挑战 · 竞猜助威</div>
-        </div>
-        <n-icon size="18" class="entry-arrow"><ChevronForward /></n-icon>
-      </div>
-      <n-button size="small" @click="router.push({ name: 'NightmareTeamLab' })">十殿组队</n-button>
+      <button class="quick-entry-card" type="button" @click="goToPushingLevels">
+        <n-icon size="20" class="entry-icon" aria-hidden="true"><FlashOutline /></n-icon>
+        <span class="entry-info">
+          <strong class="entry-title">主线推关</strong>
+          <span class="entry-desc">批量自动推图</span>
+        </span>
+        <n-icon size="16" class="entry-arrow" aria-hidden="true"><ChevronForward /></n-icon>
+      </button>
+      <button class="quick-entry-card" type="button" @click="goToApex">
+        <n-icon size="20" class="entry-icon" aria-hidden="true"><TrophyOutline /></n-icon>
+        <span class="entry-info">
+          <strong class="entry-title">逐鹿盐山</strong>
+          <span class="entry-desc">竞速挑战与竞猜助威</span>
+        </span>
+        <n-icon size="16" class="entry-arrow" aria-hidden="true"><ChevronForward /></n-icon>
+      </button>
+      <button class="quick-entry-card" type="button" @click="router.push({ name: 'MobileNightmareTeamLab' })">
+        <n-icon size="20" class="entry-icon" aria-hidden="true"><PeopleOutline /></n-icon>
+        <span class="entry-info">
+          <strong class="entry-title">十殿组队</strong>
+          <span class="entry-desc">创建队伍与管理房间</span>
+        </span>
+        <n-icon size="16" class="entry-arrow" aria-hidden="true"><ChevronForward /></n-icon>
+      </button>
     </div>
 
     <!-- 功能主体：标签页 + 功能卡片 -->
@@ -74,7 +82,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { ChevronForward } from '@vicons/ionicons5'
+import { ChevronForward, FlashOutline, PeopleOutline, TrophyOutline } from '@vicons/ionicons5'
 import { useTokenStore } from '@/stores/tokenStore'
 import GameStatus from '@/components/GameStatus.vue'
 
@@ -211,7 +219,8 @@ const goToPushingLevels = () => {
 const goToApex = () => {
   gameStatusRef.value?.setSection('apexChallengeGroup')
   if (bodyRef.value) {
-    bodyRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const reduceMotion = document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches
+    bodyRef.value.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
   }
 }
 </script>
@@ -229,12 +238,12 @@ const goToApex = () => {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md) 0;
+  padding: var(--spacing-sm) var(--mobile-page-gutter, 12px) 0;
 }
 
 .mgf-hint {
   font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -245,7 +254,11 @@ const goToApex = () => {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
+  min-height: var(--mobile-touch-target, 44px);
+  min-width: var(--mobile-touch-target, 44px);
+  border: 0;
   border-radius: var(--border-radius-full);
+  font: inherit;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -276,19 +289,23 @@ const goToApex = () => {
 /* ---------- 快速入口 ---------- */
 .quick-entries {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+  padding: var(--spacing-sm) var(--mobile-page-gutter, 12px);
 }
 
 .quick-entry-card {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: 10px 12px;
+  padding: 8px 10px;
+  min-height: 64px;
+  border: 0;
   background: var(--bg-primary);
   border-radius: var(--border-radius-large);
   color: var(--text-primary);
+  font: inherit;
+  text-align: start;
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-light);
@@ -299,18 +316,10 @@ const goToApex = () => {
     box-shadow: var(--shadow-light);
   }
 
-  &.apex {
-    background: var(--bg-primary);
-    box-shadow: var(--shadow-light);
-
-    &:active {
-      box-shadow: var(--shadow-light);
-    }
-  }
 }
 
 .entry-icon {
-  font-size: 20px;
+  color: var(--primary-color);
   flex-shrink: 0;
 }
 
@@ -320,17 +329,17 @@ const goToApex = () => {
 }
 
 .entry-title {
+  display: block;
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .entry-desc {
+  display: block;
   font-size: 12px;
-  opacity: 0.85;
+  color: var(--text-secondary);
   line-height: 1.35;
 }
 
@@ -341,12 +350,13 @@ const goToApex = () => {
 
 /* ---------- 功能主体 ---------- */
 .mgf-body {
-  padding: 0 var(--spacing-sm);
+  padding: 0 var(--mobile-page-gutter, 12px);
+  min-width: 0;
 }
 
 /* ---------- 连接详情 ---------- */
 .mgf-conn-section {
-  margin: var(--spacing-sm) var(--spacing-md) 0;
+  margin: var(--spacing-sm) var(--mobile-page-gutter, 12px) 0;
   background: var(--bg-primary);
   border: 1px solid var(--border-light);
   border-radius: var(--border-radius-medium);
@@ -363,6 +373,15 @@ const goToApex = () => {
   flex-direction: column;
   gap: var(--spacing-sm);
   padding-bottom: var(--spacing-md);
+}
+
+.conn-rows :deep(.n-button) { min-height: var(--mobile-touch-target, 44px); }
+
+@media (max-width: 480px) {
+  .quick-entry-card { flex-direction: column; justify-content: center; align-items: center; gap: 4px; text-align: center; }
+  .entry-info { flex: none; }
+  .entry-desc,
+  .entry-arrow { display: none; }
 }
 
 .conn-row {
