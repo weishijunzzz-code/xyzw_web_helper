@@ -22,6 +22,8 @@
   let initialized = false;
   let settled = false;
   let launchTimer;
+  let loginStarted = openedAt;
+  let receivedAuthentication = false;
 
   const send = (type, fields = {}) => {
     const message = { channel, version: 1, session, type, ...fields };
@@ -29,14 +31,15 @@
     else root.parent.postMessage(message, appOrigin);
   };
   const progress = (phase, start) => send('progress', { phase, durationMs: Math.round(performance.now() - start) });
-  function fail(code, status) {
+  function fail(code, status, authCode) {
     if (settled) return;
     settled = true;
     clearTimeout(launchTimer);
     splash.style.display = 'block';
     splash.style.backgroundImage = 'none';
     splash.textContent = '游戏启动失败';
-    send('failed', { code, ...(Number.isInteger(status) ? { status } : {}) });
+    send('failed', { code, ...(Number.isInteger(status) ? { status } : {}),
+      ...(Number.isInteger(authCode) && Math.abs(authCode) <= 9999999 ? { authCode } : {}) });
   }
 
   if (root.androidBridge || root.CapacitorCookiesAndroidInterface || root.webkit?.messageHandlers?.bridge || root.Capacitor?.isNativePlatform?.()) {
@@ -96,12 +99,12 @@
     ['https://comb-platform.hortorgames.com/comb-custom-switch-server/api/v1/switch/multi/status', ['switch-status', 'switches']],
   ]);
 
-  function requestNative(endpoint, body, signal, extra = {}) {
+  function requestNative(endpoint, body, signal, extra = {}, timeoutMs = 18000) {
     return new Promise((resolve, reject) => {
       if (signal.aborted) { reject(new DOMException('Cancelled', 'AbortError')); return; }
       const requestId = String(++requestSequence);
       const cancel = () => finish(new DOMException('Cancelled', 'AbortError'));
-      const timeout = setTimeout(() => finish(new Error('request-timeout')), 18000);
+      const timeout = setTimeout(() => finish(new DOMException('Request timed out', 'TimeoutError')), timeoutMs);
       const finish = (error, value) => {
         pending.delete(requestId);
         signal.removeEventListener('abort', cancel);
@@ -125,13 +128,13 @@
       if (ios && isAuthenticationURL(url)) {
         const start = performance.now();
         const request = new Request(input, options);
-        progress('login', start);
+        beginAuthentication(start);
         try {
           const { status, contentType, data } = await iosAuthentication(await request.arrayBuffer(), url, request.signal);
           reportAuthentication(status, data, start);
           return new Response(data.length ? data : null, { status, headers: { 'Content-Type': contentType } });
         } catch (error) {
-          if (!request.signal.aborted) fail('game-auth-network');
+          if (!request.signal.aborted) fail(error?.name === 'TimeoutError' ? 'game-auth-timeout' : 'game-auth-network');
           throw error;
         }
       }
@@ -181,7 +184,8 @@
       if (auth) {
         const start = performance.now();
         if (ios && auth.async) {
-          progress('login', start);
+          if (iosRequests.has(this)) throw new DOMException('Request is still pending', 'InvalidStateError');
+          beginAuthentication(start);
           const controller = new AbortController();
           iosRequests.set(this, controller);
           sendIOSAuthentication(this, args[0], auth.url, controller.signal, start).finally(() => {
@@ -199,12 +203,51 @@
     return url.origin === 'https://xxz-xyzw.hortorgames.com' && url.pathname === '/login/authuser';
   }
 
-  function reportAuthentication(status, data, start) {
-    if (status !== 200 || !data.byteLength) fail('game-auth-rejected', status);
-    else progress('auth-response', start);
+  function beginAuthentication(start) {
+    loginStarted = start;
+    receivedAuthentication = false;
+    progress('login', start);
   }
 
-  async function iosAuthentication(body, url, signal) {
+  function reportAuthentication(status, data, start) {
+    if (start !== loginStarted || settled) return;
+    if (status !== 200 || !data.byteLength) {
+      fail('game-auth-rejected', status);
+      return;
+    }
+    receivedAuthentication = true;
+    progress('auth-response', start);
+  }
+
+  function observeIOSLogin() {
+    let manager;
+    try { manager = root.__require?.('LoginManager')?.LoginManager?.prototype; }
+    catch { return; /* A different bundle version can still use the transport diagnostics. */ }
+    const authUser = manager?._authUser;
+    if (typeof authUser !== 'function') return;
+    manager._authUser = async function (...args) {
+      try {
+        const result = await authUser.apply(this, args);
+        const roleToken = result?.rawData?.roleToken;
+        if (typeof roleToken === 'string' && roleToken.trim()) {
+          progress('auth-accepted', loginStarted);
+        } else if (receivedAuthentication) {
+          fail('game-auth-invalid-role');
+        }
+        return result;
+      } catch (error) {
+        if (receivedAuthentication) {
+          // The SDK rejects with a numeric business code followed by its message.
+          const code = typeof error === 'string' ? /^(-?\d{1,7})(?:\s|$)/.exec(error)?.[1] : null;
+          if (code && Number(code)) fail('game-auth-sdk-rejected', undefined, Number(code));
+          else fail('game-auth-sdk-response');
+        }
+        throw error;
+      }
+    };
+  }
+
+  async function iosAuthentication(body, url, signal, timeout) {
     const seq = url.searchParams.get('_seq');
     const language = url.searchParams.get('_lang');
     const hint = url.searchParams.get('_hint');
@@ -221,20 +264,17 @@
     }
     const bytes = new Uint8Array(body);
     if (bytes.length > 2 * 1024 * 1024) throw new Error('request-too-large');
-    let binary = '';
-    for (const byte of bytes) binary += String.fromCharCode(byte);
     const { status, contentType, dataBase64 } = await requestNative('authuser', '', signal, {
-      bodyBase64: btoa(binary), seq, language, hint,
-    });
+      bodyBase64: encodeSocketFrame(bytes), seq, language, hint,
+    }, timeout > 0 ? Math.min(timeout, 18000) : 18000);
     return { status, contentType, data: Uint8Array.from(atob(dataBase64), char => char.charCodeAt(0)) };
   }
 
   async function sendIOSAuthentication(xhr, body, url, signal, start) {
     const set = (name, value) => Object.defineProperty(xhr, name, { configurable: true, value });
     try {
-      const { status, contentType, data } = await iosAuthentication(await new Blob([body ?? '']).arrayBuffer(), url, signal);
+      const { status, contentType, data } = await iosAuthentication(await new Blob([body ?? '']).arrayBuffer(), url, signal, xhr.timeout);
       if (signal.aborted) return;
-      reportAuthentication(status, data, start);
       const responseType = xhr.responseType;
       const text = responseType === '' || responseType === 'text' ? new TextDecoder().decode(data) : null;
       set('status', status);
@@ -245,15 +285,20 @@
       set('getAllResponseHeaders', () => `content-type: ${contentType}\r\n`);
       set('readyState', 4);
       xhr.dispatchEvent(new Event('readystatechange'));
-      xhr.dispatchEvent(new Event('load'));
-    } catch {
       if (signal.aborted) return;
-      fail('game-auth-network');
+      xhr.dispatchEvent(new ProgressEvent('load', { lengthComputable: true, loaded: data.byteLength, total: data.byteLength }));
+      if (signal.aborted) return;
+      xhr.dispatchEvent(new ProgressEvent('loadend', { lengthComputable: true, loaded: data.byteLength, total: data.byteLength }));
+      reportAuthentication(status, data, start);
+    } catch (error) {
+      if (signal.aborted) return;
+      const timedOut = error?.name === 'TimeoutError';
       set('readyState', 4);
       xhr.dispatchEvent(new Event('readystatechange'));
-      xhr.dispatchEvent(new Event('error'));
+      xhr.dispatchEvent(new ProgressEvent(timedOut ? 'timeout' : 'error'));
+      xhr.dispatchEvent(new ProgressEvent('loadend'));
+      fail(timedOut ? 'game-auth-timeout' : 'game-auth-network');
     }
-    xhr.dispatchEvent(new Event('loadend'));
   }
 
   function parseJSON(data) {
@@ -320,7 +365,7 @@
           const code = Number.isInteger(data.code) ? data.code : 1006;
           if (code !== 1000) this.emit(new Event('error'));
           this.emit(new CloseEvent('close', { code, reason: data.reason || '', wasClean: code === 1000 }));
-          if (wasConnecting && !gameSockets.size) fail('game-socket-failed', code);
+          if (wasConnecting && !settled) send('socket-handshake-failed', { status: code });
         }
       }
     }
@@ -329,11 +374,25 @@
       construct(target, args, newTarget) {
         const url = new URL(args[0], root.location.href);
         const protocols = args[1];
-        if (url.origin === 'wss://xxz-xyzw.hortorgames.com' && url.pathname === '/agent'
-            && !url.username && !url.password && !url.hash && (protocols == null || Array.isArray(protocols) && !protocols.length)) {
+        const official = url.protocol === 'wss:' && url.hostname.endsWith('.hortorgames.com') && url.pathname === '/agent'
+          && !url.username && !url.password && !url.hash;
+        if (official && url.origin === 'wss://xxz-xyzw.hortorgames.com' && (protocols == null || Array.isArray(protocols) && !protocols.length)) {
           return new GameSocket(url);
         }
-        return Reflect.construct(target, args, newTarget);
+        const socket = Reflect.construct(target, args, newTarget);
+        if (official && !settled) {
+          const start = performance.now();
+          let opened = false;
+          progress('game-socket', start);
+          socket.addEventListener('open', () => {
+            opened = true;
+            progress('game-socket-open', start);
+          }, { once: true });
+          socket.addEventListener('close', event => {
+            if (!opened && !settled) send('socket-handshake-failed', { status: event.code });
+          }, { once: true });
+        }
+        return socket;
       },
       get(target, key, receiver) {
         if (key === Symbol.hasInstance) return socket => socket instanceof GameSocket || socket instanceof target;
@@ -441,6 +500,7 @@
     root.HtmlIsLoaded = true;
     await root.boot({
       autoFullscreen: false,
+      onGameBundleLoaded: ios ? observeIOSLogin : undefined,
       onReady() {
         adaptGameCanvas();
         splash.style.display = 'none';
@@ -471,7 +531,10 @@
     if (data?.channel !== channel || data.version !== 1 || data.session !== session) return;
     if (data.type === 'http-response') {
       const finish = pending.get(data.requestId);
-      if (finish) finish(data.response ? null : new Error('network-request-failed'), data.response);
+      if (finish) {
+        if (data.error === 'timeout') finish(new DOMException('Request timed out', 'TimeoutError'));
+        else finish(data.response ? null : new Error('network-request-failed'), data.response);
+      }
     }
     if (data.type === 'socket-event') gameSockets.get(data.socketId)?.receive(data);
     if (data.type === 'team-copy-response' && teamCopy?.requestId === data.requestId) teamCopy.finish(data.ok === true);

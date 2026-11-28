@@ -415,7 +415,7 @@ window.ensureBundleVers = async function () {
 }
 
 
-window.installRemoteAssetLoader = function () {
+window.installRemoteAssetLoader = function (onGameBundleLoaded) {
   if (typeof cc === 'undefined' || !cc.assetManager || !cc.assetManager.downloader) {
     return
   }
@@ -483,6 +483,7 @@ window.installRemoteAssetLoader = function () {
         .loadJscAndDecode(finalUrl, function (code) {
           try {
             executeScript(code, finalUrl)
+            if (/\/remote\/game\/index\.[^/]+\.jsc$/.test(finalUrl)) onGameBundleLoaded?.()
             loadedScripts[finalUrl] = true
             onComplete && onComplete(null)
           } catch (err) {
@@ -564,7 +565,7 @@ window.installRemoteAssetLoader = function () {
   console.log('[remoteAssets] 资源加载已切换到 CDN')
 }
 
-window.boot = async function ({ onReady, onFailure, autoFullscreen = true } = {}) {
+window.boot = async function ({ onReady, onFailure, onGameBundleLoaded, autoFullscreen = true } = {}) {
   try {
     await window.ensureBundleVers()
   } catch (err) {
@@ -572,7 +573,7 @@ window.boot = async function ({ onReady, onFailure, autoFullscreen = true } = {}
     throw err
   }
 
-  window.installRemoteAssetLoader()
+  window.installRemoteAssetLoader(onGameBundleLoaded)
 
   var settings = window._CCSettings
   window._CCSettings = undefined

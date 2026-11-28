@@ -31,6 +31,7 @@
           <div class="game-session-secondary">
             <NButton @click="selectGearAction(() => confirmReload(false))">{{ settingsChanged ? '重载并应用脚本' : '重启游戏' }}</NButton>
             <NButton v-if="singleGameSession.scripts.length || singleGameSession.scriptError" @click="selectGearAction(() => confirmReload(true))">无脚本重试</NButton>
+            <NButton v-if="singleGameSession.nativeIOS" @click="copyStartupDiagnostic(formatIOSGameDiagnostic(singleGameSession, null, startupFailures))">复制启动诊断</NButton>
             <NButton type="error" secondary @click="selectGearAction(confirmClose)">关闭游戏</NButton>
           </div>
         </div>
@@ -67,6 +68,8 @@
           <p v-if="switchError" role="alert">{{ switchError }}</p>
           <div class="game-switch-recovery">
             <NButton type="primary" @click="selectSwitchAccount(switchState.target)">重试目标账号</NButton>
+            <NButton v-if="switchState.diagnostic" @click="selectSwitchAccount(switchState.target, true)">无脚本重试</NButton>
+            <NButton v-if="switchState.diagnostic" @click="copyStartupDiagnostic(switchState.diagnostic)">复制启动诊断</NButton>
             <NButton v-if="switchState.original.id !== switchState.target.id" @click="selectSwitchAccount(switchState.original)">重新打开原账号</NButton>
             <NButton @click="goBack">返回账号列表</NButton>
           </div>
@@ -85,6 +88,8 @@
         <template v-if="(activeSrc || singleGameSession?.nativeIOS) && !routeProblem">
           <button type="button" @click="retry(false)">重新加载</button>
           <button v-if="retained && singleGameSession?.isolated" type="button" @click="retry(true)">无脚本重试</button>
+          <button v-if="singleGameSession?.nativeIOS" type="button" @click="copyStartupDiagnostic(singleGameSession.diagnostic)">复制启动诊断</button>
+          <button v-if="singleGameSession?.nativeIOS" type="button" @click="goBack">返回账号列表</button>
         </template>
         <button v-else type="button" @click="router.replace(retained ? '/mobile/tokens' : '/tokens')">返回账号列表</button>
       </template>
@@ -104,6 +109,7 @@
 </template>
 
 <script setup>
+import { Clipboard } from '@capacitor/clipboard';
 import { AlertCircleOutline, SwapHorizontalOutline } from '@vicons/ionicons5';
 import { NButton, NDrawer, NDrawerContent, NIcon, useDialog, useDialogReactiveList, useMessage } from 'naive-ui';
 import { computed, onBeforeMount, onUnmounted, ref, useId, watch } from "vue";
@@ -117,7 +123,7 @@ import {
 } from '@/composables/useSingleGameSession';
 import { useTokenStore } from '@/stores/tokenStore';
 import { ANDROID_GAME_CHANNEL, ANDROID_GAME_ORIGIN, ANDROID_GAME_VERSION, handleAndroidGameRequest, handleAndroidTeamCopy, isAndroidGameMessage } from '@/utils/androidGameBridge';
-import { recordGameStartupTiming } from '@/utils/gameStartupTimings';
+import { formatIOSGameDiagnostic, recordGameStartupTiming } from '@/utils/gameStartupTimings';
 import { IOSGame } from '@/utils/iosGameBridge';
 import { isAndroidApp, isIOSApp } from '@/utils/runtimePlatform';
 
@@ -162,7 +168,8 @@ const switchStageLabel = computed(() => {
 const knownPhases = {
   bin: '准备账号', iframe: '打开游戏窗口', scripts: '加载本地脚本', version: '查询游戏版本',
   assets: '下载游戏包（累计）', bundles: '下载游戏包', decode: '解码游戏包（累计）', launcher: '启动游戏引擎',
-  switches: '读取游戏开关', login: '登录角色', 'auth-response': '等待游戏发起角色连接',
+  switches: '读取游戏开关', login: '请求角色认证', 'auth-response': '等待游戏解析认证响应',
+  'auth-accepted': '等待游戏发起角色连接',
   'game-socket': '连接角色服务器', 'game-socket-open': '等待游戏主界面',
   interactive: '从启动到进入主界面', resume: '恢复游戏',
 };
@@ -173,9 +180,15 @@ const startupFailures = {
   'game-initialization-failed': '游戏窗口初始化失败，可尝试无脚本重试。',
   'game-auth-rejected': '游戏登录未返回有效认证响应。',
   'game-auth-network': '游戏登录请求没有收到响应，请检查网络后重试。',
+  'game-auth-timeout': '角色认证请求超时，请重试。',
   'game-auth-request': 'iOS 未能识别游戏发出的角色登录请求。',
-  'game-socket-failed': '角色服务器连接未能建立，请重试。',
+  'game-auth-sdk-rejected': '游戏服务拒绝了本次角色认证。',
+  'game-auth-sdk-response': '游戏无法解析角色认证响应，请重试。',
+  'game-auth-invalid-role': '认证响应缺少有效的角色凭证，请重试。',
+  'game-startup-timeout': '游戏启动超时，请重试。',
+  'resource-load-failed': '游戏资源加载失败，请检查网络后重试。',
 };
+const iosLoginPhases = new Set(['login', 'auth-response', 'auth-accepted', 'game-socket', 'game-socket-open']);
 const activeSrc = computed(() => props.retained ? singleGameSession.value?.src : gameSrc.value);
 const activeStatus = computed(() => {
   if (!props.retained) return status.value;
@@ -213,17 +226,27 @@ let requestEpoch = 0;
 let switchInteraction = 0;
 let gearAction;
 
-function reportFailure(message) {
+async function copyStartupDiagnostic(diagnostic) {
+  try {
+    await Clipboard.write({ string: diagnostic });
+    message.success('已复制启动诊断');
+  } catch {
+    message.error('无法复制启动诊断，请重试。');
+  }
+}
+
+function reportFailure(message, error) {
   clearTimeout(loadTimer);
   if (props.retained) {
     const session = singleGameSession.value;
     if (session && session.status !== 'failed') {
-      updateSingleGame(session.id, { status: 'failed', failure: message });
+      const diagnostic = session.nativeIOS ? formatIOSGameDiagnostic(session, error, startupFailures) : undefined;
+      updateSingleGame(session.id, { status: 'failed', failure: message, diagnostic });
       if (session.isolated && session.status === 'loading') {
         recordGameStartupTiming({ kind: session.startupKind, status: 'failed', timings: session.timings, scriptCount: session.scripts.length });
       }
       const closingSwitch = session.status === 'loading'
-        && failSingleGameSwitch(session.id, message, { showFailure: props.workspaceActive });
+        && failSingleGameSwitch(session.id, message, { showFailure: props.workspaceActive, diagnostic });
       if (session.nativeIOS && !closingSwitch) IOSGame.close({ session: session.id }).catch(() => {});
     }
     return;
@@ -302,10 +325,17 @@ function handleRetainedStartup(event) {
 }
 
 function applyNativeGameStatus(session, data) {
-  if (data.type === 'progress' && typeof data.phase === 'string' && Object.prototype.hasOwnProperty.call(knownPhases, data.phase)) {
+  if (data.type === 'progress' && session.status === 'loading'
+    && typeof data.phase === 'string' && Object.prototype.hasOwnProperty.call(knownPhases, data.phase)) {
     const timings = Number.isFinite(data.durationMs) && data.durationMs >= 0
       ? { ...session.timings, [data.phase]: Math.round(data.durationMs) } : session.timings;
-    updateSingleGame(session.id, { stage: data.phase, timings, revealed: session.revealed || data.phase === 'launcher' });
+    const stage = session.nativeIOS && iosLoginPhases.has(session.stage) && !iosLoginPhases.has(data.phase)
+      ? session.stage : data.phase;
+    updateSingleGame(session.id, { stage, timings, revealed: session.revealed || data.phase === 'launcher' });
+  } else if (session.nativeIOS && session.status === 'loading' && data.type === 'socket-handshake-failed') {
+    if (Number.isInteger(data.status) && data.status >= 100 && data.status <= 4999) {
+      updateSingleGame(session.id, { socketStatus: data.status });
+    }
   } else if (data.type === 'ready') {
     if (session.status !== 'loading') return;
     clearTimeout(loadTimer);
@@ -319,9 +349,11 @@ function applyNativeGameStatus(session, data) {
     }
   } else if (data.type === 'failed') {
     const known = Object.prototype.hasOwnProperty.call(startupFailures, data.code);
-    const status = Number.isInteger(data.status) && data.status >= 100 && data.status <= 4999
+    const status = data.code === 'game-auth-sdk-rejected' && Number.isInteger(data.authCode) && Math.abs(data.authCode) <= 9999999
+      ? `（错误码 ${data.authCode}）` : Number.isInteger(data.status) && data.status >= 100 && data.status <= 4999
       ? `（${data.status < 600 ? 'HTTP' : 'WebSocket'} ${data.status}）` : '';
-    reportFailure(known ? `${startupFailures[data.code]}${status}` : '游戏资源加载失败，请检查网络后重试。');
+    const code = known ? data.code : 'resource-load-failed';
+    reportFailure(`${startupFailures[code]}${status}`, { ...data, code });
   } else if (data.type === 'script-result' && session.scripts.some(script => script.id === data.id)
     && ['loaded', 'failed', 'unsupported'].includes(data.status)) {
     const code = typeof data.code === 'string' && Object.prototype.hasOwnProperty.call(scriptResultReasons, data.code)
@@ -369,12 +401,12 @@ function restoreSwitchFocus() {
   if (props.workspaceActive) gameGear.value?.focus();
 }
 
-async function selectSwitchAccount(token) {
+async function selectSwitchAccount(token, withoutScripts = false) {
   if (switchState.value?.phase === 'preparing' || switchState.value?.phase === 'loading') return;
   const interaction = ++switchInteraction;
   switchError.value = '';
   try {
-    await startSingleGameSwitch(token);
+    await startSingleGameSwitch(token, { withoutScripts: withoutScripts === true });
   } catch (error) {
     if (interaction !== switchInteraction || !props.workspaceActive) return;
     switchError.value = ['未找到该账号的 BIN 数据', '该账号已在其他游戏窗口打开'].includes(error.message)
@@ -474,7 +506,8 @@ if (props.retained) {
       const session = singleGameSession.value;
       if (session?.id !== id || session.status !== 'loading') return;
       const stage = session.nativeIOS ? knownPhases[session.stage] : null;
-      reportFailure(stage ? `「${stage}」超时，可尝试无脚本重试。` : '游戏加载等待过久，可尝试重新加载。');
+      reportFailure(stage ? `「${stage}」超时，可尝试无脚本重试。` : '游戏加载等待过久，可尝试重新加载。',
+        { code: 'game-startup-timeout' });
     }, 90000);
   }, { immediate: true });
 } else {

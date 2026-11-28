@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
 import { isAndroidGameMessage } from '../src/utils/androidGameBridge.js';
-import { GAME_STARTUP_TIMING_KEY, recordGameStartupTiming } from '../src/utils/gameStartupTimings.js';
+import { formatIOSGameDiagnostic, GAME_STARTUP_TIMING_KEY, recordGameStartupTiming } from '../src/utils/gameStartupTimings.js';
 
 const bootstrap = readFileSync(new URL('../public/game/android-single.js', import.meta.url), 'utf8');
 const scriptsRuntime = readFileSync(new URL('../public/game/android-game-scripts.js', import.meta.url), 'utf8');
@@ -30,7 +30,7 @@ function fixture({ unsafe = false, ios = false, interactive = true } = {}) {
   const nodes = [];
   const persistent = storage();
   class Xhr extends EventTarget { open() {} send() {} abort() {} }
-  class BrowserSocket {
+  class BrowserSocket extends EventTarget {
     static CONNECTING = 0;
     static OPEN = 1;
     static CLOSING = 2;
@@ -69,7 +69,8 @@ function fixture({ unsafe = false, ios = false, interactive = true } = {}) {
   }
   const context = vm.createContext({ window: root, URL, URLSearchParams, Request, Response, DOMException, performance,
     setTimeout() {}, setInterval() {}, clearTimeout() {}, clearInterval() {},
-    atob, btoa, Promise, Uint8Array, ArrayBuffer, AbortController, Blob, Event, EventTarget, MessageEvent, CloseEvent, TextDecoder });
+    atob, btoa, Promise, Uint8Array, ArrayBuffer, AbortController, Blob, Event, EventTarget, MessageEvent, CloseEvent, TextDecoder,
+    ProgressEvent: Event });
   vm.runInContext(scriptsRuntime, context);
   vm.runInContext(bootstrap, context);
   function message(data, sender = root.parent, senderOrigin = appOrigin) {
@@ -250,8 +251,13 @@ test('iOS game uses a session-scoped native socket for the official game endpoin
   const receive = root.__xyzwReceiveGameRuntime;
   receive({ ...envelope, type: 'initialize', binId: 'ios-test', binHex: '000102ff' });
   await drain();
+  new root.WebSocket('wss://xxz-xyzw.hortorgames.com/agent?p=mock');
+  const first = sent.find(item => item.data.type === 'socket-open').data;
+  receive({ ...envelope, type: 'socket-event', socketId: first.socketId, event: 'close', code: 1006 });
+  assert.equal(sent.find(item => item.data.type === 'socket-handshake-failed').data.status, 1006);
+  assert.equal(sent.some(item => item.data.type === 'failed'), false);
   const socket = new root.WebSocket('wss://xxz-xyzw.hortorgames.com/agent?p=mock');
-  const request = sent.find(item => item.data.type === 'socket-open').data;
+  const request = sent.findLast(item => item.data.type === 'socket-open').data;
   const event = { ...envelope, type: 'socket-event', socketId: request.socketId };
   assert.ok(socket instanceof root.WebSocket);
   assert.equal(socket.readyState, root.WebSocket.CONNECTING);
@@ -275,5 +281,58 @@ test('iOS game uses a session-scoped native socket for the official game endpoin
   assert.equal(sent.filter(item => item.data.type === 'socket-close').length, 1);
   const fallback = new root.WebSocket('wss://other.example.test/agent?p=mock');
   assert.equal(fallback.readyState, undefined);
-  assert.equal(sent.filter(item => item.data.type === 'socket-open').length, 1);
+  assert.equal(sent.filter(item => item.data.type === 'socket-open').length, 2);
+});
+
+test('shareable iOS startup diagnostics contain only known stages, times and bounded codes', () => {
+  const diagnostic = formatIOSGameDiagnostic({
+    accountName: 'private account', binHex: 'private bin', stage: 'auth-response', socketStatus: 1006,
+    timings: { login: 10.3, 'auth-response': 521, 'auth-accepted': 634, 'private address': 100 },
+  }, {
+    code: 'game-auth-sdk-rejected', authCode: -10001, status: 90000, message: 'private response',
+  }, { 'game-auth-sdk-rejected': true });
+  assert.deepEqual(JSON.parse(diagnostic), {
+    platform: 'ios', stage: 'auth-response', scripts: 'configured',
+    timingsMs: { login: 10, 'auth-response': 521, 'auth-accepted': 634 },
+    failure: 'game-auth-sdk-rejected', authCode: -10001, socketStatus: 1006,
+  });
+});
+
+test('iOS drops a cancelled or previous-window XHR reply when reusing the request', async () => {
+  const { root, sent } = fixture({ ios: true, interactive: false });
+  const receive = root.__xyzwReceiveGameRuntime;
+  receive({ ...envelope, type: 'initialize', binId: 'ios-test', binHex: '01' });
+  await drain();
+  const xhr = new root.XMLHttpRequest();
+  const url = 'https://xxz-xyzw.hortorgames.com/login/authuser?_seq=1';
+  let loaded = 0;
+  xhr.addEventListener('load', () => loaded++);
+  xhr.open('POST', url);
+  xhr.send(Uint8Array.of(1));
+  await drain();
+  const first = sent.find(item => item.data.type === 'http-request').data.requestId;
+  xhr.open('POST', url);
+  xhr.send(Uint8Array.of(2));
+  await drain();
+  const second = sent.findLast(item => item.data.type === 'http-request').data.requestId;
+  const reply = { ...envelope, type: 'http-response',
+    response: { status: 200, contentType: 'application/octet-stream', dataBase64: 'Ag==' } };
+  receive({ ...reply, requestId: first });
+  receive({ ...reply, requestId: second, session: 'previous-window' });
+  await drain();
+  assert.equal(loaded, 0);
+  receive({ ...reply, requestId: second });
+  await drain();
+  assert.equal(loaded, 1);
+});
+
+test('iOS observes a browser-managed official socket without forwarding it over the native bridge', async () => {
+  const { root, sent } = fixture({ ios: true, interactive: false });
+  root.__xyzwReceiveGameRuntime({ ...envelope, type: 'initialize', binId: 'ios-test', binHex: '01' });
+  await drain();
+  const socket = new root.WebSocket('wss://region.hortorgames.com/agent?p=mock');
+  socket.dispatchEvent(new Event('open'));
+  assert.deepEqual(sent.map(({ data }) => data.phase).filter(phase => phase?.startsWith('game-socket')),
+    ['game-socket', 'game-socket-open']);
+  assert.equal(sent.some(({ data }) => data.type === 'socket-open'), false);
 });

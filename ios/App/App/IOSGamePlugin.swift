@@ -300,11 +300,12 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         if webView === game && (error as? URLError)?.code != .cancelled { failWindow("resource-load-failed") }
     }
 
-    private func failWindow(_ code: String, status: Int? = nil) {
+    private func failWindow(_ code: String, status: Int? = nil, authCode: Int? = nil) {
         guard let id = session else { return }
         dispose()
         var event: [String: Any] = ["session": id, "type": "failed", "code": code]
         if let status = status, (100...4999).contains(status) { event["status"] = status }
+        if let authCode = authCode, (-9999999...9999999).contains(authCode) { event["authCode"] = authCode }
         notifyListeners("gameEvent", data: event)
     }
 
@@ -340,9 +341,14 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
             ready = true
         case "failed":
             let code = data["code"] as? String ?? ""
-            let known = ["game-handshake-timeout", "game-initialization-failed", "game-auth-rejected", "game-auth-network", "game-auth-request", "game-socket-failed"]
-            failWindow(known.contains(code) ? code : "resource-load-failed", status: data["status"] as? Int)
+            let known = ["game-handshake-timeout", "game-initialization-failed", "game-auth-rejected", "game-auth-network",
+                         "game-auth-request", "game-auth-timeout", "game-auth-sdk-rejected", "game-auth-sdk-response", "game-auth-invalid-role"]
+            failWindow(known.contains(code) ? code : "resource-load-failed", status: data["status"] as? Int,
+                       authCode: code == "game-auth-sdk-rejected" ? data["authCode"] as? Int : nil)
             return
+        case "socket-handshake-failed":
+            guard let status = data["status"] as? Int, (100...4999).contains(status) else { return }
+            event["status"] = status
         case "http-request":
             if staged == nil { request(data, session: session) }
             return
@@ -422,7 +428,8 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         }
         perform(request, id: id, gameSession: session) { [weak self] response in
             var reply: [String: Any] = ["type": "http-response", "requestId": id]
-            if let response = response { reply["response"] = response }
+            if response?["error"] as? String == "timeout" { reply["error"] = "timeout" }
+            else if let response = response { reply["response"] = response }
             self?.reply(reply, session: session)
         }
     }
@@ -529,8 +536,10 @@ final class IOSGamePlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegate, UR
         guard let request = requests.removeValue(forKey: task.taskIdentifier) else { return }
         if error == nil, let response = task.response as? HTTPURLResponse,
            (200...599).contains(response.statusCode), !(300...399).contains(response.statusCode) {
-            request.complete(["status": response.statusCode, "contentType": response.mimeType ?? "application/octet-stream",
+            request.complete(["status": response.statusCode, "contentType": response.value(forHTTPHeaderField: "Content-Type") ?? "application/octet-stream",
                               "dataBase64": request.data.base64EncodedString()])
+        } else if request.gameSession != nil, (error as? URLError)?.code == .timedOut {
+            request.complete(["error": "timeout"])
         } else {
             request.complete(nil)
         }

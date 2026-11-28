@@ -65,7 +65,7 @@ export function cancelSingleGameSwitch() {
   if (singleGameSwitch.value?.phase === 'preparing') singleGameSwitch.value = null
 }
 
-export async function startSingleGameSwitch(token) {
+export async function startSingleGameSwitch(token, { withoutScripts = false } = {}) {
   if (!token?.id) throw new Error('未找到该账号的 BIN 数据')
   if (changing) return null
   const source = singleGameSession.value
@@ -80,7 +80,7 @@ export async function startSingleGameSwitch(token) {
   }
   singleGameSwitch.value = attempt
   try {
-    return await openSingleGame(token, { switchAttempt: attempt })
+    return await openSingleGame(token, { switchAttempt: attempt, withoutScripts })
   } finally {
     if (singleGameSwitch.value === attempt) singleGameSwitch.value = previousSwitch
   }
@@ -100,10 +100,10 @@ export async function finishSingleGameSwitch(sessionId, router) {
   }
 }
 
-export function failSingleGameSwitch(sessionId, failure, { showFailure } = {}) {
+export function failSingleGameSwitch(sessionId, failure, { showFailure, diagnostic } = {}) {
   const attempt = singleGameSwitch.value
   if (attempt?.sessionId !== sessionId || attempt.phase !== 'loading' || singleGameSession.value?.id !== sessionId) return
-  singleGameSwitch.value = showFailure ? { ...attempt, phase: 'failed', failure } : null
+  singleGameSwitch.value = showFailure ? { ...attempt, phase: 'failed', failure, diagnostic } : null
   return detachSingleGame()
 }
 
